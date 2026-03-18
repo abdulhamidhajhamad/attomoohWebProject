@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════
+   BranchSelector Modal – Modern White Design
+   ═══════════════════════════════════ */
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Modal */
+.modal {
+  position: relative;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 36px 32px 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Close button */
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+[dir="ltr"] .closeBtn {
+  left: auto;
+  right: 16px;
+}
+
+.closeBtn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--color-primary, #90297d), #6e1f60);
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* Branch cards container */
+.branches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Individual branch card */
+.branchCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  text-align: inherit;
+}
+
+.branchCard:hover {
+  border-color: var(--color-primary, #90297d);
+  background: rgba(144, 41, 125, 0.03);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(144, 41, 125, 0.1);
+}
+
+.branchCard:active {
+  transform: translateY(0);
+}
+
+/* Branch icon */
+.branchIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(144, 41, 125, 0.08);
+  color: var(--color-primary, #90297d);
+  flex-shrink: 0;
+}
+
+/* Branch info */
+.branchInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.branchName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.branchPhone {
+  font-size: 0.8rem;
+  color: #6b7280;
+  direction: ltr;
+  text-align: start;
+}
+
+/* Arrow / WhatsApp icon on the right */
+.branchArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #25d366;
+  color: #fff;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.branchCard:hover .branchArrow {
+  background: #1da851;
+  transform: scale(1.08);
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 480px) {
+  .modal {
+    padding: 28px 20px 24px;
+    border-radius: 20px;
+    margin: 16px;
+  }
+
+  .branchCard {
+    padding: 14px 14px;
+    gap: 12px;
+  }
+
+  .branchIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .iconWrap {
+    width: 48px;
+    height: 48px;
+  }
+}

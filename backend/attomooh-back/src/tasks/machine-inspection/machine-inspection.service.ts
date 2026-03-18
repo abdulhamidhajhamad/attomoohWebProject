@@ -1,0 +1,89 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Types } from 'mongoose';
+import { MachineInspectionRepository } from './repositories/machine-inspection.repository.js';
+import { MachineInspectionDocument } from './schemas/machine-inspection.schema.js';
+import { CreateMachineInspectionDto } from './dto/create-machine-inspection.dto.js';
+import { UpdateMachineInspectionDto } from './dto/update-machine-inspection.dto.js';
+
+@Injectable()
+export class MachineInspectionService {
+  constructor(private readonly repo: MachineInspectionRepository) {}
+
+  async create(dto: CreateMachineInspectionDto): Promise<MachineInspectionDocument> {
+    return this.repo.create({
+      machineReception: new Types.ObjectId(dto.machineReception),
+      machineName: dto.machineName ?? '',
+      machineDetails: dto.machineDetails ?? '',
+      time: dto.time ?? '',
+      technician: dto.technician ? new Types.ObjectId(dto.technician) : undefined,
+      technicianName: dto.technicianName ?? '',
+      spareParts: (dto.spareParts ?? []) as any,
+      technicianReport: dto.technicianReport ?? '',
+      readyForDelivery: dto.readyForDelivery ?? false,
+      technicianFee: dto.technicianFee ?? 0,
+      companyFee: dto.companyFee ?? 0,
+    });
+  }
+
+  async findAll(status?: string): Promise<MachineInspectionDocument[]> {
+    const filter = status ? { status } : {};
+    return this.repo.findAll(filter);
+  }
+
+  async findById(id: Types.ObjectId): Promise<MachineInspectionDocument> {
+    const doc = await this.repo.findById(id);
+    if (!doc) throw new NotFoundException('Machine inspection not found');
+    return doc;
+  }
+
+  async update(id: Types.ObjectId, dto: UpdateMachineInspectionDto): Promise<MachineInspectionDocument> {
+    const data: Record<string, unknown> = { ...dto };
+    if (dto.technician !== undefined) data.technician = dto.technician ? new Types.ObjectId(dto.technician) : undefined;
+    const updated = await this.repo.updateById(id, data as any);
+    if (!updated) throw new NotFoundException('Machine inspection not found');
+    return updated;
+  }
+
+  async startWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
+    const doc = await this.findById(id);
+    doc.timeLogs.push({ action: 'start', timestamp: new Date(), pauseReason: '' } as any);
+    return doc.save();
+  }
+
+  async pauseWork(id: Types.ObjectId, reason: string): Promise<MachineInspectionDocument> {
+    const doc = await this.findById(id);
+    doc.timeLogs.push({ action: 'pause', timestamp: new Date(), pauseReason: reason ?? '' } as any);
+    return doc.save();
+  }
+
+  async resumeWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
+    const doc = await this.findById(id);
+    doc.timeLogs.push({ action: 'resume', timestamp: new Date(), pauseReason: '' } as any);
+    return doc.save();
+  }
+
+  async finishWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
+    const doc = await this.findById(id);
+    doc.timeLogs.push({ action: 'finish', timestamp: new Date(), pauseReason: '' } as any);
+    doc.inspectionDurationMs = this.calculateDuration(doc.timeLogs as any);
+    return doc.save();
+  }
+
+  async delete(id: Types.ObjectId): Promise<void> {
+    const deleted = await this.repo.deleteById(id);
+    if (!deleted) throw new NotFoundException('Machine inspection not found');
+  }
+
+  private calculateDuration(logs: Array<{ action: string; timestamp: Date }>): number {
+    let total = 0;
+    let startTime: Date | null = null;
+    for (const log of logs) {
+      if (log.action === 'start' || log.action === 'resume') startTime = new Date(log.timestamp);
+      else if ((log.action === 'pause' || log.action === 'finish') && startTime) {
+        total += new Date(log.timestamp).getTime() - startTime.getTime();
+        startTime = null;
+      }
+    }
+    return total;
+  }
+}

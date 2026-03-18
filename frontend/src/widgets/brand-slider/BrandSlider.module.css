@@ -1,0 +1,137 @@
+/* ═══════════════════════════════════
+   Brand Slider — infinite CSS marquee
+   ═══════════════════════════════════ */
+
+.section {
+  padding: 32px 0 36px;
+  overflow: hidden;
+}
+
+.title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-gray-800);
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--color-gray-400);
+  margin-bottom: 24px;
+}
+
+/* ── Slider wrapper ── */
+.slider {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  direction: ltr; /* force LTR so marquee scrolls correctly on RTL pages */
+}
+
+/* Fade edges for premium look */
+.fadeLeft,
+.fadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--color-white) 0%, transparent 100%);
+}
+
+.fadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--color-white) 0%, transparent 100%);
+}
+
+/* ── Track — infinite scroll ── */
+.track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: scroll 30s linear infinite;
+}
+
+.track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Logo item ── */
+.logoWrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 90px;
+  margin: 0 30px; /* 30px each side = 60px between items */
+}
+
+.logo {
+  max-height: 85px;
+  max-width: 170px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.8;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.logo:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .section {
+    padding: 24px 0 28px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 0.8125rem;
+    margin-bottom: 18px;
+  }
+
+  .track {
+    animation-duration: 15s;
+  }
+
+  .fadeLeft,
+  .fadeRight {
+    width: 40px;
+  }
+
+  .logoWrapper {
+    width: 140px;
+    height: 70px;
+    margin: 0 20px;
+  }
+
+  .logo {
+    max-height: 65px;
+    max-width: 130px;
+  }
+}

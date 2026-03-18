@@ -1,0 +1,29 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  line-height: 1;
+}
+
+.new {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.sale {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+}
+
+.outOfStock {
+  background-color: var(--color-gray-400);
+  color: var(--color-white);
+}
+
+.success {
+  background-color: var(--color-success);
+  color: var(--color-white);
+}

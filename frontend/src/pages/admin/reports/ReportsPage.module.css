@@ -1,0 +1,169 @@
+/* ═══════════════════════════════════
+   Reports Page Styles
+   ═══════════════════════════════════ */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.pageSubtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 4px 0 0;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tab:hover {
+  color: #374151;
+}
+
+.tabActive {
+  background: #fff;
+  color: var(--color-primary, #90297d);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Report Table ── */
+.tableWrapper {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 14px 16px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover {
+  background: #f9fafb;
+}
+
+.tableNumber {
+  font-weight: 700;
+  color: var(--color-primary, #90297d);
+  font-size: 1rem;
+}
+
+.tableName {
+  font-weight: 600;
+}
+
+/* ── Bar ── */
+.barCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-primary, #90297d);
+  transition: width 0.4s;
+  min-width: 4px;
+}
+
+/* ── Empty ── */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.emptyState svg {
+  margin-bottom: 12px;
+  color: #d1d5db;
+}
+
+.errorBanner {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  padding: 14px 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  direction: rtl;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    font-size: 0.82rem;
+  }
+}

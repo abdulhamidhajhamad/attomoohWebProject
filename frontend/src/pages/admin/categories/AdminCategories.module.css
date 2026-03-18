@@ -1,0 +1,281 @@
+/* ===== Admin Categories Page — Tree View ===== */
+
+.page {
+  direction: rtl;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.pageSubtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--color-primary, #90297d);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  background: #6e1f60;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(144, 41, 125, 0.3);
+}
+
+.errorMsg {
+  padding: 16px;
+  color: #ef4444;
+  text-align: center;
+  background: #fef2f2;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+/* ── Tree Controls ── */
+.treeControls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.controlBtn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.controlBtn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* ── Tree Container ── */
+.treeContainer {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.treeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+/* ── Tree Row ── */
+.treeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+
+.treeRow:last-child {
+  border-bottom: none;
+}
+
+.treeRow:hover {
+  background: #fafbfc;
+}
+
+.treeChildren {
+  /* Collapsible wrapper — no extra styling needed, rows handle indent */
+}
+
+/* ── Expand Button ── */
+.expandBtn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.expandBtn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* ── Row Icon ── */
+.rowIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Row Info ── */
+.rowInfo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: 0.925rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.levelBadge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.childCount {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* ── Row Actions ── */
+.rowActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.addSubBtn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #3b82f6;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.addSubBtn:hover {
+  background: #dbeafe;
+}
+
+.deleteRowBtn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef2f2;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.deleteRowBtn:hover {
+  background: #fecaca;
+}
+
+.deleteRowBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Empty Tree ── */
+.emptyTree {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.emptyTree svg {
+  margin-bottom: 12px;
+  opacity: 0.3;
+}
+
+.emptyTree p {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+/* ── Note ── */
+.note {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 0.85rem;
+  color: #92400e;
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .rowInfo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .treeRow {
+    padding: 12px 16px;
+  }
+}

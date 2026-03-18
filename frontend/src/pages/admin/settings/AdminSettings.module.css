@@ -1,0 +1,238 @@
+/* ===== Admin Settings Page ===== */
+
+.page {
+  direction: rtl;
+  max-width: 800px;
+}
+
+.pageHeader {
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.pageSubtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* Form Grid */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.input {
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.input:read-only {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary, #90297d);
+  background: #fff;
+}
+
+/* Color Preview */
+.colorPreview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.colorSwatch {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  border: 2px solid #e5e7eb;
+}
+
+.colorPreview .input {
+  flex: 1;
+}
+
+/* Card Note */
+.cardNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: #1e40af;
+  line-height: 1.6;
+}
+
+.cardNote code {
+  background: rgba(30, 64, 175, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  direction: ltr;
+  display: inline-block;
+}
+
+.warningNote {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.warningNote code {
+  background: rgba(146, 64, 14, 0.08);
+}
+
+/* Logo Section */
+.logoSection {
+  margin-bottom: 16px;
+}
+
+.logoDesc {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 12px;
+}
+
+.logoSteps {
+  padding-right: 20px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.logoSteps code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  direction: ltr;
+  display: inline-block;
+}
+
+/* Languages */
+.langGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.langCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.langFlag {
+  font-size: 2rem;
+}
+
+.langCard strong {
+  font-size: 0.9rem;
+  color: #1a1a2e;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.langCard p {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.defaultBadge {
+  margin-right: auto;
+  padding: 4px 12px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Save Button (for future use) */
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 32px;
+  background: var(--color-primary, #90297d);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saveBtn:hover {
+  background: #6e1f60;
+}
+
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .langGrid {
+    grid-template-columns: 1fr;
+  }
+}

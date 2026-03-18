@@ -1,0 +1,279 @@
+/* ═══════════════════════════════════════════
+   HeroSlider — Full-width hero carousel
+   ═══════════════════════════════════════════ */
+
+.hero {
+  position: relative;
+  width: calc(100% - 32px);
+  max-width: 1280px;
+  height: 300px;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  margin: 16px auto 0;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    width: calc(100% - 48px);
+    height: 360px;
+    margin: 24px auto 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    width: calc(100% - 64px);
+    height: 400px;
+  }
+}
+
+/* ═══ Slides container ═══ */
+.slidesWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+  pointer-events: none;
+}
+
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ═══ Intro Slide ═══ */
+.introSlide {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    #a8378f 0%,
+    #90297d 35%,
+    #6b1d5e 70%,
+    #501748 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.introOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(144, 41, 125, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Subtle animated pattern */
+.introSlide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+.introContent {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 24px 20px;
+  max-width: 600px;
+  color: #fff;
+  animation: fadeUp 0.8s ease-out;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Badge pill */
+.badge {
+  display: inline-block;
+  padding: 5px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 14px;
+  letter-spacing: 0.02em;
+}
+
+/* Title */
+.title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 0.875rem;
+  line-height: 1.7;
+  opacity: 0.9;
+  max-width: 480px;
+  margin: 0 auto 20px;
+}
+
+@media (min-width: 768px) {
+  .subtitle {
+    font-size: 1rem;
+  }
+}
+
+/* Action buttons row */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.actions a {
+  text-decoration: none;
+}
+
+/* ═══ Image Slide ═══ */
+.imageSlide {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ═══ Navigation Arrows ═══ */
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.arrow:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.arrowPrev {
+  left: 16px;
+}
+
+[dir='rtl'] .arrowPrev {
+  left: auto;
+  right: 16px;
+}
+
+.arrowNext {
+  right: 16px;
+}
+
+[dir='rtl'] .arrowNext {
+  right: auto;
+  left: 16px;
+}
+
+@media (min-width: 768px) {
+  .arrow {
+    width: 52px;
+    height: 52px;
+  }
+
+  .arrowPrev {
+    left: 24px;
+  }
+
+  [dir='rtl'] .arrowPrev {
+    left: auto;
+    right: 24px;
+  }
+
+  .arrowNext {
+    right: 24px;
+  }
+
+  [dir='rtl'] .arrowNext {
+    right: auto;
+    left: 24px;
+  }
+}
+
+/* ═══ Dots Indicator ═══ */
+.dots {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.dotActive {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.2);
+}
