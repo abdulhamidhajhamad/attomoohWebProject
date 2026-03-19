@@ -564,3 +564,34 @@ export interface ApiVehicle {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ═══════════════════════════════════
+   Machine Reception (استلام الآلات)
+   ═══════════════════════════════════ */
+
+export type ApiReceptionStatus = 'waiting' | 'in_maintenance' | 'postponed' | 'ready' | 'rejected' | 'delivered';
+export type ApiMachineCondition = 'complete' | 'incomplete';
+
+export interface ApiMachineReception {
+  _id: string;
+  customId: string;
+  machine: ApiMachine | string | null;
+  machineDetails: string;
+  serialNumber: string;
+  customer: ApiCustomer | string | null;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  warranty: boolean;
+  receptionDate: string;
+  expectedDeliveryDate: string | null;
+  condition: ApiMachineCondition;
+  receivedParts: string;
+  customerProblemDesc: string;
+  notes: string;
+  receivedBy: ApiEmployee | string | null;
+  status: ApiReceptionStatus;
+  assignedTo: ApiEmployee | string | null;
+  createdAt: string;
+  updatedAt: string;
+}

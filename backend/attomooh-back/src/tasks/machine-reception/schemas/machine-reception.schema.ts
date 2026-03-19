@@ -56,13 +56,13 @@ export class MachineReception {
   @Prop({ default: '' })
   notes: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   receivedBy: Types.ObjectId;
 
   @Prop({ enum: ReceptionStatus, default: ReceptionStatus.WAITING })
   status: ReceptionStatus;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   assignedTo: Types.ObjectId;
 
   @Prop({ type: [TimeLog], default: [] })

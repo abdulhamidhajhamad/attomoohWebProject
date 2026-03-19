@@ -19,3 +19,7 @@ export { AreaSelect, EMPTY_AREA } from './AreaSelect';
 export type { AreaValue } from './AreaSelect';
 export { EmployeeSelect, EMPTY_EMPLOYEE } from './EmployeeSelect';
 export type { EmployeeValue } from './EmployeeSelect';
+export { MachineSelect, EMPTY_MACHINE } from './MachineSelect';
+export type { MachineValue } from './MachineSelect';
+export { CustomerSelect, EMPTY_CUSTOMER } from './CustomerSelect';
+export type { CustomerValue } from './CustomerSelect';
