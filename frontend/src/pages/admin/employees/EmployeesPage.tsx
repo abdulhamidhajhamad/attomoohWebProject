@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Plus, Search, Trash2, Pencil, X, Check, FileText, ShieldCheck, KeyRound } from 'lucide-react';
+import { Users, Plus, Search, Trash2, Pencil, X, Check, FileText, ShieldCheck, KeyRound, StickyNote } from 'lucide-react';
 import { useEmployeesStore } from '../../../shared/store/employeesStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
+import { AreaSelect, EMPTY_AREA } from '../../../shared/ui/AreaSelect';
+import type { AreaValue } from '../../../shared/ui/AreaSelect';
 import type { ApiEmployee, ApiLinkedUser } from '../../../shared/api/types';
 import styles from '../shared/CrudPage.module.css';
 
@@ -10,16 +12,48 @@ const ROLE_LABELS: Record<string, string> = { technician: 'فني صيانة', u
 
 interface AddForm {
   name: string; phone: string; jobTitle: string; category: string;
+  area: AreaValue; address: string; notes: string;
   grantAccess: boolean; email: string; password: string; role: string;
 }
-const EMPTY: AddForm = { name: '', phone: '', jobTitle: '', category: 'permanent', grantAccess: false, email: '', password: '', role: 'technician' };
+const EMPTY: AddForm = {
+  name: '', phone: '', jobTitle: '', category: 'permanent',
+  area: { ...EMPTY_AREA }, address: '', notes: '',
+  grantAccess: false, email: '', password: '', role: 'technician'
+};
 
-interface EditForm { name: string; phone: string; jobTitle: string; category: string; }
-const EMPTY_EDIT: EditForm = { name: '', phone: '', jobTitle: '', category: 'permanent' };
+interface EditForm {
+  name: string; phone: string; jobTitle: string; category: string;
+  area: AreaValue; address: string; notes: string;
+}
+const EMPTY_EDIT: EditForm = {
+  name: '', phone: '', jobTitle: '', category: 'permanent',
+  area: { ...EMPTY_AREA }, address: '', notes: ''
+};
 
 function getLinkedUser(emp: ApiEmployee): ApiLinkedUser | null {
   if (!emp.linkedUser || typeof emp.linkedUser === 'string') return null;
   return emp.linkedUser;
+}
+
+function getAreaDisplay(emp: ApiEmployee): string {
+  if (emp.area && typeof emp.area === 'object' && 'name' in emp.area) return emp.area.name;
+  return '—';
+}
+
+function employeeToEditForm(emp: ApiEmployee): EditForm {
+  let areaValue: AreaValue = { ...EMPTY_AREA };
+  if (emp.area && typeof emp.area === 'object' && '_id' in emp.area && 'name' in emp.area) {
+    areaValue = { id: emp.area._id, name: emp.area.name };
+  }
+  return {
+    name: emp.name,
+    phone: emp.phone,
+    jobTitle: emp.jobTitle,
+    category: emp.category,
+    area: areaValue,
+    address: emp.address || '',
+    notes: emp.notes || '',
+  };
 }
 
 export default function EmployeesPage() {
@@ -41,6 +75,9 @@ export default function EmployeesPage() {
       const payload: Record<string, unknown> = {
         name: addForm.name, phone: addForm.phone,
         jobTitle: addForm.jobTitle, category: addForm.category,
+        area: addForm.area.id || undefined,
+        address: addForm.address,
+        notes: addForm.notes,
       };
       if (addForm.grantAccess) {
         payload.email = addForm.email;
@@ -55,14 +92,24 @@ export default function EmployeesPage() {
 
   const startEdit = useCallback((r: ApiEmployee) => {
     setEditId(r._id);
-    setEditForm({ name: r.name, phone: r.phone, jobTitle: r.jobTitle, category: r.category });
+    setEditForm(employeeToEditForm(r));
     setShowAdd(false);
   }, []);
 
   const saveEdit = useCallback(async () => {
     if (!editId) return;
     setSaving(true);
-    try { await updateItem(editId, editForm as unknown as Record<string, unknown>); setEditId(null); } catch { /* store */ } finally { setSaving(false); }
+    try {
+      const payload = {
+        name: editForm.name, phone: editForm.phone,
+        jobTitle: editForm.jobTitle, category: editForm.category,
+        area: editForm.area.id || null,
+        address: editForm.address,
+        notes: editForm.notes,
+      };
+      await updateItem(editId, payload as unknown as Record<string, unknown>);
+      setEditId(null);
+    } catch { /* store */ } finally { setSaving(false); }
   }, [editId, editForm, updateItem]);
 
   const handleDel = useCallback(async (id: string) => {
@@ -109,6 +156,22 @@ export default function EmployeesPage() {
                 <option value="temporary">مؤقت</option>
                 <option value="external">خارجي</option>
               </select>
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>المنطقة</label>
+              <AreaSelect
+                value={addForm.area}
+                onChange={area => setAddForm({ ...addForm, area })}
+                placeholder="اختر المنطقة"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>العنوان</label>
+              <input className={styles.formInput} placeholder="العنوان التفصيلي" value={addForm.address} onChange={e => setAddForm({ ...addForm, address: e.target.value })} />
+            </div>
+            <div className={`${styles.formField} ${styles.fullWidth}`}>
+              <label className={styles.formLabel}><StickyNote size={14} /> ملاحظات</label>
+              <textarea className={styles.formTextarea} placeholder="أضف ملاحظات عن الموظف..." value={addForm.notes} onChange={e => setAddForm({ ...addForm, notes: e.target.value })} />
             </div>
 
             {/* ── System Access Section ── */}
@@ -174,6 +237,22 @@ export default function EmployeesPage() {
                 <option value="external">خارجي</option>
               </select>
             </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>المنطقة</label>
+              <AreaSelect
+                value={editForm.area}
+                onChange={area => setEditForm({ ...editForm, area })}
+                placeholder="اختر المنطقة"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>العنوان</label>
+              <input className={styles.formInput} placeholder="العنوان التفصيلي" value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} />
+            </div>
+            <div className={`${styles.formField} ${styles.fullWidth}`}>
+              <label className={styles.formLabel}><StickyNote size={14} /> ملاحظات</label>
+              <textarea className={styles.formTextarea} placeholder="أضف ملاحظات عن الموظف..." value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
           </div>
           <div className={styles.formCardActions}>
             <button className={styles.btnSave} onClick={saveEdit} disabled={saving}><Check size={14} />{saving ? 'جاري الحفظ...' : 'حفظ'}</button>
@@ -184,7 +263,7 @@ export default function EmployeesPage() {
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
-          <thead><tr><th>الرمز</th><th>الاسم</th><th>الهاتف</th><th>المسمى الوظيفي</th><th>الفئة</th><th>دخول النظام</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>الرمز</th><th>الاسم</th><th>الهاتف</th><th>المسمى الوظيفي</th><th>الفئة</th><th>المنطقة</th><th>دخول النظام</th><th>الحالة</th><th>إجراءات</th></tr></thead>
           <tbody>
             {items.map(r => (
               <tr key={r._id}>
@@ -193,6 +272,7 @@ export default function EmployeesPage() {
                 <td dir="ltr" style={{ textAlign: 'right' }}>{r.phone || '—'}</td>
                 <td>{r.jobTitle || '—'}</td>
                 <td><span className={`${styles.badge} ${styles.badgeBlue}`}>{CAT_LABELS[r.category] || r.category}</span></td>
+                <td>{getAreaDisplay(r)}</td>
                 <td>
                   {getLinkedUser(r) ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -214,7 +294,7 @@ export default function EmployeesPage() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={8}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
+            {items.length === 0 && <tr><td colSpan={9}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>

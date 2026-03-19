@@ -461,7 +461,7 @@ export interface ApiEmployee {
   phone: string;
   jobTitle: string;
   category: ApiEmployeeCategory;
-  area: string | null;
+  area: ApiArea | string | null;
   address: string;
   notes: string;
   linkedUser: ApiLinkedUser | string | null;
