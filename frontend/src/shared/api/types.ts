@@ -64,6 +64,21 @@ export interface ApiUser {
 }
 
 /* ═══════════════════════════════════
+   Area
+   ═══════════════════════════════════ */
+
+export interface ApiArea {
+  _id: string;
+  customId: string;
+  name: string;
+  phonePrefix: string;
+  notes: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
    Auth
    ═══════════════════════════════════ */
 
@@ -235,11 +250,19 @@ export interface UpdateProductPayload {
 
 export interface ApiCustomer {
   _id: string;
+  customId: string;
   name: string;
   phone: string;
+  area: ApiArea | string | null;
   address: string;
   notes: string;
-  hasAnnualContract: boolean;
+  technician1: ApiTechnician | string | null;
+  technician1Name: string;
+  technician2: ApiTechnician | string | null;
+  technician2Name: string;
+  technician3: ApiTechnician | string | null;
+  technician3Name: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -247,17 +270,29 @@ export interface ApiCustomer {
 export interface CreateCustomerRequest {
   name: string;
   phone: string;
+  area?: string;
   address?: string;
   notes?: string;
-  hasAnnualContract?: boolean;
+  technician1?: string;
+  technician1Name?: string;
+  technician2?: string;
+  technician2Name?: string;
+  technician3?: string;
+  technician3Name?: string;
 }
 
 export interface UpdateCustomerRequest {
   name?: string;
   phone?: string;
+  area?: string;
   address?: string;
   notes?: string;
-  hasAnnualContract?: boolean;
+  technician1?: string;
+  technician1Name?: string;
+  technician2?: string;
+  technician2Name?: string;
+  technician3?: string;
+  technician3Name?: string;
 }
 
 /* ═══════════════════════════════════
@@ -458,4 +493,74 @@ export interface UpdateEmployeeRequest {
   address?: string;
   notes?: string;
   isActive?: boolean;
+}
+
+/* ═══════════════════════════════════
+   Machine (إدارة الآلات)
+   ═══════════════════════════════════ */
+
+export interface ApiMachine {
+  _id: string;
+  customId: string;
+  name: string;
+  technician1: ApiTechnician | string | null;
+  technician1Name: string;
+  technician2: ApiTechnician | string | null;
+  technician2Name: string;
+  technician3: ApiTechnician | string | null;
+  technician3Name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Tool (إدارة العدد)
+   ═══════════════════════════════════ */
+
+export interface ApiTool {
+  _id: string;
+  customId: string;
+  name: string;
+  quantity: number;
+  responsibleTechnician: ApiTechnician | string | null;
+  responsibleTechnicianName: string;
+  location: string;
+  notes: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Supplier (إدارة الموردين)
+   ═══════════════════════════════════ */
+
+export interface ApiSupplier {
+  _id: string;
+  customId: string;
+  name: string;
+  phone: string;
+  area: ApiArea | string | null;
+  address: string;
+  notes: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Vehicle (إدارة المركبات)
+   ═══════════════════════════════════ */
+
+export interface ApiVehicle {
+  _id: string;
+  customId: string;
+  brandAndModel: string;
+  plateNumber: string;
+  responsiblePerson: string;
+  responsibleUser: ApiEmployee | string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

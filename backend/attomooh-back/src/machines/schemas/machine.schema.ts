@@ -20,14 +20,23 @@ export class Machine {
   @Prop({ required: true, trim: true })
   name: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   technician1: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ default: '', trim: true })
+  technician1Name: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   technician2: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ default: '', trim: true })
+  technician2Name: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   technician3: Types.ObjectId;
+
+  @Prop({ default: '', trim: true })
+  technician3Name: string;
 
   @Prop({ default: true })
   isActive: boolean;

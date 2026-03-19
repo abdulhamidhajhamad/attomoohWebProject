@@ -11,7 +11,7 @@ import {
   ServiceOrder,
   ServiceOrderDocument,
 } from './schemas/service-order.schema.js';
-import { UserService } from '../user/user.service.js';
+import { EmployeesService } from '../employees/employees.service.js';
 import { CreateServiceOrderDto } from './dto/create-service-order.dto.js';
 import { UpdateServiceOrderDto } from './dto/update-service-order.dto.js';
 import { CompleteServiceOrderDto } from './dto/complete-service-order.dto.js';
@@ -25,7 +25,7 @@ export class ServiceOrdersService {
   constructor(
     private readonly orderRepo: ServiceOrderRepository,
     private readonly counterRepo: CounterRepository,
-    private readonly userService: UserService,
+    private readonly employeesService: EmployeesService,
   ) {}
 
   /* ═══════════════════════════════════
@@ -146,7 +146,7 @@ export class ServiceOrdersService {
       throw new BadRequestException('Cannot assign to a completed/delivered order');
     }
 
-    const tech = await this.userService.findById(
+    const tech = await this.employeesService.findById(
       new Types.ObjectId(dto.technicianId),
     );
     if (tech.role !== UserRole.TECHNICIAN) {
@@ -192,7 +192,7 @@ export class ServiceOrdersService {
       timeLogs,
     } as Partial<ServiceOrder>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.ON_TASK,
     );
@@ -228,7 +228,7 @@ export class ServiceOrdersService {
       totalDurationMs,
     } as Partial<ServiceOrder>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.AVAILABLE,
     );
@@ -262,7 +262,7 @@ export class ServiceOrdersService {
       timeLogs,
     } as Partial<ServiceOrder>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.ON_TASK,
     );
@@ -319,7 +319,7 @@ export class ServiceOrdersService {
       },
     } as Partial<ServiceOrder>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.AVAILABLE,
     );

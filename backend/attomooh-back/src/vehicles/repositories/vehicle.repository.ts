@@ -11,6 +11,6 @@ export class VehicleRepository {
   async findById(id: Types.ObjectId): Promise<VehicleDocument | null> { return this.model.findById(id).populate('responsibleUser', 'name phone').exec(); }
   async findAll(): Promise<VehicleDocument[]> { return this.model.find().sort({ createdAt: -1 }).populate('responsibleUser', 'name phone').exec(); }
   async search(query: string): Promise<VehicleDocument[]> { const regex = new RegExp(query, 'i'); return this.model.find({ $or: [{ brandAndModel: regex }, { plateNumber: regex }] }).populate('responsibleUser', 'name phone').sort({ brandAndModel: 1 }).exec(); }
-  async updateById(id: Types.ObjectId, data: Partial<Vehicle>): Promise<VehicleDocument | null> { return this.model.findByIdAndUpdate(id, data, { new: true }).exec(); }
+  async updateById(id: Types.ObjectId, data: Partial<Vehicle>): Promise<VehicleDocument | null> { return this.model.findByIdAndUpdate(id, data, { new: true }).populate('responsibleUser', 'name phone').exec(); }
   async deleteById(id: Types.ObjectId): Promise<VehicleDocument | null> { return this.model.findByIdAndDelete(id).exec(); }
 }

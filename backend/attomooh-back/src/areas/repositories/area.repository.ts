@@ -25,8 +25,8 @@ export class AreaRepository {
   async search(query: string): Promise<AreaDocument[]> {
     const regex = new RegExp(query, 'i');
     return this.areaModel
-      .find({ $or: [{ city: regex }, { village: regex }] })
-      .sort({ city: 1 })
+      .find({ name: regex })
+      .sort({ name: 1 })
       .exec();
   }
 

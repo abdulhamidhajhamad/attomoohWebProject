@@ -18,13 +18,13 @@ export class Area {
   customId: string;
 
   @Prop({ required: true, trim: true })
-  city: string;
-
-  @Prop({ required: true, trim: true })
-  village: string;
+  name: string;
 
   @Prop({ default: '', trim: true })
   phonePrefix: string;
+
+  @Prop({ default: '', trim: true })
+  notes: string;
 
   @Prop({ default: true })
   isActive: boolean;
@@ -34,4 +34,4 @@ export class Area {
 }
 
 export const AreaSchema = SchemaFactory.createForClass(Area);
-AreaSchema.index({ city: 'text', village: 'text' });
+AreaSchema.index({ name: 'text' });

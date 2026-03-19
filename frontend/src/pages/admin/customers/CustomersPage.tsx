@@ -1,25 +1,89 @@
 import { useEffect, useState, useCallback } from 'react';
-import {
-  Users,
-  Plus,
-  Search,
-  Trash2,
-  Pencil,
-  X,
-  Check,
-  FileText,
-} from 'lucide-react';
+import { Users, Plus, Search, Trash2, Pencil, X, Check, FileText, StickyNote } from 'lucide-react';
 import { useServiceOrdersStore } from '../../../shared/store/serviceOrdersStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
-import type { ApiCustomer, CreateCustomerRequest } from '../../../shared/api/types';
+import { TechnicianSelect, EMPTY_TECHNICIAN } from '../../../shared/ui/TechnicianSelect';
+import { AreaSelect, EMPTY_AREA } from '../../../shared/ui/AreaSelect';
+import type { TechnicianValue } from '../../../shared/ui/TechnicianSelect';
+import type { AreaValue } from '../../../shared/ui/AreaSelect';
+import type { ApiCustomer } from '../../../shared/api/types';
 import styles from './CustomersPage.module.css';
 
-const EMPTY_FORM: CreateCustomerRequest = {
+interface CustomerForm {
+  name: string;
+  phone: string;
+  area: AreaValue;
+  address: string;
+  notes: string;
+  tech1: TechnicianValue;
+  tech2: TechnicianValue;
+  tech3: TechnicianValue;
+}
+
+const EMPTY_FORM: CustomerForm = {
   name: '',
   phone: '',
+  area: { ...EMPTY_AREA },
   address: '',
   notes: '',
-  hasAnnualContract: false,
+  tech1: { ...EMPTY_TECHNICIAN },
+  tech2: { ...EMPTY_TECHNICIAN },
+  tech3: { ...EMPTY_TECHNICIAN },
+};
+
+const getAreaDisplay = (customer: ApiCustomer) => {
+  const area = customer.area;
+  if (area && typeof area === 'object' && 'name' in area) return area.name;
+  return '—';
+};
+
+const getTechDisplay = (customer: ApiCustomer, field: 'technician1' | 'technician2' | 'technician3') => {
+  const nameField = `${field}Name` as const;
+  const tech = customer[field];
+  const manualName = customer[nameField];
+  if (tech && typeof tech === 'object' && 'name' in tech) return tech.name;
+  if (manualName) return manualName;
+  return '—';
+};
+
+const formToPayload = (form: CustomerForm) => ({
+  name: form.name,
+  phone: form.phone,
+  area: form.area.id || undefined,
+  address: form.address,
+  notes: form.notes,
+  technician1: form.tech1.mode === 'select' && form.tech1.id ? form.tech1.id : undefined,
+  technician1Name: form.tech1.mode === 'manual' ? form.tech1.name : '',
+  technician2: form.tech2.mode === 'select' && form.tech2.id ? form.tech2.id : undefined,
+  technician2Name: form.tech2.mode === 'manual' ? form.tech2.name : '',
+  technician3: form.tech3.mode === 'select' && form.tech3.id ? form.tech3.id : undefined,
+  technician3Name: form.tech3.mode === 'manual' ? form.tech3.name : '',
+});
+
+const customerToForm = (c: ApiCustomer): CustomerForm => {
+  const techValue = (tech: unknown, name: string): TechnicianValue => {
+    if (tech && typeof tech === 'object' && '_id' in tech && 'name' in tech) {
+      return { id: (tech as { _id: string })._id, name: (tech as { name: string }).name, mode: 'select' };
+    }
+    if (name) return { id: undefined, name, mode: 'manual' };
+    return { ...EMPTY_TECHNICIAN };
+  };
+
+  let areaValue: AreaValue = { ...EMPTY_AREA };
+  if (c.area && typeof c.area === 'object' && '_id' in c.area && 'name' in c.area) {
+    areaValue = { id: (c.area as { _id: string })._id, name: (c.area as { name: string }).name };
+  }
+
+  return {
+    name: c.name,
+    phone: c.phone,
+    area: areaValue,
+    address: c.address || '',
+    notes: c.notes || '',
+    tech1: techValue(c.technician1, c.technician1Name),
+    tech2: techValue(c.technician2, c.technician2Name),
+    tech3: techValue(c.technician3, c.technician3Name),
+  };
 };
 
 export default function CustomersPage() {
@@ -35,17 +99,14 @@ export default function CustomersPage() {
   } = useServiceOrdersStore();
 
   const [search, setSearch] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState<CreateCustomerRequest>({ ...EMPTY_FORM });
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState<CustomerForm>({ ...EMPTY_FORM });
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<CreateCustomerRequest>({ ...EMPTY_FORM });
+  const [editForm, setEditForm] = useState<CustomerForm>({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
 
-  // Fetch customers on mount and on search change
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCustomers(search || undefined);
-    }, 300);
+    const timer = setTimeout(() => fetchCustomers(search || undefined), 300);
     return () => clearTimeout(timer);
   }, [fetchCustomers, search]);
 
@@ -53,287 +114,202 @@ export default function CustomersPage() {
     if (!addForm.name.trim() || !addForm.phone.trim()) return;
     setSaving(true);
     try {
-      await createCustomer(addForm);
+      await createCustomer(formToPayload(addForm));
       setAddForm({ ...EMPTY_FORM });
-      setShowAddForm(false);
-    } catch {
-      /* error is in store */
-    } finally {
+      setShowAdd(false);
+    } catch { /* store handles error */ } finally {
       setSaving(false);
     }
   }, [addForm, createCustomer]);
 
-  const handleStartEdit = useCallback((c: ApiCustomer) => {
+  const startEdit = useCallback((c: ApiCustomer) => {
     setEditId(c._id);
-    setEditForm({
-      name: c.name,
-      phone: c.phone,
-      address: c.address || '',
-      notes: c.notes || '',
-      hasAnnualContract: c.hasAnnualContract,
-    });
+    setEditForm(customerToForm(c));
+    setShowAdd(false);
   }, []);
 
-  const handleSaveEdit = useCallback(async () => {
+  const saveEdit = useCallback(async () => {
     if (!editId) return;
     setSaving(true);
     try {
-      await updateCustomer(editId, editForm);
+      await updateCustomer(editId, formToPayload(editForm));
       setEditId(null);
-    } catch {
-      /* error is in store */
-    } finally {
+    } catch { /* store handles error */ } finally {
       setSaving(false);
     }
   }, [editId, editForm, updateCustomer]);
 
-  const handleDelete = useCallback(
-    async (id: string, name: string) => {
-      if (!confirm(`هل أنت متأكد من حذف الزبون "${name}"؟`)) return;
-      try {
-        await deleteCustomer(id);
-      } catch {
-        /* error is in store */
-      }
-    },
-    [deleteCustomer],
-  );
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (!confirm(`هل أنت متأكد من حذف الزبون "${name}"؟`)) return;
+    try { await deleteCustomer(id); } catch { /* store handles error */ }
+  }, [deleteCustomer]);
+
+  const cancelForm = useCallback(() => {
+    setShowAdd(false);
+    setEditId(null);
+    setAddForm({ ...EMPTY_FORM });
+    setEditForm({ ...EMPTY_FORM });
+  }, []);
 
   if (loading && customers.length === 0) {
-    return (
-      <div className={styles.page}>
-        <LoadingSpinner />
-      </div>
-    );
+    return <div className={styles.page}><LoadingSpinner /></div>;
   }
+
+  const activeForm = showAdd ? addForm : editId ? editForm : null;
+  const setActiveForm = showAdd ? setAddForm : setEditForm;
+  const isEditing = !!editId;
 
   return (
     <div className={styles.page}>
-      {/* Header */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>
-            <Users size={24} />
-            إدارة الزبائن
-          </h1>
-          <p className={styles.pageSubtitle}>
-            إدارة بيانات الزبائن والعقود السنوية
-          </p>
+          <h1 className={styles.pageTitle}><Users size={24} />إدارة الزبائن</h1>
+          <p className={styles.pageSubtitle}>إدارة بيانات الزبائن والفنيين المخصصين</p>
         </div>
         <div className={styles.headerActions}>
           <div className={styles.searchBox}>
             <Search size={18} color="#9ca3af" />
-            <input
-              type="text"
-              placeholder="بحث بالاسم أو الهاتف..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <input placeholder="بحث بالاسم أو الهاتف..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button
-            className={styles.btnPrimary}
-            onClick={() => {
-              clearError();
-              setShowAddForm(!showAddForm);
-            }}
-          >
-            <Plus size={18} />
-            زبون جديد
+          <button className={styles.btnPrimary} onClick={() => { clearError(); setEditId(null); setAddForm({ ...EMPTY_FORM }); setShowAdd(!showAdd); }}>
+            <Plus size={18} />زبون جديد
           </button>
         </div>
       </div>
 
-      {/* Error */}
       {error && <div className={styles.errorBanner}>⚠️ {error}</div>}
 
-      {/* Table */}
+      {activeForm && (
+        <div className={styles.formCard}>
+          <h3 className={styles.formCardTitle}>
+            {isEditing ? <><Pencil size={18} />تعديل زبون</> : <><Plus size={18} />إضافة زبون جديد</>}
+          </h3>
+          <div className={styles.formGrid}>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>اسم الزبون *</label>
+              <input
+                className={styles.formInput}
+                placeholder="اسم الزبون"
+                value={activeForm.name}
+                onChange={e => setActiveForm({ ...activeForm, name: e.target.value })}
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>رقم الهاتف *</label>
+              <input
+                className={styles.formInput}
+                placeholder="رقم الهاتف"
+                value={activeForm.phone}
+                onChange={e => setActiveForm({ ...activeForm, phone: e.target.value })}
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>المنطقة</label>
+              <AreaSelect
+                value={activeForm.area}
+                onChange={area => setActiveForm({ ...activeForm, area })}
+                placeholder="اختر المنطقة"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>العنوان التفصيلي</label>
+              <input
+                className={styles.formInput}
+                placeholder="العنوان التفصيلي"
+                value={activeForm.address}
+                onChange={e => setActiveForm({ ...activeForm, address: e.target.value })}
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>الفني الأول</label>
+              <TechnicianSelect
+                value={activeForm.tech1}
+                onChange={tech1 => setActiveForm({ ...activeForm, tech1 })}
+                placeholder="اختر أو أدخل الفني"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>الفني الثاني</label>
+              <TechnicianSelect
+                value={activeForm.tech2}
+                onChange={tech2 => setActiveForm({ ...activeForm, tech2 })}
+                placeholder="اختر أو أدخل الفني"
+              />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>الفني الثالث</label>
+              <TechnicianSelect
+                value={activeForm.tech3}
+                onChange={tech3 => setActiveForm({ ...activeForm, tech3 })}
+                placeholder="اختر أو أدخل الفني"
+              />
+            </div>
+            <div className={`${styles.formField} ${styles.fullWidth}`}>
+              <label className={styles.formLabel}><StickyNote size={14} /> ملاحظات</label>
+              <textarea
+                className={styles.formTextarea}
+                placeholder="أضف ملاحظات عن الزبون..."
+                value={activeForm.notes}
+                onChange={e => setActiveForm({ ...activeForm, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className={styles.formCardActions}>
+            <button className={styles.btnSave} onClick={isEditing ? saveEdit : handleAdd} disabled={saving}>
+              <Check size={14} />{saving ? 'جاري الحفظ...' : 'حفظ'}
+            </button>
+            <button className={styles.btnCancel} onClick={cancelForm}>
+              <X size={14} />إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
             <tr>
+              <th>الرمز</th>
               <th>الاسم</th>
               <th>الهاتف</th>
-              <th>العنوان</th>
-              <th>عقد سنوي</th>
-              <th>ملاحظات</th>
+              <th>المنطقة</th>
+              <th>فني 1</th>
+              <th>فني 2</th>
+              <th>فني 3</th>
+              <th>الحالة</th>
               <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {/* Add Row */}
-            {showAddForm && (
-              <tr className={styles.addFormRow}>
+            {customers.map(c => (
+              <tr key={c._id}>
+                <td><span className={styles.customId}>{c.customId}</span></td>
+                <td style={{ fontWeight: 600 }}>{c.name}</td>
+                <td dir="ltr" style={{ textAlign: 'right' }}>{c.phone}</td>
+                <td>{getAreaDisplay(c)}</td>
+                <td>{getTechDisplay(c, 'technician1')}</td>
+                <td>{getTechDisplay(c, 'technician2')}</td>
+                <td>{getTechDisplay(c, 'technician3')}</td>
                 <td>
-                  <input
-                    className={styles.formInput}
-                    placeholder="اسم الزبون *"
-                    value={addForm.name}
-                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <input
-                    className={styles.formInput}
-                    placeholder="رقم الهاتف *"
-                    value={addForm.phone}
-                    onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
-                  />
-                </td>
-                <td>
-                  <input
-                    className={styles.formInput}
-                    placeholder="العنوان"
-                    value={addForm.address}
-                    onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
-                  />
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className={styles.formCheckbox}
-                    checked={addForm.hasAnnualContract}
-                    onChange={(e) =>
-                      setAddForm({ ...addForm, hasAnnualContract: e.target.checked })
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    className={styles.formInput}
-                    placeholder="ملاحظات"
-                    value={addForm.notes}
-                    onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                  />
+                  <span className={`${styles.badge} ${c.isActive ? styles.badgeGreen : styles.badgeGray}`}>
+                    {c.isActive ? 'فعال' : 'غير فعال'}
+                  </span>
                 </td>
                 <td>
                   <div className={styles.actions}>
-                    <button
-                      className={styles.btnSave}
-                      onClick={handleAdd}
-                      disabled={saving}
-                    >
-                      <Check size={14} />
-                      حفظ
+                    <button className={styles.btnSecondary} onClick={() => startEdit(c)} title="تعديل">
+                      <Pencil size={14} />
                     </button>
-                    <button
-                      className={styles.btnCancel}
-                      onClick={() => setShowAddForm(false)}
-                    >
-                      <X size={14} />
+                    <button className={styles.btnDanger} onClick={() => handleDelete(c._id, c.name)} title="حذف">
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </td>
               </tr>
-            )}
-
-            {/* Data Rows */}
-            {customers.map((c) =>
-              editId === c._id ? (
-                <tr key={c._id} className={styles.addFormRow}>
-                  <td>
-                    <input
-                      className={styles.formInput}
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={styles.formInput}
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={styles.formInput}
-                      value={editForm.address}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, address: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      className={styles.formCheckbox}
-                      checked={editForm.hasAnnualContract}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, hasAnnualContract: e.target.checked })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={styles.formInput}
-                      value={editForm.notes}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, notes: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <div className={styles.actions}>
-                      <button
-                        className={styles.btnSave}
-                        onClick={handleSaveEdit}
-                        disabled={saving}
-                      >
-                        <Check size={14} />
-                        حفظ
-                      </button>
-                      <button
-                        className={styles.btnCancel}
-                        onClick={() => setEditId(null)}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={c._id}>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td dir="ltr" style={{ textAlign: 'right' }}>
-                    {c.phone}
-                  </td>
-                  <td>{c.address || '—'}</td>
-                  <td>
-                    <span
-                      className={`${styles.contractBadge} ${
-                        c.hasAnnualContract ? styles.contractYes : styles.contractNo
-                      }`}
-                    >
-                      {c.hasAnnualContract ? '✓ نعم' : 'لا'}
-                    </span>
-                  </td>
-                  <td>{c.notes || '—'}</td>
-                  <td>
-                    <div className={styles.actions}>
-                      <button
-                        className={styles.btnSecondary}
-                        onClick={() => handleStartEdit(c)}
-                        title="تعديل"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        className={styles.btnDanger}
-                        onClick={() => handleDelete(c._id, c.name)}
-                        title="حذف"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ),
-            )}
-
-            {/* Empty */}
-            {customers.length === 0 && !showAddForm && (
+            ))}
+            {customers.length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={9}>
                   <div className={styles.emptyState}>
                     <FileText size={40} />
                     <p>لا يوجد زبائن بعد</p>

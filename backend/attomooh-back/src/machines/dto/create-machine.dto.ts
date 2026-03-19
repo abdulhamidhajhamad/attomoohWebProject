@@ -13,13 +13,25 @@ export class CreateMachineDto {
   @IsOptional()
   technician1?: string;
 
+  @IsString()
+  @IsOptional()
+  technician1Name?: string;
+
   @IsMongoId()
   @IsOptional()
   technician2?: string;
 
+  @IsString()
+  @IsOptional()
+  technician2Name?: string;
+
   @IsMongoId()
   @IsOptional()
   technician3?: string;
+
+  @IsString()
+  @IsOptional()
+  technician3Name?: string;
 
   @IsBoolean()
   @IsOptional()

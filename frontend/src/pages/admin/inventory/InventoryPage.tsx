@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Boxes, Plus, Search, Trash2, Pencil, X, Check, FileText } from 'lucide-react';
+import { Boxes, Plus, Search, Trash2, Pencil, X, Check, FileText, StickyNote } from 'lucide-react';
 import { useInventoryStore } from '../../../shared/store/inventoryStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import type { ApiInventoryItem } from '../../../shared/api/types';
@@ -39,7 +39,7 @@ export default function InventoryPage() {
       {error && <div className={styles.errorBanner}>{error}</div>}
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
-          <thead><tr><th>الرمز</th><th>الاسم</th><th>سعر الشراء</th><th>سعر البيع</th><th>الكمية</th><th>الموقع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>الرمز</th><th>الاسم</th><th>سعر الشراء</th><th>سعر البيع</th><th>الكمية</th><th>الموقع</th><th>ملاحظات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
           <tbody>
             {showAdd && (
               <tr className={styles.addFormRow}>
@@ -49,6 +49,7 @@ export default function InventoryPage() {
                 <td><input className={styles.formInput} type="number" placeholder="0" value={addForm.sellingPrice} onChange={e => setAddForm({ ...addForm, sellingPrice: e.target.value })} /></td>
                 <td><input className={styles.formInput} type="number" placeholder="0" value={addForm.quantity} onChange={e => setAddForm({ ...addForm, quantity: e.target.value })} /></td>
                 <td><input className={styles.formInput} placeholder="الموقع" value={addForm.location} onChange={e => setAddForm({ ...addForm, location: e.target.value })} /></td>
+                <td><input className={styles.formInput} placeholder="ملاحظات" value={addForm.notes} onChange={e => setAddForm({ ...addForm, notes: e.target.value })} /></td>
                 <td>—</td>
                 <td><div className={styles.actions}><button className={styles.btnSave} onClick={handleAdd} disabled={saving}><Check size={14} />حفظ</button><button className={styles.btnCancel} onClick={() => setShowAdd(false)}><X size={14} /></button></div></td>
               </tr>
@@ -61,6 +62,7 @@ export default function InventoryPage() {
                 <td><input className={styles.formInput} type="number" value={editForm.sellingPrice} onChange={e => setEditForm({ ...editForm, sellingPrice: e.target.value })} /></td>
                 <td><input className={styles.formInput} type="number" value={editForm.quantity} onChange={e => setEditForm({ ...editForm, quantity: e.target.value })} /></td>
                 <td><input className={styles.formInput} value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} /></td>
+                <td><input className={styles.formInput} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></td>
                 <td>—</td>
                 <td><div className={styles.actions}><button className={styles.btnSave} onClick={saveEdit} disabled={saving}><Check size={14} />حفظ</button><button className={styles.btnCancel} onClick={() => setEditId(null)}><X size={14} /></button></div></td>
               </tr>
@@ -72,11 +74,12 @@ export default function InventoryPage() {
                 <td>{r.sellingPrice}</td>
                 <td>{r.quantity}</td>
                 <td>{r.location || '—'}</td>
+                <td style={{ maxWidth: 150, fontSize: '0.85rem', color: '#6b7280' }}>{r.notes || '—'}</td>
                 <td><span className={`${styles.badge} ${r.isActive ? styles.badgeGreen : styles.badgeGray}`}>{r.isActive ? 'فعال' : 'غير فعال'}</span></td>
                 <td><div className={styles.actions}><button className={styles.btnSecondary} onClick={() => startEdit(r)} title="تعديل"><Pencil size={14} /></button><button className={styles.btnDanger} onClick={() => handleDel(r._id)} title="حذف"><Trash2 size={14} /></button></div></td>
               </tr>
             ))}
-            {items.length === 0 && !showAdd && <tr><td colSpan={8}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
+            {items.length === 0 && !showAdd && <tr><td colSpan={9}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>

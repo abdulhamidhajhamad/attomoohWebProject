@@ -7,15 +7,15 @@ export class CreateAreaDto {
 
   @IsString()
   @IsNotEmpty()
-  city: string;
-
-  @IsString()
-  @IsNotEmpty()
-  village: string;
+  name: string;
 
   @IsString()
   @IsOptional()
   phonePrefix?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 
   @IsBoolean()
   @IsOptional()

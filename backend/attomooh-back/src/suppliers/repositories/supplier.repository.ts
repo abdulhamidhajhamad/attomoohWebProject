@@ -32,7 +32,7 @@ export class SupplierRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<Supplier>): Promise<SupplierDocument | null> {
-    return this.supplierModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.supplierModel.findByIdAndUpdate(id, data, { new: true }).populate('area').exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<SupplierDocument | null> {

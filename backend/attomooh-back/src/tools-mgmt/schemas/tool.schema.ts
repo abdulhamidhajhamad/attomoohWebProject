@@ -17,8 +17,11 @@ export class Tool {
   @Prop({ default: 0 })
   quantity: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   responsibleTechnician: Types.ObjectId;
+
+  @Prop({ default: '', trim: true })
+  responsibleTechnicianName: string;
 
   @Prop({ default: '', trim: true })
   location: string;

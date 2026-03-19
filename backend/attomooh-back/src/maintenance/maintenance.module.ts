@@ -7,7 +7,7 @@ import {
 import { MaintenanceRepository } from './repositories/maintenance.repository.js';
 import { MaintenanceService } from './maintenance.service.js';
 import { MaintenanceController } from './maintenance.controller.js';
-import { UserModule } from '../user/user.module.js';
+import { EmployeesModule } from '../employees/employees.module.js';
 import { ServiceOrdersModule } from '../service-orders/service-orders.module.js';
 
 @Module({
@@ -15,7 +15,7 @@ import { ServiceOrdersModule } from '../service-orders/service-orders.module.js'
     MongooseModule.forFeature([
       { name: MaintenanceTask.name, schema: MaintenanceTaskSchema },
     ]),
-    UserModule,
+    EmployeesModule,
     ServiceOrdersModule,
   ],
   controllers: [MaintenanceController],

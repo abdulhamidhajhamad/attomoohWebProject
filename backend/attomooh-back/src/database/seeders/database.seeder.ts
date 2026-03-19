@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User, UserDocument } from '../../user/schemas/user.schema.js';
+import { Employee, EmployeeDocument } from '../../employees/schemas/employee.schema.js';
 import { UserRole } from '../../common/enums/user-role.enum.js';
 import {
   Category,
@@ -15,7 +15,7 @@ export class DatabaseSeeder implements OnModuleInit {
   private readonly logger = new Logger(DatabaseSeeder.name);
 
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Employee.name) private readonly employeeModel: Model<EmployeeDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
     private readonly configService: ConfigService,
@@ -34,16 +34,15 @@ export class DatabaseSeeder implements OnModuleInit {
       'ADMIN_EMAIL',
       'admin@company.com',
     );
-    const existingAdmin = await this.userModel.findOne({ email: adminEmail });
+    const existingAdmin = await this.employeeModel.findOne({ email: adminEmail });
 
     if (existingAdmin) {
-      this.logger.log('Admin user already exists, skipping seed');
+      this.logger.log('Admin employee already exists, skipping seed');
       return;
     }
 
-    const saltRounds = this.configService.get<number>(
-      'BCRYPT_SALT_ROUNDS',
-      10,
+    const saltRounds = Number(
+      this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
     );
     const adminPassword = this.configService.get<string>(
       'ADMIN_PASSWORD',
@@ -51,15 +50,18 @@ export class DatabaseSeeder implements OnModuleInit {
     );
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
-    await this.userModel.create({
+    await this.employeeModel.create({
+      customId: 'EMP-000001',
       name: this.configService.get<string>('ADMIN_NAME', 'Admin'),
       email: adminEmail,
       password: hashedPassword,
       role: UserRole.ADMIN,
       phone: this.configService.get<string>('ADMIN_PHONE', '05484584'),
+      jobTitle: 'System Administrator',
+      isActive: true,
     });
 
-    this.logger.log('Admin user seeded successfully');
+    this.logger.log('Admin employee seeded successfully');
   }
 
   /* ── Technicians Seed ── */
@@ -71,33 +73,40 @@ export class DatabaseSeeder implements OnModuleInit {
 
     const technicians = [
       {
+        customId: 'EMP-000002',
         name: 'abo hane',
         email: 'abohane@company.com',
         password: 'Tech@123',
         phone: '0500000001',
+        jobTitle: 'Technician',
       },
       {
+        customId: 'EMP-000003',
         name: 'abdalwahab',
         email: 'abdalwahab@company.com',
         password: 'Tech@123',
         phone: '0500000002',
+        jobTitle: 'Technician',
       },
     ];
 
     for (const tech of technicians) {
-      const exists = await this.userModel.findOne({ email: tech.email });
+      const exists = await this.employeeModel.findOne({ email: tech.email });
       if (exists) {
         this.logger.log(`Technician "${tech.name}" already exists, skipping`);
         continue;
       }
 
       const hashedPassword = await bcrypt.hash(tech.password, saltRounds);
-      await this.userModel.create({
+      await this.employeeModel.create({
+        customId: tech.customId,
         name: tech.name,
         email: tech.email,
         password: hashedPassword,
         role: UserRole.TECHNICIAN,
         phone: tech.phone,
+        jobTitle: tech.jobTitle,
+        isActive: true,
       });
       this.logger.log(`Technician "${tech.name}" seeded successfully`);
     }

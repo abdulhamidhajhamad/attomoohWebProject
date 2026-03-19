@@ -10,7 +10,6 @@ import { CommonModule } from './common/common.module.js';
 import { DatabaseModule } from './database/database.module.js';
 
 // ── Core Modules ──
-import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ProductsModule } from './products/products.module.js';
@@ -70,7 +69,6 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
     DatabaseModule,
 
     // ── Core Modules ──
-    UserModule,
     AuthModule,
     CategoriesModule,
     ProductsModule,

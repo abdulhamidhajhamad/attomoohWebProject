@@ -20,7 +20,7 @@ export class Vehicle {
   @Prop({ default: '', trim: true })
   responsiblePerson: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   responsibleUser: Types.ObjectId;
 
   @Prop({ default: true })

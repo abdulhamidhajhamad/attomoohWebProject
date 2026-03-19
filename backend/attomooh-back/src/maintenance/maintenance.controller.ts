@@ -17,7 +17,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Types } from 'mongoose';
 import { Request } from 'express';
 import { MaintenanceService } from './maintenance.service.js';
-import { UserService } from '../user/user.service.js';
+import { EmployeesService } from '../employees/employees.service.js';
 import {
   CreateTaskDto,
   AssignTaskDto,
@@ -46,7 +46,7 @@ interface AuthenticatedRequest extends Request {
 export class MaintenanceController {
   constructor(
     private readonly maintenanceService: MaintenanceService,
-    private readonly userService: UserService,
+    private readonly employeesService: EmployeesService,
   ) {}
 
   /* ═══════════════════════════════════
@@ -97,7 +97,7 @@ export class MaintenanceController {
   @Get('technicians')
   @Roles(UserRole.ADMIN)
   async getTechnicians() {
-    return await this.userService.findTechnicians();
+    return await this.employeesService.findTechnicians();
   }
 
   /**
@@ -203,7 +203,7 @@ export class MaintenanceController {
   @Get('my-status')
   @Roles(UserRole.TECHNICIAN)
   async getMyStatus(@Req() req: AuthenticatedRequest) {
-    const user = await this.userService.findById(req.user._id);
+    const user = await this.employeesService.findById(req.user._id);
     return { technicianStatus: user.technicianStatus };
   }
 
@@ -222,7 +222,7 @@ export class MaintenanceController {
         `Invalid status. Must be one of: ${Object.values(TechnicianStatus).join(', ')}`,
       );
     }
-    const user = await this.userService.updateTechnicianStatus(
+    const user = await this.employeesService.updateTechnicianStatus(
       req.user._id,
       status as TechnicianStatus,
     );

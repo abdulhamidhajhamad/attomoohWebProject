@@ -9,7 +9,7 @@ import { ServiceOrderRepository } from './repositories/service-order.repository.
 import { CounterRepository } from './repositories/counter.repository.js';
 import { ServiceOrdersService } from './service-orders.service.js';
 import { ServiceOrdersController } from './service-orders.controller.js';
-import { UserModule } from '../user/user.module.js';
+import { EmployeesModule } from '../employees/employees.module.js';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { UserModule } from '../user/user.module.js';
       { name: ServiceOrder.name, schema: ServiceOrderSchema },
       { name: Counter.name, schema: CounterSchema },
     ]),
-    UserModule,
+    EmployeesModule,
   ],
   controllers: [ServiceOrdersController],
   providers: [ServiceOrdersService, ServiceOrderRepository, CounterRepository],

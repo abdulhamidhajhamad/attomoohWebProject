@@ -2,11 +2,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { Truck, Plus, Search, Trash2, Pencil, X, Check, FileText, StickyNote } from 'lucide-react';
 import { useSuppliersStore } from '../../../shared/store/suppliersStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
+import { AreaSelect, EMPTY_AREA } from '../../../shared/ui/AreaSelect';
+import type { AreaValue } from '../../../shared/ui/AreaSelect';
 import type { ApiSupplier } from '../../../shared/api/types';
 import styles from '../shared/CrudPage.module.css';
 
-interface SupplierForm { name: string; phone: string; address: string; notes: string; }
-const EMPTY: SupplierForm = { name: '', phone: '', address: '', notes: '' };
+interface SupplierForm { name: string; phone: string; area: AreaValue; address: string; notes: string; }
+const EMPTY: SupplierForm = { name: '', phone: '', area: { ...EMPTY_AREA }, address: '', notes: '' };
 
 export default function SuppliersPage() {
   const { items, loading, error, fetchAll, createItem, updateItem, deleteItem, clearError } = useSuppliersStore();
@@ -22,19 +24,44 @@ export default function SuppliersPage() {
   const handleAdd = useCallback(async () => {
     if (!addForm.name.trim()) return;
     setSaving(true);
-    try { await createItem(addForm as unknown as Record<string, unknown>); setAddForm({ ...EMPTY }); setShowAdd(false); } catch { /* store */ } finally { setSaving(false); }
+    try {
+      const payload = {
+        name: addForm.name,
+        phone: addForm.phone,
+        area: addForm.area.id || undefined,
+        address: addForm.address,
+        notes: addForm.notes,
+      };
+      await createItem(payload as unknown as Record<string, unknown>);
+      setAddForm({ ...EMPTY });
+      setShowAdd(false);
+    } catch { /* store */ } finally { setSaving(false); }
   }, [addForm, createItem]);
 
   const startEdit = useCallback((r: ApiSupplier) => {
     setEditId(r._id);
-    setEditForm({ name: r.name, phone: r.phone, address: r.address, notes: r.notes });
+    let areaValue: AreaValue = { ...EMPTY_AREA };
+    if (r.area && typeof r.area === 'object' && '_id' in r.area && 'name' in r.area) {
+      areaValue = { id: (r.area as { _id: string })._id, name: (r.area as { name: string }).name };
+    }
+    setEditForm({ name: r.name, phone: r.phone, area: areaValue, address: r.address, notes: r.notes });
     setShowAdd(false);
   }, []);
 
   const saveEdit = useCallback(async () => {
     if (!editId) return;
     setSaving(true);
-    try { await updateItem(editId, editForm as unknown as Record<string, unknown>); setEditId(null); } catch { /* store */ } finally { setSaving(false); }
+    try {
+      const payload = {
+        name: editForm.name,
+        phone: editForm.phone,
+        area: editForm.area.id || null,
+        address: editForm.address,
+        notes: editForm.notes,
+      };
+      await updateItem(editId, payload as unknown as Record<string, unknown>);
+      setEditId(null);
+    } catch { /* store */ } finally { setSaving(false); }
   }, [editId, editForm, updateItem]);
 
   const handleDel = useCallback(async (id: string) => {
@@ -42,7 +69,7 @@ export default function SuppliersPage() {
     try { await deleteItem(id); } catch { /* store */ }
   }, [deleteItem]);
 
-  const areaName = (a: unknown) => (a && typeof a === 'object' && 'city' in (a as Record<string, unknown>)) ? (a as { city: string }).city : '—';
+  const areaName = (a: unknown) => (a && typeof a === 'object' && 'name' in (a as Record<string, unknown>)) ? (a as { name: string }).name : '—';
 
   if (loading && items.length === 0) return <div className={styles.page}><LoadingSpinner /></div>;
 
@@ -79,6 +106,14 @@ export default function SuppliersPage() {
             <div className={styles.formField}>
               <label className={styles.formLabel}>الهاتف</label>
               <input className={styles.formInput} placeholder="رقم الهاتف" value={activeForm.phone} onChange={e => setActiveForm({ ...activeForm, phone: e.target.value })} />
+            </div>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>المنطقة</label>
+              <AreaSelect
+                value={activeForm.area}
+                onChange={area => setActiveForm({ ...activeForm, area })}
+                placeholder="اختر المنطقة"
+              />
             </div>
             <div className={styles.formField}>
               <label className={styles.formLabel}>العنوان</label>

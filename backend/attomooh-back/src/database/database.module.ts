@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../user/schemas/user.schema.js';
+import { Employee, EmployeeSchema } from '../employees/schemas/employee.schema.js';
 import {
   Category,
   CategorySchema,
@@ -10,7 +10,7 @@ import { DatabaseSeeder } from './seeders/database.seeder.js';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
+      { name: Employee.name, schema: EmployeeSchema },
       { name: Category.name, schema: CategorySchema },
     ]),
   ],

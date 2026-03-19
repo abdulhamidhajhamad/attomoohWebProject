@@ -10,7 +10,7 @@ import {
   MaintenanceTask,
   MaintenanceTaskDocument,
 } from './schemas/maintenance-task.schema.js';
-import { UserService } from '../user/user.service.js';
+import { EmployeesService } from '../employees/employees.service.js';
 import { ServiceOrderRepository } from '../service-orders/repositories/service-order.repository.js';
 import { CreateTaskDto } from './dto/create-task.dto.js';
 import { UpdateTaskDto } from './dto/update-task.dto.js';
@@ -24,7 +24,7 @@ import { TechnicianStatus } from '../common/enums/technician-status.enum.js';
 export class MaintenanceService {
   constructor(
     private readonly maintenanceRepo: MaintenanceRepository,
-    private readonly userService: UserService,
+    private readonly employeesService: EmployeesService,
     private readonly serviceOrderRepo: ServiceOrderRepository,
   ) {}
 
@@ -78,7 +78,7 @@ export class MaintenanceService {
 
     // If admin assigns a technician immediately
     if (dto.assignedTo) {
-      const tech = await this.userService.findById(
+      const tech = await this.employeesService.findById(
         new Types.ObjectId(dto.assignedTo),
       );
       if (tech.role !== UserRole.TECHNICIAN) {
@@ -118,7 +118,7 @@ export class MaintenanceService {
     if (dto.scheduledEndTime !== undefined) updateData.scheduledEndTime = dto.scheduledEndTime;
 
     if (dto.assignedTo !== undefined) {
-      const tech = await this.userService.findById(
+      const tech = await this.employeesService.findById(
         new Types.ObjectId(dto.assignedTo),
       );
       if (tech.role !== UserRole.TECHNICIAN) {
@@ -157,7 +157,7 @@ export class MaintenanceService {
       );
     }
 
-    const tech = await this.userService.findById(
+    const tech = await this.employeesService.findById(
       new Types.ObjectId(dto.technicianId),
     );
     if (tech.role !== UserRole.TECHNICIAN) {
@@ -184,7 +184,7 @@ export class MaintenanceService {
 
     // If technician was working, set them back to available
     if (task.assignedTo && task.status === TaskStatus.IN_PROGRESS) {
-      await this.userService.updateTechnicianStatus(
+      await this.employeesService.updateTechnicianStatus(
         task.assignedTo,
         TechnicianStatus.AVAILABLE,
       );
@@ -228,7 +228,7 @@ export class MaintenanceService {
     } as Partial<MaintenanceTask>);
 
     // Update technician status
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.ON_TASK,
     );
@@ -265,7 +265,7 @@ export class MaintenanceService {
     } as Partial<MaintenanceTask>);
 
     // Technician is no longer actively working
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.AVAILABLE,
     );
@@ -299,7 +299,7 @@ export class MaintenanceService {
       timeLogs,
     } as Partial<MaintenanceTask>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.ON_TASK,
     );
@@ -347,7 +347,7 @@ export class MaintenanceService {
       },
     } as Partial<MaintenanceTask>);
 
-    await this.userService.updateTechnicianStatus(
+    await this.employeesService.updateTechnicianStatus(
       technicianId,
       TechnicianStatus.AVAILABLE,
     );

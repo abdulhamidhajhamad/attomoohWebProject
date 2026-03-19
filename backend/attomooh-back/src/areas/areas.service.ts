@@ -18,9 +18,9 @@ export class AreasService {
     const customId = dto.customId || (await this.idGenerator.generateId(IdPrefix.AREA));
     return this.areaRepo.create({
       customId,
-      city: dto.city,
-      village: dto.village,
+      name: dto.name,
       phonePrefix: dto.phonePrefix ?? '',
+      notes: dto.notes ?? '',
       isActive: dto.isActive ?? true,
     });
   }
