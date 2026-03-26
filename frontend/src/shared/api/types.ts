@@ -595,3 +595,20 @@ export interface ApiMachineReception {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ═══════════════════════════════════
+   Machine Delivery (تسليم الآلات)
+   ═══════════════════════════════════ */
+
+export interface ApiMachineDelivery {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  customerName: string;
+  deliveryDate: string;
+  notes: string;
+  deliveredBy: ApiEmployee | string | null;
+  createdAt: string;
+  updatedAt: string;
+}

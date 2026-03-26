@@ -26,7 +26,7 @@ export class MachineDelivery {
   @Prop({ default: '' })
   notes: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   deliveredBy: Types.ObjectId;
 
   createdAt: Date;
