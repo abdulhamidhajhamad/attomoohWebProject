@@ -4,7 +4,8 @@ import type { ApiCustomerCall } from '../types';
 
 export const customerCallService = {
   async getAll(search?: string): Promise<ApiCustomerCall[]> {
-    const url = search ? `${ENDPOINTS.CUSTOMER_CALL.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.CUSTOMER_CALL.BASE;
+    const q = search?.trim();
+    const url = q ? `${ENDPOINTS.CUSTOMER_CALL.BASE}?search=${encodeURIComponent(q)}` : ENDPOINTS.CUSTOMER_CALL.BASE;
     return httpClient.get<ApiCustomerCall[]>(url, true);
   },
   async getById(id: string): Promise<ApiCustomerCall> {

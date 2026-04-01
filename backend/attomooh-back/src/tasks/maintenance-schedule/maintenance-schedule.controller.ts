@@ -16,9 +16,9 @@ export class MaintenanceScheduleController {
 
   @Post() @HttpCode(HttpStatus.CREATED) async create(@Body() dto: CreateMaintenanceScheduleDto) { return this.svc.create(dto); }
 
-  @Get() async findAll(@Query('from') from?: string, @Query('to') to?: string) {
+  @Get() async findAll(@Query('from') from?: string, @Query('to') to?: string, @Query('search') search?: string) {
     if (from && to) return this.svc.findByDateRange(new Date(from), new Date(to));
-    return this.svc.findAll();
+    return this.svc.findAll(search);
   }
 
   @Get(':id') async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) { return this.svc.findById(id); }

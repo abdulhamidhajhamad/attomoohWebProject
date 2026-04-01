@@ -15,14 +15,16 @@ export class MaintenanceScheduleService {
       machineReception: new Types.ObjectId(dto.machineReception),
       machineName: dto.machineName ?? '',
       machineDetails: dto.machineDetails ?? '',
-      technician: dto.technician ? new Types.ObjectId(dto.technician) : undefined,
+      technician: dto.technician ? new Types.ObjectId(dto.technician) : null,
       technicianName: dto.technicianName ?? '',
       scheduledDate: new Date(dto.scheduledDate),
-      scheduledTime: dto.scheduledTime ?? '',
+      scheduledTime: dto.scheduledTime,
     });
   }
 
-  async findAll(): Promise<MaintenanceScheduleDocument[]> { return this.repo.findAll(); }
+  async findAll(search?: string): Promise<MaintenanceScheduleDocument[]> {
+    return this.repo.findAll(search);
+  }
 
   async findByDateRange(from: Date, to: Date): Promise<MaintenanceScheduleDocument[]> { return this.repo.findByDateRange(from, to); }
 
@@ -34,34 +36,75 @@ export class MaintenanceScheduleService {
 
   async update(id: Types.ObjectId, dto: UpdateMaintenanceScheduleDto): Promise<MaintenanceScheduleDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.technician !== undefined) data.technician = dto.technician ? new Types.ObjectId(dto.technician) : undefined;
-    if (dto.rescheduledTechnician !== undefined) data.rescheduledTechnician = dto.rescheduledTechnician ? new Types.ObjectId(dto.rescheduledTechnician) : undefined;
+
+    if (dto.machineReception !== undefined) {
+      data.machineReception = new Types.ObjectId(dto.machineReception);
+    }
+
+    if (dto.technician !== undefined || dto.technicianName !== undefined) {
+      if (dto.technician) {
+        data.technician = new Types.ObjectId(dto.technician);
+        if (dto.technicianName === undefined) data.technicianName = '';
+      } else if (dto.technicianName && dto.technicianName.trim()) {
+        data.technician = null;
+      } else if (dto.technician === '' || dto.technicianName === '') {
+        data.technician = null;
+        data.technicianName = '';
+      }
+    }
+
+    if (dto.rescheduledTechnician !== undefined || dto.rescheduledTechnicianName !== undefined) {
+      if (dto.rescheduledTechnician) {
+        data.rescheduledTechnician = new Types.ObjectId(dto.rescheduledTechnician);
+        if (dto.rescheduledTechnicianName === undefined) data.rescheduledTechnicianName = '';
+      } else if (dto.rescheduledTechnicianName && dto.rescheduledTechnicianName.trim()) {
+        data.rescheduledTechnician = null;
+      } else if (dto.rescheduledTechnician === '' || dto.rescheduledTechnicianName === '') {
+        data.rescheduledTechnician = null;
+        data.rescheduledTechnicianName = '';
+      }
+    }
+
     if (dto.scheduledDate !== undefined) data.scheduledDate = new Date(dto.scheduledDate);
-    if (dto.rescheduledDate !== undefined) data.rescheduledDate = dto.rescheduledDate ? new Date(dto.rescheduledDate) : undefined;
+    if (dto.rescheduledDate !== undefined) data.rescheduledDate = dto.rescheduledDate ? new Date(dto.rescheduledDate) : null;
+
     const u = await this.repo.updateById(id, data as any);
     if (!u) throw new NotFoundException('Maintenance schedule not found');
     return u;
   }
 
   async reschedule(id: Types.ObjectId, dto: UpdateMaintenanceScheduleDto): Promise<MaintenanceScheduleDocument> {
-    const d = await this.findById(id);
-    d.status = ScheduleStatus.RESCHEDULED;
-    if (dto.rescheduledTechnician) d.rescheduledTechnician = new Types.ObjectId(dto.rescheduledTechnician);
-    if (dto.rescheduledDate) d.rescheduledDate = new Date(dto.rescheduledDate);
-    if (dto.rescheduledTime !== undefined) d.rescheduledTime = dto.rescheduledTime;
-    if (dto.rescheduleReason !== undefined) d.rescheduleReason = dto.rescheduleReason;
-    return d.save();
+    const data: Record<string, unknown> = {
+      status: ScheduleStatus.RESCHEDULED,
+    };
+
+    if (dto.rescheduledTechnician) {
+      data.rescheduledTechnician = new Types.ObjectId(dto.rescheduledTechnician);
+      data.rescheduledTechnicianName = '';
+    } else if (dto.rescheduledTechnicianName && dto.rescheduledTechnicianName.trim()) {
+      data.rescheduledTechnician = null;
+      data.rescheduledTechnicianName = dto.rescheduledTechnicianName;
+    }
+
+    if (dto.rescheduledDate) data.rescheduledDate = new Date(dto.rescheduledDate);
+    if (dto.rescheduledTime !== undefined) data.rescheduledTime = dto.rescheduledTime;
+    if (dto.rescheduleReason !== undefined) data.rescheduleReason = dto.rescheduleReason;
+
+    const updated = await this.repo.updateById(id, data as any);
+    if (!updated) throw new NotFoundException('Maintenance schedule not found');
+    return updated;
   }
 
   async cancel(id: Types.ObjectId, reason: string): Promise<MaintenanceScheduleDocument> {
-    const d = await this.findById(id);
-    d.status = ScheduleStatus.CANCELLED;
-    d.cancellationReason = reason ?? '';
-    return d.save();
+    const updated = await this.repo.updateById(id, {
+      status: ScheduleStatus.CANCELLED,
+      cancellationReason: reason ?? '',
+    });
+    if (!updated) throw new NotFoundException('Maintenance schedule not found');
+    return updated;
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
-    const d = await this.repo.deleteById(id);
-    if (!d) throw new NotFoundException('Maintenance schedule not found');
+    await this.repo.deleteById(id);
   }
 }

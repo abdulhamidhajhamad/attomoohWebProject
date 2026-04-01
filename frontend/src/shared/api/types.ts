@@ -698,3 +698,100 @@ export interface ApiMachineInstallation {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ═══════════════════════════════════
+   Machine Production (إنتاج الآلات)
+   ═══════════════════════════════════ */
+
+export interface ApiMachineProduction {
+  _id: string;
+  customId: string;
+  machineName: string;
+  machineDetails: string;
+  machineNameAndDetails: string;
+  date: string;
+  pauseReason: string;
+  technician: ApiEmployee | string | null;
+  technicianName: string;
+  productionDurationMs: number;
+  materialsAndParts: ApiInspectionSparePart[];
+  readyForDelivery: boolean;
+  technicianFee: number;
+  companyFee: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Transport (النقل)
+   ═══════════════════════════════════ */
+
+export interface ApiTransport {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  date: string;
+  time: string;
+  pauseReason: string;
+  logistic: ApiEmployee | string | null;
+  logisticName: string;
+  logisticReport: string;
+  transportDurationMs: number;
+  readyForDelivery: boolean;
+  logisticFee: number;
+  companyFee: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Customer Call (الاتصال الهاتفي)
+   ═══════════════════════════════════ */
+
+export interface ApiCustomerCall {
+  _id: string;
+  customer: ApiCustomer | string | null;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  machine: ApiMachine | string | null;
+  machineName: string;
+  machineDetails: string;
+  warranty: boolean;
+  date: string;
+  time: string;
+  customerProblemDesc: string;
+  solution: string;
+  notes: string;
+  receivedBy: ApiEmployee | string | null;
+  receivedByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Maintenance Schedule (جدولة الصيانة)
+   ═══════════════════════════════════ */
+
+export type ApiScheduleStatus = 'scheduled' | 'rescheduled' | 'cancelled';
+
+export interface ApiMaintenanceSchedule {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  technician: ApiEmployee | string | null;
+  technicianName: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  status: ApiScheduleStatus;
+  rescheduledTechnician: ApiEmployee | string | null;
+  rescheduledTechnicianName: string;
+  rescheduledDate: string | null;
+  rescheduledTime: string;
+  rescheduleReason: string;
+  cancellationReason: string;
+  createdAt: string;
+  updatedAt: string;
+}

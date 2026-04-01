@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -35,8 +36,8 @@ export class MachineProductionController {
   }
 
   @Get()
-  async findAll() {
-    return this.svc.findAll();
+  async findAll(@Query('search') search?: string) {
+    return this.svc.findAll(search);
   }
 
   @Get(':id')

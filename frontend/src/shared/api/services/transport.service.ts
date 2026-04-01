@@ -4,7 +4,7 @@ import type { ApiTransport } from '../types';
 
 export const transportService = {
   async getAll(search?: string): Promise<ApiTransport[]> {
-    const url = search ? `${ENDPOINTS.TRANSPORT.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.TRANSPORT.BASE;
+    const url = search?.trim() ? `${ENDPOINTS.TRANSPORT.BASE}?search=${encodeURIComponent(search.trim())}` : ENDPOINTS.TRANSPORT.BASE;
     return httpClient.get<ApiTransport[]>(url, true);
   },
   async getById(id: string): Promise<ApiTransport> {
@@ -23,7 +23,7 @@ export const transportService = {
     return httpClient.post<ApiTransport>(ENDPOINTS.TRANSPORT.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiTransport> {
-    return httpClient.post<ApiTransport>(ENDPOINTS.TRANSPORT.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiTransport>(ENDPOINTS.TRANSPORT.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiTransport> {
     return httpClient.post<ApiTransport>(ENDPOINTS.TRANSPORT.RESUME(id), undefined, true);

@@ -9,13 +9,14 @@ export class MaintenanceSchedule {
   @Prop({ type: Types.ObjectId, ref: 'MachineReception', required: true }) machineReception: Types.ObjectId;
   @Prop({ default: '' }) machineName: string;
   @Prop({ default: '' }) machineDetails: string;
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null }) technician: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) technician: Types.ObjectId | null;
   @Prop({ default: '' }) technicianName: string;
   @Prop({ type: Date, required: true }) scheduledDate: Date;
   @Prop({ default: '' }) scheduledTime: string;
   @Prop({ enum: ScheduleStatus, default: ScheduleStatus.SCHEDULED }) status: ScheduleStatus;
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null }) rescheduledTechnician: Types.ObjectId;
-  @Prop({ type: Date, default: null }) rescheduledDate: Date;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) rescheduledTechnician: Types.ObjectId | null;
+  @Prop({ default: '' }) rescheduledTechnicianName: string;
+  @Prop({ type: Date, default: null }) rescheduledDate: Date | null;
   @Prop({ default: '' }) rescheduledTime: string;
   @Prop({ default: '' }) rescheduleReason: string;
   @Prop({ default: '' }) cancellationReason: string;

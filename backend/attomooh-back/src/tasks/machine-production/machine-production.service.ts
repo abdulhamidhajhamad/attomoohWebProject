@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { MachineProductionRepository } from './repositories/machine-production.repository.js';
 import { MachineProductionDocument } from './schemas/machine-production.schema.js';
@@ -17,23 +17,38 @@ export class MachineProductionService {
   async create(
     dto: CreateMachineProductionDto,
   ): Promise<MachineProductionDocument> {
-    const customId = await this.idGenerator.generateId(IdPrefix.PRODUCTION);
+    const customId = dto.customId?.trim() || (await this.idGenerator.generateId(IdPrefix.PRODUCTION));
+    const machineName = dto.machineName?.trim() ?? '';
+    const machineDetails = dto.machineDetails?.trim() ?? '';
+    const machineNameAndDetails = dto.machineNameAndDetails?.trim() || [machineName, machineDetails].filter(Boolean).join(' - ');
+
+    if (!machineNameAndDetails) {
+      throw new BadRequestException('Machine name/details is required');
+    }
+
     return this.repo.create({
       customId,
-      machineNameAndDetails: dto.machineNameAndDetails,
+      machineName,
+      machineDetails,
+      machineNameAndDetails,
+      pauseReason: dto.pauseReason ?? '',
       technician: dto.technician
         ? new Types.ObjectId(dto.technician)
         : undefined,
       technicianName: dto.technicianName ?? '',
-      materialsAndParts: (dto.materialsAndParts ?? []) as any,
+      materialsAndParts: (dto.materialsAndParts ?? []).map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      })) as any,
       readyForDelivery: dto.readyForDelivery ?? false,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
     });
   }
 
-  async findAll(): Promise<MachineProductionDocument[]> {
-    return this.repo.findAll();
+  async findAll(search?: string): Promise<MachineProductionDocument[]> {
+    return this.repo.findAll({ search });
   }
 
   async findById(
@@ -50,10 +65,39 @@ export class MachineProductionService {
     dto: UpdateMachineProductionDto,
   ): Promise<MachineProductionDocument> {
     const data: Record<string, unknown> = { ...dto };
+
+    if (dto.customId !== undefined) data.customId = dto.customId.trim();
+
     if (dto.technician !== undefined)
       data.technician = dto.technician
         ? new Types.ObjectId(dto.technician)
-        : undefined;
+        : null;
+
+    if (dto.technician !== undefined && dto.technician) data.technicianName = '';
+    if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
+
+    if (dto.materialsAndParts !== undefined) {
+      data.materialsAndParts = dto.materialsAndParts.map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      }));
+    }
+
+    const hasName = dto.machineName !== undefined;
+    const hasDetails = dto.machineDetails !== undefined;
+    const hasCombined = dto.machineNameAndDetails !== undefined;
+
+    if (hasName || hasDetails || hasCombined) {
+      const current = await this.findById(id);
+      const machineName = (dto.machineName ?? current.machineName ?? '').trim();
+      const machineDetails = (dto.machineDetails ?? current.machineDetails ?? '').trim();
+      const combined = dto.machineNameAndDetails?.trim() || [machineName, machineDetails].filter(Boolean).join(' - ');
+      data.machineName = machineName;
+      data.machineDetails = machineDetails;
+      data.machineNameAndDetails = combined;
+    }
+
     const u = await this.repo.updateById(id, data as any);
     if (!u)
       throw new NotFoundException('Production record not found');
@@ -112,9 +156,7 @@ export class MachineProductionService {
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
-    const d = await this.repo.deleteById(id);
-    if (!d)
-      throw new NotFoundException('Production record not found');
+    await this.repo.deleteById(id);
   }
 
   private calcDuration(

@@ -4,7 +4,7 @@ export class CreateTransportDto {
   @IsMongoId() @IsNotEmpty() machineReception: string;
   @IsString() @IsOptional() machineName?: string;
   @IsString() @IsOptional() machineDetails?: string;
-  @IsString() @IsOptional() time?: string;
+  @IsString() @IsOptional() pauseReason?: string;
   @IsMongoId() @IsOptional() logistic?: string;
   @IsString() @IsOptional() logisticName?: string;
   @IsString() @IsOptional() logisticReport?: string;

@@ -4,7 +4,9 @@ import type { ApiMachineProduction } from '../types';
 
 export const machineProductionService = {
   async getAll(search?: string): Promise<ApiMachineProduction[]> {
-    const url = search ? `${ENDPOINTS.MACHINE_PRODUCTION.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.MACHINE_PRODUCTION.BASE;
+    const url = search?.trim()
+      ? `${ENDPOINTS.MACHINE_PRODUCTION.BASE}?search=${encodeURIComponent(search.trim())}`
+      : ENDPOINTS.MACHINE_PRODUCTION.BASE;
     return httpClient.get<ApiMachineProduction[]>(url, true);
   },
   async getById(id: string): Promise<ApiMachineProduction> {
@@ -23,7 +25,7 @@ export const machineProductionService = {
     return httpClient.post<ApiMachineProduction>(ENDPOINTS.MACHINE_PRODUCTION.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiMachineProduction> {
-    return httpClient.post<ApiMachineProduction>(ENDPOINTS.MACHINE_PRODUCTION.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiMachineProduction>(ENDPOINTS.MACHINE_PRODUCTION.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiMachineProduction> {
     return httpClient.post<ApiMachineProduction>(ENDPOINTS.MACHINE_PRODUCTION.RESUME(id), undefined, true);

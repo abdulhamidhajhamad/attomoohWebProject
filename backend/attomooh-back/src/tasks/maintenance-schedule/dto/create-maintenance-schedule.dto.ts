@@ -7,5 +7,5 @@ export class CreateMaintenanceScheduleDto {
   @IsMongoId() @IsOptional() technician?: string;
   @IsString() @IsOptional() technicianName?: string;
   @IsDateString() @IsNotEmpty() scheduledDate: string;
-  @IsString() @IsOptional() scheduledTime?: string;
+  @IsString() @IsNotEmpty() scheduledTime: string;
 }

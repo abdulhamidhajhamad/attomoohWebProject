@@ -13,7 +13,7 @@ export class TransportService {
     return this.repo.create({
       machineReception: new Types.ObjectId(dto.machineReception),
       machineName: dto.machineName ?? '', machineDetails: dto.machineDetails ?? '',
-      time: dto.time ?? '',
+      pauseReason: dto.pauseReason ?? '',
       logistic: dto.logistic ? new Types.ObjectId(dto.logistic) : undefined,
       logisticName: dto.logisticName ?? '', logisticReport: dto.logisticReport ?? '',
       readyForDelivery: dto.readyForDelivery ?? false,
@@ -21,12 +21,15 @@ export class TransportService {
     });
   }
 
-  async findAll(): Promise<TransportDocument[]> { return this.repo.findAll(); }
+  async findAll(search?: string): Promise<TransportDocument[]> { return this.repo.findAll({ search }); }
   async findById(id: Types.ObjectId): Promise<TransportDocument> { const d = await this.repo.findById(id); if (!d) throw new NotFoundException('Transport not found'); return d; }
 
   async update(id: Types.ObjectId, dto: UpdateTransportDto): Promise<TransportDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.logistic !== undefined) data.logistic = dto.logistic ? new Types.ObjectId(dto.logistic) : undefined;
+    if (dto.machineReception !== undefined) data.machineReception = new Types.ObjectId(dto.machineReception);
+    if (dto.logistic !== undefined) data.logistic = dto.logistic ? new Types.ObjectId(dto.logistic) : null;
+    if (dto.logistic !== undefined && dto.logistic) data.logisticName = '';
+    if (dto.logistic === undefined && dto.logisticName !== undefined) data.logistic = null;
     const u = await this.repo.updateById(id, data as any);
     if (!u) throw new NotFoundException('Transport not found');
     return u;
@@ -42,7 +45,7 @@ export class TransportService {
     return d.save();
   }
 
-  async delete(id: Types.ObjectId): Promise<void> { const d = await this.repo.deleteById(id); if (!d) throw new NotFoundException('Transport not found'); }
+  async delete(id: Types.ObjectId): Promise<void> { await this.repo.deleteById(id); }
 
   private calcDuration(logs: Array<{ action: string; timestamp: Date }>): number {
     let total = 0, start: Date | null = null;

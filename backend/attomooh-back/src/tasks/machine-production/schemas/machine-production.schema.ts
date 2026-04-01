@@ -18,10 +18,13 @@ export type MachineProductionDocument =
 })
 export class MachineProduction {
   @Prop({ unique: true, required: true }) customId: string;
+  @Prop({ default: '' }) machineName: string;
+  @Prop({ default: '' }) machineDetails: string;
   @Prop({ required: true }) machineNameAndDetails: string;
   @Prop({ type: [TimeLog], default: [] }) timeLogs: TimeLog[];
   @Prop({ default: Date.now }) date: Date;
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ default: '' }) pauseReason: string;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   technician: Types.ObjectId;
   @Prop({ default: '' }) technicianName: string;
   @Prop({ default: 0 }) productionDurationMs: number;

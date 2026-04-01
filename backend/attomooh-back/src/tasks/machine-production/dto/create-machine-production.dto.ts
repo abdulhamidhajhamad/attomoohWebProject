@@ -18,7 +18,11 @@ class MaterialPartDto {
 }
 
 export class CreateMachineProductionDto {
-  @IsString() @IsNotEmpty() machineNameAndDetails: string;
+  @IsString() @IsOptional() customId?: string;
+  @IsString() @IsOptional() machineName?: string;
+  @IsString() @IsOptional() machineDetails?: string;
+  @IsString() @IsOptional() machineNameAndDetails?: string;
+  @IsString() @IsOptional() pauseReason?: string;
   @IsMongoId() @IsOptional() technician?: string;
   @IsString() @IsOptional() technicianName?: string;
   @IsArray() @ValidateNested({ each: true }) @Type(() => MaterialPartDto) @IsOptional() materialsAndParts?: MaterialPartDto[];

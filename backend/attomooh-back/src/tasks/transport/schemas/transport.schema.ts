@@ -11,8 +11,9 @@ export class Transport {
   @Prop({ default: '' }) machineDetails: string;
   @Prop({ type: [TimeLog], default: [] }) timeLogs: TimeLog[];
   @Prop({ default: Date.now }) date: Date;
-  @Prop({ default: '' }) time: string;
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null }) logistic: Types.ObjectId;
+  @Prop({ default: () => new Date().toTimeString().slice(0, 5) }) time: string;
+  @Prop({ default: '' }) pauseReason: string;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) logistic: Types.ObjectId;
   @Prop({ default: '' }) logisticName: string;
   @Prop({ default: '' }) logisticReport: string;
   @Prop({ default: 0 }) transportDurationMs: number;

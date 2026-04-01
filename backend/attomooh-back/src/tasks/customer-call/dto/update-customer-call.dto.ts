@@ -6,11 +6,12 @@ export class UpdateCustomerCallDto {
   @IsString() @IsOptional() customerPhone?: string;
   @IsString() @IsOptional() customerAddress?: string;
   @IsMongoId() @IsOptional() machine?: string;
+  @IsString() @IsOptional() machineName?: string;
   @IsString() @IsOptional() machineDetails?: string;
   @IsBoolean() @IsOptional() warranty?: boolean;
-  @IsString() @IsOptional() time?: string;
   @IsString() @IsOptional() customerProblemDesc?: string;
   @IsString() @IsOptional() solution?: string;
   @IsString() @IsOptional() notes?: string;
   @IsMongoId() @IsOptional() receivedBy?: string;
+  @IsString() @IsOptional() receivedByName?: string;
 }

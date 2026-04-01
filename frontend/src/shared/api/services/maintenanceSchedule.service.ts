@@ -4,7 +4,8 @@ import type { ApiMaintenanceSchedule } from '../types';
 
 export const maintenanceScheduleService = {
   async getAll(search?: string): Promise<ApiMaintenanceSchedule[]> {
-    const url = search ? `${ENDPOINTS.MAINTENANCE_SCHEDULE.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.MAINTENANCE_SCHEDULE.BASE;
+    const q = search?.trim();
+    const url = q ? `${ENDPOINTS.MAINTENANCE_SCHEDULE.BASE}?search=${encodeURIComponent(q)}` : ENDPOINTS.MAINTENANCE_SCHEDULE.BASE;
     return httpClient.get<ApiMaintenanceSchedule[]>(url, true);
   },
   async getById(id: string): Promise<ApiMaintenanceSchedule> {

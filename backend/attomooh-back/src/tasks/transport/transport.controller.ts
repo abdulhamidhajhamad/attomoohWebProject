@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Types } from 'mongoose';
 import { TransportService } from './transport.service.js';
@@ -14,7 +14,7 @@ import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe.js';
 export class TransportController {
   constructor(private readonly svc: TransportService) {}
   @Post() @HttpCode(HttpStatus.CREATED) async create(@Body() dto: CreateTransportDto) { return this.svc.create(dto); }
-  @Get() async findAll() { return this.svc.findAll(); }
+  @Get() async findAll(@Query('search') search?: string) { return this.svc.findAll(search); }
   @Get(':id') async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) { return this.svc.findById(id); }
   @Patch(':id') async update(@Param('id', ParseObjectIdPipe) id: Types.ObjectId, @Body() dto: UpdateTransportDto) { return this.svc.update(id, dto); }
   @Patch(':id/start') async start(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) { return this.svc.startWork(id); }
