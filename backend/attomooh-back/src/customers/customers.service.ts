@@ -22,8 +22,11 @@ export class CustomersService {
       name: dto.name,
       phone: dto.phone,
       area: dto.area ? new Types.ObjectId(dto.area) : undefined,
-      address: dto.address ?? '',
-      notes: dto.notes ?? '',
+      address: dto.address?.trim() ?? '',
+      notes: dto.notes?.trim() ?? '',
+      technician1Name: dto.technician1Name?.trim() ?? '',
+      technician2Name: dto.technician2Name?.trim() ?? '',
+      technician3Name: dto.technician3Name?.trim() ?? '',
       technician1: dto.technician1
         ? new Types.ObjectId(dto.technician1)
         : undefined,
@@ -54,21 +57,28 @@ export class CustomersService {
     id: Types.ObjectId,
     dto: UpdateCustomerDto,
   ): Promise<CustomerDocument> {
-    const data: Record<string, unknown> = { ...dto };
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address !== undefined) data.address = dto.address?.trim() ?? '';
+    if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? '';
+    if (dto.technician1Name !== undefined) data.technician1Name = dto.technician1Name?.trim() ?? '';
+    if (dto.technician2Name !== undefined) data.technician2Name = dto.technician2Name?.trim() ?? '';
+    if (dto.technician3Name !== undefined) data.technician3Name = dto.technician3Name?.trim() ?? '';
     if (dto.area !== undefined)
       data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
     if (dto.technician1 !== undefined)
       data.technician1 = dto.technician1
         ? new Types.ObjectId(dto.technician1)
-        : undefined;
+        : null;
     if (dto.technician2 !== undefined)
       data.technician2 = dto.technician2
         ? new Types.ObjectId(dto.technician2)
-        : undefined;
+        : null;
     if (dto.technician3 !== undefined)
       data.technician3 = dto.technician3
         ? new Types.ObjectId(dto.technician3)
-        : undefined;
+        : null;
     const updated = await this.customerRepo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Customer not found');
     return updated;

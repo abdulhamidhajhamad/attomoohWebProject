@@ -28,7 +28,7 @@ export class FinancialDocumentRepository {
   async findByTechnician(technicianId: Types.ObjectId): Promise<FinancialDocumentDocument[]> { return this.findAll({ technician: technicianId }); }
 
   async updateById(id: Types.ObjectId, data: Partial<FinancialDocument>): Promise<FinancialDocumentDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<FinancialDocumentDocument | null> {

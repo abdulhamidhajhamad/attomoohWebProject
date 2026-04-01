@@ -31,7 +31,7 @@ export class AreaRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<Area>): Promise<AreaDocument | null> {
-    return this.areaModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.areaModel.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<AreaDocument | null> {

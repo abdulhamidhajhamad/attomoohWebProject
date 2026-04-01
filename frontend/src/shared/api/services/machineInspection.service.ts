@@ -23,7 +23,7 @@ export const machineInspectionService = {
     return httpClient.post<ApiMachineInspection>(ENDPOINTS.MACHINE_INSPECTION.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiMachineInspection> {
-    return httpClient.post<ApiMachineInspection>(ENDPOINTS.MACHINE_INSPECTION.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiMachineInspection>(ENDPOINTS.MACHINE_INSPECTION.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiMachineInspection> {
     return httpClient.post<ApiMachineInspection>(ENDPOINTS.MACHINE_INSPECTION.RESUME(id), undefined, true);

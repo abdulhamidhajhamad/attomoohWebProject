@@ -69,8 +69,46 @@ export class EmployeesService {
   }
 
   async update(id: Types.ObjectId, dto: UpdateEmployeeDto): Promise<EmployeeDocument> {
-    const data: Record<string, unknown> = { ...dto };
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new NotFoundException('Employee not found');
+
+    const data: Record<string, unknown> = {};
+
+    // Basic fields
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.jobTitle !== undefined) data.jobTitle = dto.jobTitle;
+    if (dto.category !== undefined) data.category = dto.category;
+    if (dto.address !== undefined) data.address = dto.address;
+    if (dto.notes !== undefined) data.notes = dto.notes;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
+    if (dto.technicianStatus !== undefined) data.technicianStatus = dto.technicianStatus;
+
     if (dto.area !== undefined) data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
+
+    // System access: email/role/password
+    if (dto.email !== undefined) {
+      if (dto.email) {
+        const other = await this.repo.findByEmail(dto.email);
+        if (other && other._id.toString() !== id.toString()) {
+          throw new ConflictException('Email already exists');
+        }
+        data.email = dto.email;
+      } else {
+        data.email = null;
+        data.role = null;
+        data.password = null;
+      }
+    }
+
+    if (dto.role !== undefined) {
+      data.role = dto.role;
+    }
+
+    if (dto.password) {
+      data.password = await bcrypt.hash(dto.password, this.SALT_ROUNDS);
+    }
+
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Employee not found');
     return updated;

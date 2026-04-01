@@ -24,7 +24,7 @@ export class MachineReceptionRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<MachineReception>): Promise<MachineReceptionDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true })
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('machine').populate('customer').populate('receivedBy', 'name phone').populate('assignedTo', 'name phone').exec();
   }
 

@@ -42,7 +42,7 @@ export class MachineProductionRepository {
     id: Types.ObjectId,
     data: Partial<MachineProduction>,
   ): Promise<MachineProductionDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
   }
 
   async deleteById(

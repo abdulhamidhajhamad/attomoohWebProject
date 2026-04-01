@@ -11,7 +11,8 @@ export class MachineRepository {
   ) {}
 
   async create(data: Partial<Machine>): Promise<MachineDocument> {
-    return new this.machineModel(data).save();
+    const doc = await new this.machineModel(data).save();
+    return this.findById(doc._id as Types.ObjectId) as Promise<MachineDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<MachineDocument | null> {
@@ -42,7 +43,12 @@ export class MachineRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<Machine>): Promise<MachineDocument | null> {
-    return this.machineModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.machineModel
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('technician1', 'name phone')
+      .populate('technician2', 'name phone')
+      .populate('technician3', 'name phone')
+      .exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<MachineDocument | null> {

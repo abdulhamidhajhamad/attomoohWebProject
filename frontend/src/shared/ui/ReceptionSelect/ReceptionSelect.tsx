@@ -18,29 +18,39 @@ interface ReceptionSelectProps {
   statusFilter?: string[];
 }
 
+const DEFAULT_STATUS_FILTER = ['ready'];
+
 export function ReceptionSelect({
   value,
   onChange,
   placeholder = 'اختر الآلة المستلمة',
   disabled = false,
-  statusFilter = ['ready'],
+  statusFilter = DEFAULT_STATUS_FILTER,
 }: ReceptionSelectProps) {
   const [receptions, setReceptions] = useState<ApiMachineReception[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (receptions.length === 0) {
       setLoading(true);
-      machineReceptionService
-        .getAll()
-        .then((data) => {
-          // Filter by status
+      setError(null);
+      (async () => {
+        try {
+          const canQuerySingleStatus = statusFilter.length === 1;
+          const data = canQuerySingleStatus
+            ? await machineReceptionService.getAll({ status: statusFilter[0] })
+            : await machineReceptionService.getAll();
           const filtered = data.filter(r => statusFilter.includes(r.status));
           setReceptions(filtered);
-        })
-        .catch(() => setReceptions([]))
-        .finally(() => setLoading(false));
+        } catch (e) {
+          setReceptions([]);
+          setError('تعذر تحميل الآلات');
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [receptions.length, statusFilter]);
 
@@ -91,6 +101,8 @@ export function ReceptionSelect({
           <div className={styles.dropdown}>
             {loading ? (
               <div className={styles.dropdownLoading}>جاري التحميل...</div>
+            ) : error ? (
+              <div className={styles.dropdownEmpty} style={{ color: '#ef4444' }}>{error}</div>
             ) : receptions.length === 0 ? (
               <div className={styles.dropdownEmpty}>لا يوجد آلات جاهزة للتسليم</div>
             ) : (

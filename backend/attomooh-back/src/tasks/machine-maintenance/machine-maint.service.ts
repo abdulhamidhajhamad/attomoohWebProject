@@ -11,25 +11,31 @@ export class MachineMaintService {
   constructor(private readonly repo: MachineMaintRepository) {}
 
   async create(dto: CreateMachineMaintDto): Promise<MachineMaintDocument> {
+    const status = dto.status ?? MaintenanceStatus.WAITING;
     return this.repo.create({
       machineReception: new Types.ObjectId(dto.machineReception),
       machineName: dto.machineName ?? '',
       machineDetails: dto.machineDetails ?? '',
-      time: dto.time ?? '',
+      pauseReason: dto.pauseReason ?? '',
       technician: dto.technician
         ? new Types.ObjectId(dto.technician)
         : undefined,
       technicianName: dto.technicianName ?? '',
-      spareParts: (dto.spareParts ?? []) as any,
+      spareParts: (dto.spareParts ?? []).map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      })) as any,
       technicianReport: dto.technicianReport ?? '',
-      readyForDelivery: dto.readyForDelivery ?? false,
+      status,
+      readyForDelivery: status === MaintenanceStatus.READY,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
     });
   }
 
-  async findAll(status?: string): Promise<MachineMaintDocument[]> {
-    return this.repo.findAll(status ? { status } : {});
+  async findAll(status?: string, search?: string): Promise<MachineMaintDocument[]> {
+    return this.repo.findAll({ status, search });
   }
 
   async findById(id: Types.ObjectId): Promise<MachineMaintDocument> {
@@ -43,10 +49,21 @@ export class MachineMaintService {
     dto: UpdateMachineMaintDto,
   ): Promise<MachineMaintDocument> {
     const data: Record<string, unknown> = { ...dto };
+    if (dto.machineReception !== undefined) data.machineReception = new Types.ObjectId(dto.machineReception);
     if (dto.technician !== undefined)
       data.technician = dto.technician
         ? new Types.ObjectId(dto.technician)
-        : undefined;
+        : null;
+    if (dto.technician !== undefined && dto.technician) data.technicianName = '';
+    if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
+    if (dto.status !== undefined) data.readyForDelivery = dto.status === MaintenanceStatus.READY;
+    if (dto.spareParts !== undefined) {
+      data.spareParts = dto.spareParts.map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      }));
+    }
     const u = await this.repo.updateById(id, data as any);
     if (!u) throw new NotFoundException('Maintenance record not found');
     return u;
@@ -101,8 +118,7 @@ export class MachineMaintService {
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
-    const d = await this.repo.deleteById(id);
-    if (!d) throw new NotFoundException('Maintenance record not found');
+    await this.repo.deleteById(id);
   }
 
   private calcDuration(

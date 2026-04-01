@@ -17,28 +17,38 @@ interface ReceptionModalProps {
   statusFilter?: string[];
 }
 
+const DEFAULT_STATUS_FILTER = ['ready'];
+
 export function ReceptionModal({
   isOpen,
   onClose,
   onSelect,
-  statusFilter = ['ready'],
+  statusFilter = DEFAULT_STATUS_FILTER,
 }: ReceptionModalProps) {
   const [receptions, setReceptions] = useState<ApiMachineReception[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      machineReceptionService
-        .getAll()
-        .then((data) => {
-          // Filter by status
+      setError(null);
+      (async () => {
+        try {
+          const canQuerySingleStatus = statusFilter.length === 1;
+          const data = canQuerySingleStatus
+            ? await machineReceptionService.getAll({ status: statusFilter[0] })
+            : await machineReceptionService.getAll();
           const filtered = data.filter(r => statusFilter.includes(r.status));
           setReceptions(filtered);
-        })
-        .catch(() => setReceptions([]))
-        .finally(() => setLoading(false));
+        } catch (e) {
+          setReceptions([]);
+          setError('تعذر تحميل الآلات الجاهزة، حاول مرة أخرى.');
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [isOpen, statusFilter]);
 
@@ -76,6 +86,8 @@ export function ReceptionModal({
         <div className={styles.content}>
           {loading ? (
             <div className={styles.loading}>جاري التحميل...</div>
+          ) : error ? (
+            <div className={styles.empty} style={{ color: '#ef4444' }}>{error}</div>
           ) : receptions.length === 0 ? (
             <div className={styles.empty}>
               <Package size={48} />

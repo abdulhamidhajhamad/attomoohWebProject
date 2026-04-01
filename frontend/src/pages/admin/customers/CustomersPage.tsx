@@ -46,18 +46,30 @@ const getTechDisplay = (customer: ApiCustomer, field: 'technician1' | 'technicia
   return '—';
 };
 
+const pickTechName = (tech: TechnicianValue) => {
+  const name = tech.name.trim();
+  if (!name) return '';
+  return tech.mode === 'manual' || !tech.id ? name : '';
+};
+
+const pickTechId = (tech: TechnicianValue) => {
+  if (tech.mode === 'select' && tech.id) return tech.id;
+  if (tech.mode === 'manual' && tech.name.trim()) return null;
+  return undefined;
+};
+
 const formToPayload = (form: CustomerForm) => ({
   name: form.name,
   phone: form.phone,
   area: form.area.id || undefined,
   address: form.address,
   notes: form.notes,
-  technician1: form.tech1.mode === 'select' && form.tech1.id ? form.tech1.id : undefined,
-  technician1Name: form.tech1.mode === 'manual' ? form.tech1.name : '',
-  technician2: form.tech2.mode === 'select' && form.tech2.id ? form.tech2.id : undefined,
-  technician2Name: form.tech2.mode === 'manual' ? form.tech2.name : '',
-  technician3: form.tech3.mode === 'select' && form.tech3.id ? form.tech3.id : undefined,
-  technician3Name: form.tech3.mode === 'manual' ? form.tech3.name : '',
+  technician1: pickTechId(form.tech1),
+  technician1Name: pickTechName(form.tech1),
+  technician2: pickTechId(form.tech2),
+  technician2Name: pickTechName(form.tech2),
+  technician3: pickTechId(form.tech3),
+  technician3Name: pickTechName(form.tech3),
 });
 
 const customerToForm = (c: ApiCustomer): CustomerForm => {

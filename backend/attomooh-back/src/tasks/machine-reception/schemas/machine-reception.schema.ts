@@ -59,6 +59,9 @@ export class MachineReception {
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   receivedBy: Types.ObjectId;
 
+  @Prop({ default: '' })
+  receivedByName: string;
+
   @Prop({ enum: ReceptionStatus, default: ReceptionStatus.WAITING })
   status: ReceptionStatus;
 

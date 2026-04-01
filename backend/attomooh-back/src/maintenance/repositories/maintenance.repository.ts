@@ -84,7 +84,7 @@ export class MaintenanceRepository {
     data: Partial<MaintenanceTask>,
   ): Promise<MaintenanceTaskDocument | null> {
     return this.taskModel
-      .findByIdAndUpdate(id, data, { new: true })
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
       .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })

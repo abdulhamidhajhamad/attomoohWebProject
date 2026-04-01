@@ -17,6 +17,7 @@ export class MachineReceptionService {
 
   async create(dto: CreateMachineReceptionDto): Promise<MachineReceptionDocument> {
     const customId = dto.customId || (await this.idGen.generateId(IdPrefix.RECEPTION));
+    const receivedBy = dto.receivedBy ? new Types.ObjectId(dto.receivedBy) : undefined;
     return this.repo.create({
       customId,
       machine: dto.machine ? new Types.ObjectId(dto.machine) : undefined,
@@ -32,7 +33,8 @@ export class MachineReceptionService {
       receivedParts: dto.receivedParts ?? '',
       customerProblemDesc: dto.customerProblemDesc ?? '',
       notes: dto.notes ?? '',
-      receivedBy: dto.receivedBy ? new Types.ObjectId(dto.receivedBy) : undefined,
+      receivedBy,
+      receivedByName: receivedBy ? '' : (dto.receivedByName ?? ''),
     });
   }
 
@@ -51,7 +53,19 @@ export class MachineReceptionService {
     const data: Record<string, unknown> = { ...dto };
     if (dto.machine !== undefined) data.machine = dto.machine ? new Types.ObjectId(dto.machine) : undefined;
     if (dto.customer !== undefined) data.customer = dto.customer ? new Types.ObjectId(dto.customer) : undefined;
-    if (dto.receivedBy !== undefined) data.receivedBy = dto.receivedBy ? new Types.ObjectId(dto.receivedBy) : undefined;
+    if (dto.receivedBy !== undefined) {
+      if (dto.receivedBy) {
+        data.receivedBy = new Types.ObjectId(dto.receivedBy);
+        data.receivedByName = '';
+      } else {
+        data.receivedBy = undefined;
+        data.receivedByName = dto.receivedByName ?? '';
+      }
+    }
+    if (dto.receivedByName !== undefined && dto.receivedBy === undefined) {
+      // Update manual name without touching the linked employee
+      data.receivedByName = dto.receivedByName;
+    }
     if (dto.assignedTo !== undefined) data.assignedTo = dto.assignedTo ? new Types.ObjectId(dto.assignedTo) : undefined;
     if (dto.expectedDeliveryDate !== undefined) data.expectedDeliveryDate = dto.expectedDeliveryDate ? new Date(dto.expectedDeliveryDate) : undefined;
     const updated = await this.repo.updateById(id, data as any);

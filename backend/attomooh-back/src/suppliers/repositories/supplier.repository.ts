@@ -11,7 +11,8 @@ export class SupplierRepository {
   ) {}
 
   async create(data: Partial<Supplier>): Promise<SupplierDocument> {
-    return new this.supplierModel(data).save();
+    const doc = await new this.supplierModel(data).save();
+    return this.findById(doc._id as Types.ObjectId) as Promise<SupplierDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<SupplierDocument | null> {
@@ -32,7 +33,10 @@ export class SupplierRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<Supplier>): Promise<SupplierDocument | null> {
-    return this.supplierModel.findByIdAndUpdate(id, data, { new: true }).populate('area').exec();
+    return this.supplierModel
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('area')
+      .exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<SupplierDocument | null> {

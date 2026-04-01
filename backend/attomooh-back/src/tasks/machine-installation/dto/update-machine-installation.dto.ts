@@ -9,9 +9,10 @@ import {
 import { InstallationStatus } from '../../../common/enums/installation-status.enum.js';
 
 export class UpdateMachineInstallationDto {
+  @IsMongoId() @IsOptional() machineReception?: string;
   @IsString() @IsOptional() machineName?: string;
   @IsString() @IsOptional() machineDetails?: string;
-  @IsString() @IsOptional() time?: string;
+  @IsString() @IsOptional() pauseReason?: string;
   @IsMongoId() @IsOptional() technician?: string;
   @IsString() @IsOptional() technicianName?: string;
   @IsString() @IsOptional() technicianReport?: string;

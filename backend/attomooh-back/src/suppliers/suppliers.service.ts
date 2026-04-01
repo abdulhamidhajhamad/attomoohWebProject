@@ -19,10 +19,10 @@ export class SuppliersService {
     return this.supplierRepo.create({
       customId,
       name: dto.name,
-      phone: dto.phone ?? '',
+      phone: dto.phone?.trim() ?? '',
       area: dto.area ? new Types.ObjectId(dto.area) : undefined,
-      address: dto.address ?? '',
-      notes: dto.notes ?? '',
+      address: dto.address?.trim() ?? '',
+      notes: dto.notes?.trim() ?? '',
       isActive: dto.isActive ?? true,
     });
   }
@@ -42,7 +42,12 @@ export class SuppliersService {
   }
 
   async update(id: Types.ObjectId, dto: UpdateSupplierDto): Promise<SupplierDocument> {
-    const data: Record<string, unknown> = { ...dto };
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone?.trim() ?? '';
+    if (dto.address !== undefined) data.address = dto.address?.trim() ?? '';
+    if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? '';
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.area !== undefined) data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
     const updated = await this.supplierRepo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Supplier not found');

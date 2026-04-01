@@ -31,7 +31,7 @@ export class PurchaseOrderRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<PurchaseOrder>): Promise<PurchaseOrderDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<PurchaseOrderDocument | null> {

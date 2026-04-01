@@ -17,6 +17,7 @@ interface EmployeeSelectProps {
   onChange: (value: EmployeeValue) => void;
   placeholder?: string;
   disabled?: boolean;
+  hideManualToggle?: boolean;
 }
 
 export function EmployeeSelect({
@@ -24,6 +25,7 @@ export function EmployeeSelect({
   onChange,
   placeholder = 'اختر الموظف',
   disabled = false,
+  hideManualToggle = false,
 }: EmployeeSelectProps) {
   const [employees, setEmployees] = useState<ApiEmployee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,19 +70,21 @@ export function EmployeeSelect({
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <button
-          type="button"
-          className={`${styles.modeBtn} ${value.mode === 'select' ? styles.active : ''}`}
-          onClick={toggleMode}
-          disabled={disabled}
-          title={value.mode === 'select' ? 'التبديل لإدخال يدوي' : 'التبديل لاختيار من القائمة'}
-        >
-          {value.mode === 'select' ? <User size={14} /> : <Keyboard size={14} />}
-        </button>
-      </div>
+      {!hideManualToggle && (
+        <div className={styles.header}>
+          <button
+            type="button"
+            className={`${styles.modeBtn} ${value.mode === 'select' ? styles.active : ''}`}
+            onClick={toggleMode}
+            disabled={disabled}
+            title={value.mode === 'select' ? 'التبديل لإدخال يدوي' : 'التبديل لاختيار من القائمة'}
+          >
+            {value.mode === 'select' ? <User size={14} /> : <Keyboard size={14} />}
+          </button>
+        </div>
+      )}
 
-      {value.mode === 'select' ? (
+      {value.mode === 'select' || hideManualToggle ? (
         <div className={styles.selectWrapper}>
           <button
             type="button"

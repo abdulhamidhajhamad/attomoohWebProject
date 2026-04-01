@@ -47,7 +47,7 @@ export class IdGeneratorService {
         $inc: { value: 1 },
         $setOnInsert: { prefix, padLength: 7 },
       },
-      { new: true, upsert: true },
+      { returnDocument: 'after', upsert: true },
     );
     const padded = String(doc!.value).padStart(doc!.padLength || 7, '0');
     return `${prefix}${padded}`;

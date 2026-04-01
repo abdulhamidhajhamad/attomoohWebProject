@@ -11,7 +11,7 @@ export class MachineDeliveryRepository {
   async findById(id: Types.ObjectId): Promise<MachineDeliveryDocument | null> { return this.model.findById(id).populate('machineReception').populate('deliveredBy', 'name phone').exec(); }
   async findAll(): Promise<MachineDeliveryDocument[]> { return this.model.find().sort({ createdAt: -1 }).populate('machineReception').populate('deliveredBy', 'name phone').exec(); }
   async updateById(id: Types.ObjectId, data: Partial<MachineDelivery>): Promise<MachineDeliveryDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true })
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('machineReception').populate('deliveredBy', 'name phone').exec();
   }
   async deleteById(id: Types.ObjectId): Promise<MachineDeliveryDocument | null> { return this.model.findByIdAndDelete(id).exec(); }

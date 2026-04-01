@@ -36,8 +36,8 @@ export class MachineInstallationController {
   }
 
   @Get()
-  async findAll(@Query('status') status?: string) {
-    return this.svc.findAll(status);
+  async findAll(@Query('status') status?: string, @Query('search') search?: string) {
+    return this.svc.findAll(status, search);
   }
 
   @Get(':id')

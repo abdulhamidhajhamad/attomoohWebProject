@@ -18,7 +18,7 @@ export class CounterRepository {
     const doc = await this.counterModel.findOneAndUpdate(
       { name: sequenceName },
       { $inc: { value: 1 } },
-      { new: true, upsert: true },
+      { returnDocument: 'after', upsert: true },
     );
     return doc!.value;
   }

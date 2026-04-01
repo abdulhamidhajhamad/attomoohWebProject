@@ -3,8 +3,16 @@ import { ENDPOINTS } from '../endpoints';
 import type { ApiMachineMaint } from '../types';
 
 export const machineMaintenanceService = {
-  async getAll(search?: string): Promise<ApiMachineMaint[]> {
-    const url = search ? `${ENDPOINTS.MACHINE_MAINTENANCE.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.MACHINE_MAINTENANCE.BASE;
+  async getAll(searchOrParams?: string | { search?: string; status?: string }): Promise<ApiMachineMaint[]> {
+    const query = new URLSearchParams();
+    if (typeof searchOrParams === 'string') {
+      if (searchOrParams.trim()) query.set('search', searchOrParams.trim());
+    } else if (searchOrParams) {
+      if (searchOrParams.search?.trim()) query.set('search', searchOrParams.search.trim());
+      if (searchOrParams.status?.trim()) query.set('status', searchOrParams.status.trim());
+    }
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.MACHINE_MAINTENANCE.BASE}?${qs}` : ENDPOINTS.MACHINE_MAINTENANCE.BASE;
     return httpClient.get<ApiMachineMaint[]>(url, true);
   },
   async getById(id: string): Promise<ApiMachineMaint> {
@@ -23,7 +31,7 @@ export const machineMaintenanceService = {
     return httpClient.post<ApiMachineMaint>(ENDPOINTS.MACHINE_MAINTENANCE.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiMachineMaint> {
-    return httpClient.post<ApiMachineMaint>(ENDPOINTS.MACHINE_MAINTENANCE.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiMachineMaint>(ENDPOINTS.MACHINE_MAINTENANCE.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiMachineMaint> {
     return httpClient.post<ApiMachineMaint>(ENDPOINTS.MACHINE_MAINTENANCE.RESUME(id), undefined, true);

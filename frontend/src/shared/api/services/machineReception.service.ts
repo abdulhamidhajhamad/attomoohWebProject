@@ -3,8 +3,18 @@ import { ENDPOINTS } from '../endpoints';
 import type { ApiMachineReception } from '../types';
 
 export const machineReceptionService = {
-  async getAll(search?: string): Promise<ApiMachineReception[]> {
-    const url = search ? `${ENDPOINTS.MACHINE_RECEPTION.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.MACHINE_RECEPTION.BASE;
+  async getAll(searchOrParams?: string | { search?: string; status?: string }): Promise<ApiMachineReception[]> {
+    const query = new URLSearchParams();
+
+    if (typeof searchOrParams === 'string') {
+      if (searchOrParams.trim()) query.set('search', searchOrParams.trim());
+    } else if (searchOrParams) {
+      if (searchOrParams.search?.trim()) query.set('search', searchOrParams.search.trim());
+      if (searchOrParams.status?.trim()) query.set('status', searchOrParams.status.trim());
+    }
+
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.MACHINE_RECEPTION.BASE}?${qs}` : ENDPOINTS.MACHINE_RECEPTION.BASE;
     return httpClient.get<ApiMachineReception[]>(url, true);
   },
   async getById(id: string): Promise<ApiMachineReception> {
@@ -23,7 +33,7 @@ export const machineReceptionService = {
     return httpClient.post<ApiMachineReception>(ENDPOINTS.MACHINE_RECEPTION.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiMachineReception> {
-    return httpClient.post<ApiMachineReception>(ENDPOINTS.MACHINE_RECEPTION.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiMachineReception>(ENDPOINTS.MACHINE_RECEPTION.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiMachineReception> {
     return httpClient.post<ApiMachineReception>(ENDPOINTS.MACHINE_RECEPTION.RESUME(id), undefined, true);

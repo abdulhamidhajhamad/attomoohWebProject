@@ -55,7 +55,7 @@ export default function SuppliersPage() {
       const payload = {
         name: editForm.name,
         phone: editForm.phone,
-        area: editForm.area.id || null,
+        area: editForm.area.id || undefined,
         address: editForm.address,
         notes: editForm.notes,
       };

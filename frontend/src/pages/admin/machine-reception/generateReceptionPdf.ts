@@ -168,10 +168,14 @@ export function generateReceptionPdf(reception: ApiMachineReception): void {
   }
 
   // Received By
-  if (reception.receivedBy && typeof reception.receivedBy === 'object' && 'name' in reception.receivedBy) {
+  const receiverName = reception.receivedBy && typeof reception.receivedBy === 'object' && 'name' in reception.receivedBy
+    ? reception.receivedBy.name
+    : reception.receivedByName;
+
+  if (receiverName) {
     yPos += 15;
     doc.setTextColor(grayColor);
-    addText(`مستلم الآلة: ${reception.receivedBy.name}`, pageWidth - margin, yPos, 10);
+    addText(`مستلم الآلة: ${receiverName}`, pageWidth - margin, yPos, 10);
   }
 
   // Footer - Signature Section

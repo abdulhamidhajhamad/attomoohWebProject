@@ -27,7 +27,7 @@ export class EmployeeRepository {
   }
 
   async updateById(id: Types.ObjectId, data: Partial<Employee>): Promise<EmployeeDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }).populate('area').exec();
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).populate('area').exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<EmployeeDocument | null> {
@@ -50,6 +50,6 @@ export class EmployeeRepository {
   }
 
   async updateTechnicianStatus(id: Types.ObjectId, status: TechnicianStatus): Promise<EmployeeDocument | null> {
-    return this.model.findByIdAndUpdate(id, { technicianStatus: status }, { new: true }).exec();
+    return this.model.findByIdAndUpdate(id, { technicianStatus: status }, { returnDocument: 'after' }).exec();
   }
 }

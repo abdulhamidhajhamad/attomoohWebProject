@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsMongoId, IsEnum, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsMongoId, IsEnum, IsEmail, MinLength } from 'class-validator';
 import { EmployeeCategory } from '../../common/enums/employee-category.enum.js';
 import { UserRole } from '../../common/enums/user-role.enum.js';
 import { TechnicianStatus } from '../../common/enums/technician-status.enum.js';
@@ -16,5 +16,6 @@ export class UpdateEmployeeDto {
   /* ── System access fields ── */
   @IsEmail() @IsOptional() email?: string;
   @IsEnum(UserRole) @IsOptional() role?: UserRole;
+  @IsString() @MinLength(6) @IsOptional() password?: string;
   @IsEnum(TechnicianStatus) @IsOptional() technicianStatus?: TechnicianStatus;
 }

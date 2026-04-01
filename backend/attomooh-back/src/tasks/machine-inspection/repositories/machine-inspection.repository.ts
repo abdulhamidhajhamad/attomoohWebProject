@@ -7,9 +7,37 @@ import { MachineInspection, MachineInspectionDocument } from '../schemas/machine
 export class MachineInspectionRepository {
   constructor(@InjectModel(MachineInspection.name) private readonly model: Model<MachineInspectionDocument>) {}
 
-  async create(data: Partial<MachineInspection>): Promise<MachineInspectionDocument> { return new this.model(data).save(); }
+  async create(data: Partial<MachineInspection>): Promise<MachineInspectionDocument> {
+    const doc = await new this.model(data).save();
+    return this.model
+      .findById(doc._id)
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .orFail()
+      .exec();
+  }
   async findById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findById(id).populate('machineReception').populate('technician', 'name phone').exec(); }
-  async findAll(filter: Record<string, unknown> = {}): Promise<MachineInspectionDocument[]> { return this.model.find(filter).sort({ createdAt: -1 }).populate('machineReception').populate('technician', 'name phone').exec(); }
-  async updateById(id: Types.ObjectId, data: Partial<MachineInspection>): Promise<MachineInspectionDocument | null> { return this.model.findByIdAndUpdate(id, data, { new: true }).exec(); }
+  async findAll(params: { status?: string; search?: string } = {}): Promise<MachineInspectionDocument[]> {
+    const filter: Record<string, unknown> = {};
+    if (params.status) filter.status = params.status;
+    if (params.search) {
+      const rx = new RegExp(params.search, 'i');
+      filter.$or = [
+        { machineName: rx },
+        { machineDetails: rx },
+        { technicianName: rx },
+        { technicianReport: rx },
+        { pauseReason: rx },
+      ];
+    }
+    return this.model.find(filter).sort({ createdAt: -1 }).populate('machineReception').populate('technician', 'name phone').exec();
+  }
+  async updateById(id: Types.ObjectId, data: Partial<MachineInspection>): Promise<MachineInspectionDocument | null> {
+    return this.model
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
+  }
   async deleteById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findByIdAndDelete(id).exec(); }
 }

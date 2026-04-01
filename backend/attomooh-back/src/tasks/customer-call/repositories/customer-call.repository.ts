@@ -9,6 +9,8 @@ export class CustomerCallRepository {
   async create(data: Partial<CustomerCall>): Promise<CustomerCallDocument> { return new this.model(data).save(); }
   async findById(id: Types.ObjectId): Promise<CustomerCallDocument | null> { return this.model.findById(id).populate('customer').populate('machine').populate('receivedBy', 'name phone').exec(); }
   async findAll(): Promise<CustomerCallDocument[]> { return this.model.find().sort({ createdAt: -1 }).populate('customer').populate('machine').populate('receivedBy', 'name phone').exec(); }
-  async updateById(id: Types.ObjectId, data: Partial<CustomerCall>): Promise<CustomerCallDocument | null> { return this.model.findByIdAndUpdate(id, data, { new: true }).exec(); }
+  async updateById(id: Types.ObjectId, data: Partial<CustomerCall>): Promise<CustomerCallDocument | null> {
+    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
+  }
   async deleteById(id: Types.ObjectId): Promise<CustomerCallDocument | null> { return this.model.findByIdAndDelete(id).exec(); }
 }

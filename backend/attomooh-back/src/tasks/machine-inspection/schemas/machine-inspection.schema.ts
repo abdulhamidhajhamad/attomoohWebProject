@@ -26,10 +26,13 @@ export class MachineInspection {
   @Prop({ default: Date.now })
   date: Date;
 
-  @Prop({ default: '' })
+  @Prop({ default: () => new Date().toTimeString().slice(0, 5) })
   time: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ default: '' })
+  pauseReason: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   technician: Types.ObjectId;
 
   @Prop({ default: '' })
@@ -47,7 +50,7 @@ export class MachineInspection {
   @Prop({ default: 0 })
   inspectionDurationMs: number;
 
-  @Prop({ enum: InspectionStatus, default: InspectionStatus.POSTPONED })
+  @Prop({ enum: InspectionStatus, default: InspectionStatus.IN_PROGRESS })
   status: InspectionStatus;
 
   @Prop({ default: 0 })

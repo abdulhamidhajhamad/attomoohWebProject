@@ -18,7 +18,9 @@ export class MachineInspectionController {
   async create(@Body() dto: CreateMachineInspectionDto) { return this.svc.create(dto); }
 
   @Get()
-  async findAll(@Query('status') status?: string) { return this.svc.findAll(status); }
+  async findAll(@Query('status') status?: string, @Query('search') search?: string) {
+    return this.svc.findAll(status, search);
+  }
 
   @Get(':id')
   async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) { return this.svc.findById(id); }

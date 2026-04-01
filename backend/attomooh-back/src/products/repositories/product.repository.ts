@@ -49,7 +49,7 @@ export class ProductRepository {
     data: Partial<Product>,
   ): Promise<ProductDocument | null> {
     return this.productModel
-      .findByIdAndUpdate(id, { $set: data }, { new: true })
+      .findByIdAndUpdate(id, { $set: data }, { returnDocument: 'after' })
       .populate('categories', 'name description')
       .exec();
   }

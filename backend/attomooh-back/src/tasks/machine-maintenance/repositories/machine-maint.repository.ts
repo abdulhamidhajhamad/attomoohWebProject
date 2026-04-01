@@ -14,7 +14,13 @@ export class MachineMaintRepository {
   ) {}
 
   async create(data: Partial<MachineMaint>): Promise<MachineMaintDocument> {
-    return new this.model(data).save();
+    const doc = await new this.model(data).save();
+    return this.model
+      .findById(doc._id)
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .orFail()
+      .exec();
   }
 
   async findById(
@@ -27,9 +33,19 @@ export class MachineMaintRepository {
       .exec();
   }
 
-  async findAll(
-    filter: Record<string, unknown> = {},
-  ): Promise<MachineMaintDocument[]> {
+  async findAll(params: { status?: string; search?: string } = {}): Promise<MachineMaintDocument[]> {
+    const filter: Record<string, unknown> = {};
+    if (params.status) filter.status = params.status;
+    if (params.search) {
+      const rx = new RegExp(params.search, 'i');
+      filter.$or = [
+        { machineName: rx },
+        { machineDetails: rx },
+        { technicianName: rx },
+        { technicianReport: rx },
+        { pauseReason: rx },
+      ];
+    }
     return this.model
       .find(filter)
       .sort({ createdAt: -1 })
@@ -42,7 +58,11 @@ export class MachineMaintRepository {
     id: Types.ObjectId,
     data: Partial<MachineMaint>,
   ): Promise<MachineMaintDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { new: true }).exec();
+    return this.model
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
   }
 
   async deleteById(

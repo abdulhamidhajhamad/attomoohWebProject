@@ -31,11 +31,23 @@ const getTechDisplay = (tool: ApiTool) => {
   return '—';
 };
 
+const pickTechName = (tech: TechnicianValue) => {
+  const name = tech.name.trim();
+  if (!name) return '';
+  return tech.mode === 'manual' || !tech.id ? name : '';
+};
+
+const pickTechId = (tech: TechnicianValue) => {
+  if (tech.mode === 'select' && tech.id) return tech.id;
+  if (tech.mode === 'manual' && tech.name.trim()) return null;
+  return undefined;
+};
+
 const formToPayload = (form: ToolForm) => ({
   name: form.name,
   quantity: Number(form.quantity) || 0,
-  responsibleTechnician: form.technician.mode === 'select' && form.technician.id ? form.technician.id : undefined,
-  responsibleTechnicianName: form.technician.mode === 'manual' ? form.technician.name : '',
+  responsibleTechnician: pickTechId(form.technician),
+  responsibleTechnicianName: pickTechName(form.technician),
   location: form.location,
   notes: form.notes,
 });
@@ -212,6 +224,7 @@ export default function ToolsPage() {
               <th>الكمية</th>
               <th>الفني المسؤول</th>
               <th>الموقع</th>
+              <th>ملاحظات</th>
               <th>الحالة</th>
               <th>إجراءات</th>
             </tr>
@@ -224,6 +237,7 @@ export default function ToolsPage() {
                 <td>{t.quantity}</td>
                 <td>{getTechDisplay(t)}</td>
                 <td>{t.location || '—'}</td>
+                <td style={{ maxWidth: 220, fontSize: '0.85rem', color: '#6b7280' }}>{t.notes || '—'}</td>
                 <td>
                   <span className={`${styles.badge} ${t.isActive ? styles.badgeGreen : styles.badgeGray}`}>
                     {t.isActive ? 'فعال' : 'غير فعال'}
@@ -243,7 +257,7 @@ export default function ToolsPage() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className={styles.emptyState}>
                     <FileText size={40} />
                     <p>لا يوجد بيانات</p>

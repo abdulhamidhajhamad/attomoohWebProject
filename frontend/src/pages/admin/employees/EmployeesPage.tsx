@@ -4,7 +4,7 @@ import { useEmployeesStore } from '../../../shared/store/employeesStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import { AreaSelect, EMPTY_AREA } from '../../../shared/ui/AreaSelect';
 import type { AreaValue } from '../../../shared/ui/AreaSelect';
-import type { ApiEmployee, ApiLinkedUser } from '../../../shared/api/types';
+import type { ApiEmployee } from '../../../shared/api/types';
 import styles from '../shared/CrudPage.module.css';
 
 const CAT_LABELS: Record<string, string> = { permanent: 'دائم', partial: 'جزئي', temporary: 'مؤقت', external: 'خارجي' };
@@ -24,16 +24,13 @@ const EMPTY: AddForm = {
 interface EditForm {
   name: string; phone: string; jobTitle: string; category: string;
   area: AreaValue; address: string; notes: string;
+  grantAccess: boolean; email: string; password: string; role: string;
 }
 const EMPTY_EDIT: EditForm = {
   name: '', phone: '', jobTitle: '', category: 'permanent',
-  area: { ...EMPTY_AREA }, address: '', notes: ''
+  area: { ...EMPTY_AREA }, address: '', notes: '',
+  grantAccess: false, email: '', password: '', role: 'technician'
 };
-
-function getLinkedUser(emp: ApiEmployee): ApiLinkedUser | null {
-  if (!emp.linkedUser || typeof emp.linkedUser === 'string') return null;
-  return emp.linkedUser;
-}
 
 function getAreaDisplay(emp: ApiEmployee): string {
   if (emp.area && typeof emp.area === 'object' && 'name' in emp.area) return emp.area.name;
@@ -53,6 +50,10 @@ function employeeToEditForm(emp: ApiEmployee): EditForm {
     area: areaValue,
     address: emp.address || '',
     notes: emp.notes || '',
+    grantAccess: Boolean(emp.email),
+    email: emp.email || '',
+    password: '',
+    role: emp.role || 'technician',
   };
 }
 
@@ -98,19 +99,34 @@ export default function EmployeesPage() {
 
   const saveEdit = useCallback(async () => {
     if (!editId) return;
+    const current = items.find(it => it._id === editId);
+    const hadAccess = Boolean(current?.email);
+    if (editForm.grantAccess && !editForm.email.trim()) return;
+    if (editForm.grantAccess && !hadAccess && !editForm.password.trim()) return;
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: editForm.name, phone: editForm.phone,
         jobTitle: editForm.jobTitle, category: editForm.category,
         area: editForm.area.id || null,
         address: editForm.address,
         notes: editForm.notes,
       };
-      await updateItem(editId, payload as unknown as Record<string, unknown>);
+
+      if (editForm.grantAccess) {
+        payload.email = editForm.email.trim();
+        payload.role = editForm.role;
+        if (editForm.password.trim()) payload.password = editForm.password.trim();
+      } else {
+        payload.email = null;
+        payload.role = null;
+        payload.password = null;
+      }
+
+      await updateItem(editId, payload);
       setEditId(null);
     } catch { /* store */ } finally { setSaving(false); }
-  }, [editId, editForm, updateItem]);
+  }, [editId, editForm, items, updateItem]);
 
   const handleDel = useCallback(async (id: string) => {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
@@ -199,7 +215,14 @@ export default function EmployeesPage() {
                 </div>
                 <div className={styles.formField}>
                   <label className={styles.formLabel}>كلمة المرور *</label>
-                  <input className={styles.formInput} type="password" placeholder="6 أحرف على الأقل" value={addForm.password} onChange={e => setAddForm({ ...addForm, password: e.target.value })} />
+                  <input
+                    className={styles.formInput}
+                    type="password"
+                    placeholder="6 أحرف على الأقل"
+                    value={addForm.password}
+                    onChange={e => setAddForm({ ...addForm, password: e.target.value })}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>لن تُعرض الكلمة، تأكد منها قبل الحفظ.</span>
                 </div>
               </>
             )}
@@ -253,6 +276,43 @@ export default function EmployeesPage() {
               <label className={styles.formLabel}><StickyNote size={14} /> ملاحظات</label>
               <textarea className={styles.formTextarea} placeholder="أضف ملاحظات عن الموظف..." value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
             </div>
+
+            {/* ── System Access Section (edit) ── */}
+            <div className={styles.formDivider} />
+            <div className={styles.formSectionLabel}><KeyRound size={15} />دخول النظام</div>
+            <div className={styles.formField}>
+              <label className={styles.switchLabel}>
+                <input type="checkbox" className={styles.formCheckbox} checked={editForm.grantAccess} onChange={e => setEditForm({ ...editForm, grantAccess: e.target.checked, password: '' })} />
+                منح / تعديل صلاحية دخول النظام
+              </label>
+            </div>
+            {editForm.grantAccess && (
+              <>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>الدور</label>
+                  <select className={styles.formSelect} value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
+                    <option value="technician">فني صيانة</option>
+                    <option value="user">مستخدم</option>
+                    <option value="admin">مدير</option>
+                  </select>
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>البريد الإلكتروني *</label>
+                  <input className={styles.formInput} type="email" placeholder="example@email.com" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>كلمة المرور (اختياري للتغيير)</label>
+                  <input
+                    className={styles.formInput}
+                    type="password"
+                    placeholder="اتركها فارغة للإبقاء على الحالية"
+                    value={editForm.password}
+                    onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>أدخل كلمة جديدة إن أردت التغيير؛ لا يمكن عرض القديمة.</span>
+                </div>
+              </>
+            )}
           </div>
           <div className={styles.formCardActions}>
             <button className={styles.btnSave} onClick={saveEdit} disabled={saving}><Check size={14} />{saving ? 'جاري الحفظ...' : 'حفظ'}</button>
@@ -274,12 +334,12 @@ export default function EmployeesPage() {
                 <td><span className={`${styles.badge} ${styles.badgeBlue}`}>{CAT_LABELS[r.category] || r.category}</span></td>
                 <td>{getAreaDisplay(r)}</td>
                 <td>
-                  {getLinkedUser(r) ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {r.email && r.role ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span className={`${styles.badge} ${styles.badgePurple}`}>
-                        <ShieldCheck size={12} />{ROLE_LABELS[getLinkedUser(r)!.role] || getLinkedUser(r)!.role}
+                        <ShieldCheck size={12} />{ROLE_LABELS[r.role] || r.role}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{getLinkedUser(r)!.email}</span>
+                      <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>{r.email}</span>
                     </div>
                   ) : (
                     <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>—</span>

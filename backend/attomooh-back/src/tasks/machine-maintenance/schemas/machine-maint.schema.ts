@@ -24,8 +24,9 @@ export class MachineMaint {
   @Prop({ default: '' }) machineDetails: string;
   @Prop({ type: [TimeLog], default: [] }) timeLogs: TimeLog[];
   @Prop({ default: Date.now }) date: Date;
-  @Prop({ default: '' }) time: string;
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null }) technician: Types.ObjectId;
+  @Prop({ default: () => new Date().toTimeString().slice(0, 5) }) time: string;
+  @Prop({ default: '' }) pauseReason: string;
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null }) technician: Types.ObjectId;
   @Prop({ default: '' }) technicianName: string;
   @Prop({ type: [SparePart], default: [] }) spareParts: SparePart[];
   @Prop({ default: '' }) technicianReport: string;

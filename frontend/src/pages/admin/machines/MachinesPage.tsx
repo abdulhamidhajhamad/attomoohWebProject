@@ -30,14 +30,27 @@ const getTechDisplay = (machine: ApiMachine, field: 'technician1' | 'technician2
   return '—';
 };
 
+const pickTechName = (tech: TechnicianValue) => {
+  const name = tech.name.trim();
+  if (!name) return '';
+  return tech.mode === 'manual' || !tech.id ? name : '';
+};
+
+const pickTechId = (tech: TechnicianValue) => {
+  if (tech.mode === 'select' && tech.id) return tech.id;
+  // When manual name entered, clear any previous id
+  if (tech.mode === 'manual' && tech.name.trim()) return null;
+  return undefined;
+};
+
 const formToPayload = (form: MachineForm) => ({
   name: form.name,
-  technician1: form.tech1.mode === 'select' && form.tech1.id ? form.tech1.id : undefined,
-  technician1Name: form.tech1.mode === 'manual' ? form.tech1.name : '',
-  technician2: form.tech2.mode === 'select' && form.tech2.id ? form.tech2.id : undefined,
-  technician2Name: form.tech2.mode === 'manual' ? form.tech2.name : '',
-  technician3: form.tech3.mode === 'select' && form.tech3.id ? form.tech3.id : undefined,
-  technician3Name: form.tech3.mode === 'manual' ? form.tech3.name : '',
+  technician1: pickTechId(form.tech1),
+  technician1Name: pickTechName(form.tech1),
+  technician2: pickTechId(form.tech2),
+  technician2Name: pickTechName(form.tech2),
+  technician3: pickTechId(form.tech3),
+  technician3Name: pickTechName(form.tech3),
 });
 
 const machineToForm = (m: ApiMachine): MachineForm => {

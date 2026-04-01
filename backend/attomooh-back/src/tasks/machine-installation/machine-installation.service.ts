@@ -13,23 +13,25 @@ export class MachineInstallationService {
   async create(
     dto: CreateMachineInstallationDto,
   ): Promise<MachineInstallationDocument> {
+    const status = dto.status ?? InstallationStatus.POSTPONED;
     return this.repo.create({
       machineReception: new Types.ObjectId(dto.machineReception),
       machineName: dto.machineName ?? '',
       machineDetails: dto.machineDetails ?? '',
-      time: dto.time ?? '',
+      pauseReason: dto.pauseReason ?? '',
       technician: dto.technician
         ? new Types.ObjectId(dto.technician)
         : undefined,
       technicianName: dto.technicianName ?? '',
       technicianReport: dto.technicianReport ?? '',
+      status,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
     });
   }
 
-  async findAll(status?: string): Promise<MachineInstallationDocument[]> {
-    return this.repo.findAll(status ? { status } : {});
+  async findAll(status?: string, search?: string): Promise<MachineInstallationDocument[]> {
+    return this.repo.findAll({ status, search });
   }
 
   async findById(
@@ -46,10 +48,13 @@ export class MachineInstallationService {
     dto: UpdateMachineInstallationDto,
   ): Promise<MachineInstallationDocument> {
     const data: Record<string, unknown> = { ...dto };
+    if (dto.machineReception !== undefined) data.machineReception = new Types.ObjectId(dto.machineReception);
     if (dto.technician !== undefined)
       data.technician = dto.technician
         ? new Types.ObjectId(dto.technician)
-        : undefined;
+        : null;
+    if (dto.technician !== undefined && dto.technician) data.technicianName = '';
+    if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
     const u = await this.repo.updateById(id, data as any);
     if (!u)
       throw new NotFoundException('Installation record not found');
@@ -111,9 +116,7 @@ export class MachineInstallationService {
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
-    const d = await this.repo.deleteById(id);
-    if (!d)
-      throw new NotFoundException('Installation record not found');
+    await this.repo.deleteById(id);
   }
 
   private calcDuration(

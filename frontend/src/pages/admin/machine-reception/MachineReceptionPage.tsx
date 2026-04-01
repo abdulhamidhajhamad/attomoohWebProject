@@ -63,7 +63,8 @@ const formToPayload = (form: ReceptionForm) => ({
   receivedParts: form.receivedParts,
   customerProblemDesc: form.customerProblemDesc,
   notes: form.notes,
-  receivedBy: form.receivedBy.mode === 'select' && form.receivedBy.id ? form.receivedBy.id : undefined,
+  receivedBy: form.receivedBy.mode === 'select' ? (form.receivedBy.id || undefined) : null,
+  receivedByName: form.receivedBy.mode === 'manual' ? form.receivedBy.name : '',
 });
 
 const receptionToForm = (r: ApiMachineReception): ReceptionForm => {
@@ -94,6 +95,9 @@ const receptionToForm = (r: ApiMachineReception): ReceptionForm => {
   let receivedByValue: EmployeeValue = { ...EMPTY_EMPLOYEE };
   if (r.receivedBy && typeof r.receivedBy === 'object' && '_id' in r.receivedBy) {
     receivedByValue = { id: r.receivedBy._id, name: r.receivedBy.name, mode: 'select' };
+  } else if (r.receivedByName) {
+    // If they had a manual name from before, force them to select a system employee now since manual is disabled
+    receivedByValue = { id: undefined, name: '', mode: 'select' };
   }
 
   return {
@@ -123,6 +127,7 @@ const getCustomerName = (r: ApiMachineReception) => {
 
 const getReceivedByName = (r: ApiMachineReception) => {
   if (r.receivedBy && typeof r.receivedBy === 'object' && 'name' in r.receivedBy) return r.receivedBy.name;
+  if (r.receivedByName) return r.receivedByName;
   return '—';
 };
 
@@ -328,6 +333,7 @@ export default function MachineReceptionPage() {
                 value={activeForm.receivedBy}
                 onChange={receivedBy => setActiveForm({ ...activeForm, receivedBy })}
                 placeholder="اختر الموظف المستلم"
+                hideManualToggle={true}
               />
             </div>
 

@@ -3,8 +3,16 @@ import { ENDPOINTS } from '../endpoints';
 import type { ApiMachineInstallation } from '../types';
 
 export const machineInstallationService = {
-  async getAll(search?: string): Promise<ApiMachineInstallation[]> {
-    const url = search ? `${ENDPOINTS.MACHINE_INSTALLATION.BASE}?search=${encodeURIComponent(search)}` : ENDPOINTS.MACHINE_INSTALLATION.BASE;
+  async getAll(searchOrParams?: string | { search?: string; status?: string }): Promise<ApiMachineInstallation[]> {
+    const query = new URLSearchParams();
+    if (typeof searchOrParams === 'string') {
+      if (searchOrParams.trim()) query.set('search', searchOrParams.trim());
+    } else if (searchOrParams) {
+      if (searchOrParams.search?.trim()) query.set('search', searchOrParams.search.trim());
+      if (searchOrParams.status?.trim()) query.set('status', searchOrParams.status.trim());
+    }
+    const qs = query.toString();
+    const url = qs ? `${ENDPOINTS.MACHINE_INSTALLATION.BASE}?${qs}` : ENDPOINTS.MACHINE_INSTALLATION.BASE;
     return httpClient.get<ApiMachineInstallation[]>(url, true);
   },
   async getById(id: string): Promise<ApiMachineInstallation> {
@@ -23,7 +31,7 @@ export const machineInstallationService = {
     return httpClient.post<ApiMachineInstallation>(ENDPOINTS.MACHINE_INSTALLATION.START(id), undefined, true);
   },
   async pause(id: string, pauseReason: string): Promise<ApiMachineInstallation> {
-    return httpClient.post<ApiMachineInstallation>(ENDPOINTS.MACHINE_INSTALLATION.PAUSE(id), { pauseReason }, true);
+    return httpClient.post<ApiMachineInstallation>(ENDPOINTS.MACHINE_INSTALLATION.PAUSE(id), { reason: pauseReason }, true);
   },
   async resume(id: string): Promise<ApiMachineInstallation> {
     return httpClient.post<ApiMachineInstallation>(ENDPOINTS.MACHINE_INSTALLATION.RESUME(id), undefined, true);

@@ -14,8 +14,10 @@ export class VehiclesService {
   async create(dto: CreateVehicleDto): Promise<VehicleDocument> {
     const customId = dto.customId || (await this.idGen.generateId(IdPrefix.VEHICLE));
     return this.repo.create({
-      customId, brandAndModel: dto.brandAndModel, plateNumber: dto.plateNumber,
-      responsiblePerson: dto.responsiblePerson ?? '',
+      customId,
+      brandAndModel: dto.brandAndModel,
+      plateNumber: dto.plateNumber,
+      responsiblePerson: dto.responsiblePerson?.trim() ?? '',
       responsibleUser: dto.responsibleUser ? new Types.ObjectId(dto.responsibleUser) : undefined,
       isActive: dto.isActive ?? true,
     });
@@ -25,7 +27,11 @@ export class VehiclesService {
   async findById(id: Types.ObjectId): Promise<VehicleDocument> { const doc = await this.repo.findById(id); if (!doc) throw new NotFoundException('Vehicle not found'); return doc; }
   async search(query: string): Promise<VehicleDocument[]> { return this.repo.search(query); }
   async update(id: Types.ObjectId, dto: UpdateVehicleDto): Promise<VehicleDocument> {
-    const data: Record<string, unknown> = { ...dto };
+    const data: Record<string, unknown> = {};
+    if (dto.brandAndModel !== undefined) data.brandAndModel = dto.brandAndModel;
+    if (dto.plateNumber !== undefined) data.plateNumber = dto.plateNumber;
+    if (dto.responsiblePerson !== undefined) data.responsiblePerson = dto.responsiblePerson?.trim() ?? '';
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.responsibleUser !== undefined) data.responsibleUser = dto.responsibleUser ? new Types.ObjectId(dto.responsibleUser) : null;
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Vehicle not found');

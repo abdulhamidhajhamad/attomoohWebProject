@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsMongoId, IsDateString, IsEnum, IsNumber, IsArray, ValidateNested, Min, IsNotEmpty } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ReceptionStatus } from '../../../common/enums/reception-status.enum.js';
 
 class SparePartDto {
@@ -22,7 +22,9 @@ export class UpdateMachineReceptionDto {
   @IsString() @IsOptional() receivedParts?: string;
   @IsString() @IsOptional() customerProblemDesc?: string;
   @IsString() @IsOptional() notes?: string;
-  @IsMongoId() @IsOptional() receivedBy?: string;
+  @Transform(({ value }) => value === null ? undefined : value)
+  @IsMongoId() @IsOptional() receivedBy?: string | null;
+  @IsString() @IsOptional() receivedByName?: string;
   @IsMongoId() @IsOptional() assignedTo?: string;
   @IsEnum(ReceptionStatus) @IsOptional() status?: ReceptionStatus;
   @IsString() @IsOptional() technicianReport?: string;

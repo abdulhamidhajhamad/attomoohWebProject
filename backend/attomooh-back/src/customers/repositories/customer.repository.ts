@@ -11,7 +11,8 @@ export class CustomerRepository {
   ) {}
 
   async create(data: Partial<Customer>): Promise<CustomerDocument> {
-    return new this.customerModel(data).save();
+    const doc = await new this.customerModel(data).save();
+    return this.findById(doc._id as Types.ObjectId) as Promise<CustomerDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<CustomerDocument | null> {
@@ -52,7 +53,11 @@ export class CustomerRepository {
     data: Partial<Customer>,
   ): Promise<CustomerDocument | null> {
     return this.customerModel
-      .findByIdAndUpdate(id, data, { new: true })
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('area')
+      .populate('technician1', 'name phone')
+      .populate('technician2', 'name phone')
+      .populate('technician3', 'name phone')
       .exec();
   }
 

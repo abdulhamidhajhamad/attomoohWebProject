@@ -30,7 +30,7 @@ export class MachineTypeRepository {
     data: Partial<MachineType>,
   ): Promise<MachineTypeDocument | null> {
     return this.machineTypeModel
-      .findByIdAndUpdate(id, data, { new: true })
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .exec();
   }
 

@@ -4,30 +4,36 @@ import { MachineInspectionRepository } from './repositories/machine-inspection.r
 import { MachineInspectionDocument } from './schemas/machine-inspection.schema.js';
 import { CreateMachineInspectionDto } from './dto/create-machine-inspection.dto.js';
 import { UpdateMachineInspectionDto } from './dto/update-machine-inspection.dto.js';
+import { InspectionStatus } from '../../common/enums/inspection-status.enum.js';
 
 @Injectable()
 export class MachineInspectionService {
   constructor(private readonly repo: MachineInspectionRepository) {}
 
   async create(dto: CreateMachineInspectionDto): Promise<MachineInspectionDocument> {
+    const status = dto.status ?? InspectionStatus.IN_PROGRESS;
     return this.repo.create({
       machineReception: new Types.ObjectId(dto.machineReception),
       machineName: dto.machineName ?? '',
       machineDetails: dto.machineDetails ?? '',
-      time: dto.time ?? '',
+      pauseReason: dto.pauseReason ?? '',
       technician: dto.technician ? new Types.ObjectId(dto.technician) : undefined,
       technicianName: dto.technicianName ?? '',
-      spareParts: (dto.spareParts ?? []) as any,
+      spareParts: (dto.spareParts ?? []).map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      })) as any,
       technicianReport: dto.technicianReport ?? '',
-      readyForDelivery: dto.readyForDelivery ?? false,
+      status,
+      readyForDelivery: status === InspectionStatus.READY,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
     });
   }
 
-  async findAll(status?: string): Promise<MachineInspectionDocument[]> {
-    const filter = status ? { status } : {};
-    return this.repo.findAll(filter);
+  async findAll(status?: string, search?: string): Promise<MachineInspectionDocument[]> {
+    return this.repo.findAll({ status, search });
   }
 
   async findById(id: Types.ObjectId): Promise<MachineInspectionDocument> {
@@ -38,7 +44,22 @@ export class MachineInspectionService {
 
   async update(id: Types.ObjectId, dto: UpdateMachineInspectionDto): Promise<MachineInspectionDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.technician !== undefined) data.technician = dto.technician ? new Types.ObjectId(dto.technician) : undefined;
+    if (dto.machineReception !== undefined) data.machineReception = new Types.ObjectId(dto.machineReception);
+    if (dto.technician !== undefined) {
+      data.technician = dto.technician ? new Types.ObjectId(dto.technician) : null;
+      if (dto.technician) data.technicianName = '';
+    }
+    if (dto.technician === undefined && dto.technicianName !== undefined) {
+      data.technician = null;
+    }
+    if (dto.status !== undefined) data.readyForDelivery = dto.status === InspectionStatus.READY;
+    if (dto.spareParts !== undefined) {
+      data.spareParts = dto.spareParts.map((part) => ({
+        name: part.name,
+        quantity: part.quantity ?? 1,
+        cost: part.cost ?? 0,
+      }));
+    }
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Machine inspection not found');
     return updated;
@@ -70,8 +91,8 @@ export class MachineInspectionService {
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
-    const deleted = await this.repo.deleteById(id);
-    if (!deleted) throw new NotFoundException('Machine inspection not found');
+    // Idempotent delete: if record is already gone, treat as success.
+    await this.repo.deleteById(id);
   }
 
   private calculateDuration(logs: Array<{ action: string; timestamp: Date }>): number {

@@ -14,11 +14,23 @@ interface VehicleForm {
 }
 const EMPTY: VehicleForm = { brandAndModel: '', plateNumber: '', responsible: { ...EMPTY_EMPLOYEE } };
 
+const pickResponsibleName = (res: EmployeeValue) => {
+  const name = res.name.trim();
+  if (!name) return '';
+  return res.mode === 'manual' || !res.id ? name : '';
+};
+
+const pickResponsibleId = (res: EmployeeValue) => {
+  if (res.mode === 'select' && res.id) return res.id;
+  if (res.mode === 'manual' && res.name.trim()) return null;
+  return undefined;
+};
+
 const formToPayload = (form: VehicleForm) => ({
   brandAndModel: form.brandAndModel,
   plateNumber: form.plateNumber,
-  responsibleUser: form.responsible.mode === 'select' && form.responsible.id ? form.responsible.id : undefined,
-  responsiblePerson: form.responsible.mode === 'manual' ? form.responsible.name : '',
+  responsibleUser: pickResponsibleId(form.responsible),
+  responsiblePerson: pickResponsibleName(form.responsible),
 });
 
 const vehicleToForm = (v: ApiVehicle): VehicleForm => {

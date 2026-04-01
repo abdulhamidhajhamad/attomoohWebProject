@@ -447,13 +447,6 @@ export interface ReportByCustomer {
 
 export type ApiEmployeeCategory = 'permanent' | 'partial' | 'temporary' | 'external';
 
-export interface ApiLinkedUser {
-  _id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'user' | 'technician';
-}
-
 export interface ApiEmployee {
   _id: string;
   customId: string;
@@ -464,7 +457,9 @@ export interface ApiEmployee {
   area: ApiArea | string | null;
   address: string;
   notes: string;
-  linkedUser: ApiLinkedUser | string | null;
+  email: string | null;
+  role: 'admin' | 'user' | 'technician' | null;
+  technicianStatus: ApiTechnicianStatus;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -479,9 +474,10 @@ export interface CreateEmployeeRequest {
   address?: string;
   notes?: string;
   isActive?: boolean;
-  /** Optional: grant system access by creating a technician user */
+  /** Optional: grant system access by creating a user */
   email?: string;
   password?: string;
+  role?: 'admin' | 'user' | 'technician';
 }
 
 export interface UpdateEmployeeRequest {
@@ -493,6 +489,10 @@ export interface UpdateEmployeeRequest {
   address?: string;
   notes?: string;
   isActive?: boolean;
+  email?: string | null;
+  password?: string;
+  role?: 'admin' | 'user' | 'technician' | null;
+  technicianStatus?: ApiTechnicianStatus;
 }
 
 /* ═══════════════════════════════════
@@ -590,6 +590,7 @@ export interface ApiMachineReception {
   customerProblemDesc: string;
   notes: string;
   receivedBy: ApiEmployee | string | null;
+  receivedByName: string;
   status: ApiReceptionStatus;
   assignedTo: ApiEmployee | string | null;
   createdAt: string;
@@ -609,6 +610,91 @@ export interface ApiMachineDelivery {
   deliveryDate: string;
   notes: string;
   deliveredBy: ApiEmployee | string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Machine Inspection (فحص الآلات)
+   ═══════════════════════════════════ */
+
+export type ApiInspectionStatus = 'in_progress' | 'postponed' | 'ready' | 'rejected';
+
+export interface ApiInspectionSparePart {
+  name: string;
+  quantity: number;
+  cost: number;
+}
+
+export interface ApiMachineInspection {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  date: string;
+  time: string;
+  pauseReason: string;
+  technician: ApiEmployee | string | null;
+  technicianName: string;
+  spareParts: ApiInspectionSparePart[];
+  technicianReport: string;
+  readyForDelivery: boolean;
+  inspectionDurationMs: number;
+  status: ApiInspectionStatus;
+  technicianFee: number;
+  companyFee: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Machine Maintenance (صيانة الآلات)
+   ═══════════════════════════════════ */
+
+export type ApiMaintenanceStatus = 'waiting' | 'in_maintenance' | 'postponed' | 'ready' | 'rejected';
+
+export interface ApiMachineMaint {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  date: string;
+  time: string;
+  pauseReason: string;
+  technician: ApiEmployee | string | null;
+  technicianName: string;
+  spareParts: ApiInspectionSparePart[];
+  technicianReport: string;
+  readyForDelivery: boolean;
+  maintenanceDurationMs: number;
+  status: ApiMaintenanceStatus;
+  technicianFee: number;
+  companyFee: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Machine Installation (تنصيب الآلات)
+   ═══════════════════════════════════ */
+
+export type ApiInstallationStatus = 'postponed' | 'ready' | 'rejected';
+
+export interface ApiMachineInstallation {
+  _id: string;
+  machineReception: ApiMachineReception | string;
+  machineName: string;
+  machineDetails: string;
+  date: string;
+  time: string;
+  pauseReason: string;
+  technician: ApiEmployee | string | null;
+  technicianName: string;
+  technicianReport: string;
+  installationDurationMs: number;
+  status: ApiInstallationStatus;
+  technicianFee: number;
+  companyFee: number;
   createdAt: string;
   updatedAt: string;
 }
