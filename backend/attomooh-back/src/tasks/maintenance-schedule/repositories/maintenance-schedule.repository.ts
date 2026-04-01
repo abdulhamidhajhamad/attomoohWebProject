@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { MaintenanceSchedule, MaintenanceScheduleDocument } from '../schemas/maintenance-schedule.schema.js';
+import { ScheduleStatus } from '../../../common/enums/schedule-status.enum.js';
 
 @Injectable()
 export class MaintenanceScheduleRepository {
@@ -35,6 +36,30 @@ export class MaintenanceScheduleRepository {
   }
 
   async findByDateRange(from: Date, to: Date): Promise<MaintenanceScheduleDocument[]> { return this.model.find({ scheduledDate: { $gte: from, $lte: to } }).sort({ scheduledDate: 1 }).populate('machineReception').populate('technician', 'name phone').populate('rescheduledTechnician', 'name phone').exec(); }
+
+  async findForTechnicianByDateRange(technicianId: Types.ObjectId, from: Date, to: Date): Promise<MaintenanceScheduleDocument[]> {
+    return this.model
+      .find({
+        $or: [
+          {
+            status: { $ne: ScheduleStatus.RESCHEDULED },
+            technician: technicianId,
+            scheduledDate: { $gte: from, $lte: to },
+          },
+          {
+            status: ScheduleStatus.RESCHEDULED,
+            rescheduledTechnician: technicianId,
+            rescheduledDate: { $gte: from, $lte: to },
+          },
+        ],
+      })
+      .sort({ scheduledDate: 1 })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .populate('rescheduledTechnician', 'name phone')
+      .exec();
+  }
+
   async updateById(id: Types.ObjectId, data: Partial<MaintenanceSchedule>): Promise<MaintenanceScheduleDocument | null> {
     await this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
     return this.findById(id);

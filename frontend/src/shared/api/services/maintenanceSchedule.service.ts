@@ -3,10 +3,15 @@ import { ENDPOINTS } from '../endpoints';
 import type { ApiMaintenanceSchedule } from '../types';
 
 export const maintenanceScheduleService = {
-  async getAll(search?: string): Promise<ApiMaintenanceSchedule[]> {
+  async getAll(search?: string, tokenKey?: string, from?: string, to?: string): Promise<ApiMaintenanceSchedule[]> {
+    const params = new URLSearchParams();
     const q = search?.trim();
-    const url = q ? `${ENDPOINTS.MAINTENANCE_SCHEDULE.BASE}?search=${encodeURIComponent(q)}` : ENDPOINTS.MAINTENANCE_SCHEDULE.BASE;
-    return httpClient.get<ApiMaintenanceSchedule[]>(url, true);
+    if (q) params.set('search', q);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    const url = query ? `${ENDPOINTS.MAINTENANCE_SCHEDULE.BASE}?${query}` : ENDPOINTS.MAINTENANCE_SCHEDULE.BASE;
+    return httpClient.get<ApiMaintenanceSchedule[]>(url, true, tokenKey);
   },
   async getById(id: string): Promise<ApiMaintenanceSchedule> {
     return httpClient.get<ApiMaintenanceSchedule>(ENDPOINTS.MAINTENANCE_SCHEDULE.BY_ID(id), true);

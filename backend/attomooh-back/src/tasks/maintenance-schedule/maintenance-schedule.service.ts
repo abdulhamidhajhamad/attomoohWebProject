@@ -28,6 +28,10 @@ export class MaintenanceScheduleService {
 
   async findByDateRange(from: Date, to: Date): Promise<MaintenanceScheduleDocument[]> { return this.repo.findByDateRange(from, to); }
 
+  async findForTechnicianByDateRange(technicianId: Types.ObjectId, from: Date, to: Date): Promise<MaintenanceScheduleDocument[]> {
+    return this.repo.findForTechnicianByDateRange(technicianId, from, to);
+  }
+
   async findById(id: Types.ObjectId): Promise<MaintenanceScheduleDocument> {
     const d = await this.repo.findById(id);
     if (!d) throw new NotFoundException('Maintenance schedule not found');

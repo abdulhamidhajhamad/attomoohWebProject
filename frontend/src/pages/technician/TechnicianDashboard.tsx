@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useMaintenanceStore } from '../../shared/store/maintenanceStore';
 import { useTechnicianAuthStore } from '../../shared/store/technicianAuthStore';
+import { maintenanceScheduleService } from '../../shared/api/services';
 import { LoadingSpinner } from '../../shared/ui/LoadingSpinner/LoadingSpinner';
 import WeeklyCalendar, {
   getWeekStart,
@@ -25,6 +26,7 @@ import WeeklyCalendar, {
 import { TECH_TOKEN_KEY } from '../../shared/api/httpClient';
 import type {
   ApiMaintenanceTask,
+  ApiMaintenanceSchedule,
   ApiTaskStatus,
   ApiTechnicianStatus,
   TaskReportRequest,
@@ -83,6 +85,48 @@ function formatTimer(ms: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function addOneHour(time: string | null | undefined): string | null {
+  if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const [h, m] = time.split(':').map(Number);
+  const totalMinutes = (h * 60 + m + 60) % (24 * 60);
+  const nextH = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const nextM = String(totalMinutes % 60).padStart(2, '0');
+  return `${nextH}:${nextM}`;
+}
+
+function toTechScheduleTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
+  const scheduleDate = item.status === 'rescheduled' ? (item.rescheduledDate || item.scheduledDate) : item.scheduledDate;
+  const scheduleTime = item.status === 'rescheduled' ? (item.rescheduledTime || item.scheduledTime) : item.scheduledTime;
+
+  return {
+    _id: `tech-schedule-${item._id}`,
+    title: `جدولة صيانة - ${item.machineName || 'آلة'}`,
+    description: item.rescheduleReason || item.cancellationReason || '',
+    machineInfo: [item.machineName, item.machineDetails].filter(Boolean).join(' - '),
+    location: '',
+    priority: 'medium',
+    status: item.status === 'cancelled' ? 'cancelled' : 'assigned',
+    createdBy: 'system',
+    assignedTo: 'مجدولة لك',
+    serviceOrder: null,
+    timeLogs: [],
+    totalDurationMs: 0,
+    report: {
+      problemDescription: '',
+      solutionDescription: '',
+      usedParts: [],
+      laborCost: 0,
+      notes: '',
+    },
+    scheduledDate: scheduleDate,
+    scheduledStartTime: scheduleTime || null,
+    scheduledEndTime: addOneHour(scheduleTime),
+    completedAt: null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
 /* ═══════════════════════════════════
    Component
    ═══════════════════════════════════ */
@@ -113,6 +157,7 @@ export default function TechnicianDashboard() {
   // View mode: 'tasks' (original) or 'calendar'
   const [viewMode, setViewMode] = useState<'tasks' | 'calendar'>('tasks');
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [scheduleTasks, setScheduleTasks] = useState<ApiMaintenanceTask[]>([]);
 
   // Finish form state
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -136,8 +181,17 @@ export default function TechnicianDashboard() {
       toDate.setDate(toDate.getDate() + 6);
       const to = formatDateISO(toDate);
       fetchCalendarTasks(from, to, undefined, TECH_TOKEN_KEY);
+
+      maintenanceScheduleService
+        .getAll(undefined, TECH_TOKEN_KEY, from, to)
+        .then((rows) => setScheduleTasks(rows.map(toTechScheduleTask)))
+        .catch(() => setScheduleTasks([]));
+    } else {
+      setScheduleTasks([]);
     }
   }, [fetchCalendarTasks, weekStart, viewMode]);
+
+  const mergedCalendarTasks = [...calendarTasks, ...scheduleTasks];
 
   // Timer tick — update every second for live display
   useEffect(() => {
@@ -220,9 +274,11 @@ export default function TechnicianDashboard() {
   };
 
   // Separate active tasks and completed/cancelled
-  const activeTasks = myTasks.filter((t) =>
+  const baseActiveTasks = myTasks.filter((t) =>
     ['assigned', 'in_progress', 'paused'].includes(t.status),
   );
+  const activeScheduleTasks = scheduleTasks.filter((t) => t.status !== 'cancelled');
+  const activeTasks = [...baseActiveTasks, ...activeScheduleTasks];
   const completedTasks = myTasks.filter((t) =>
     ['completed', 'cancelled'].includes(t.status),
   );
@@ -300,7 +356,7 @@ export default function TechnicianDashboard() {
       <div className={styles.techContent}>
         {viewMode === 'calendar' ? (
           <WeeklyCalendar
-            tasks={calendarTasks}
+            tasks={mergedCalendarTasks}
             weekStart={weekStart}
             onWeekChange={setWeekStart}
             showAssignee={false}
@@ -325,6 +381,7 @@ export default function TechnicianDashboard() {
             const isInProgress = task.status === 'in_progress';
             const isPaused = task.status === 'paused';
             const isAssigned = task.status === 'assigned';
+            const isSyntheticSchedule = task._id.startsWith('tech-schedule-');
             const liveDuration = calcLiveDuration(task);
 
             return (
@@ -363,7 +420,13 @@ export default function TechnicianDashboard() {
 
                 {/* Actions */}
                 <div className={styles.actionBtns}>
-                  {isAssigned && (
+                  {task._id.startsWith('tech-schedule-') && (
+                    <button className={styles.btnPause} disabled>
+                      هذه مهمة مجدولة
+                    </button>
+                  )}
+
+                  {isAssigned && !isSyntheticSchedule && (
                     <button
                       className={styles.btnStart}
                       onClick={() => handleAction(task._id, 'start')}
@@ -374,7 +437,7 @@ export default function TechnicianDashboard() {
                     </button>
                   )}
 
-                  {isInProgress && (
+                  {isInProgress && !isSyntheticSchedule && (
                     <>
                       <button
                         className={styles.btnPause}
@@ -395,7 +458,7 @@ export default function TechnicianDashboard() {
                     </>
                   )}
 
-                  {isPaused && (
+                  {isPaused && !isSyntheticSchedule && (
                     <>
                       <button
                         className={styles.btnResume}
