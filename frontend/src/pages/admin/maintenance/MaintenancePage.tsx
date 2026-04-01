@@ -15,12 +15,13 @@ import {
 } from 'lucide-react';
 import { useMaintenanceStore } from '../../../shared/store/maintenanceStore';
 import { useAdminStore } from '../../../shared/store/adminStore';
+import { maintenanceScheduleService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import WeeklyCalendar, {
   getWeekStart,
   formatDateISO,
 } from '../../../shared/ui/WeeklyCalendar/WeeklyCalendar';
-import type { ApiMaintenanceTask, ApiTaskStatus, ApiServiceOrder } from '../../../shared/api/types';
+import type { ApiMaintenanceTask, ApiMaintenanceSchedule, ApiTaskStatus, ApiServiceOrder } from '../../../shared/api/types';
 import styles from './MaintenancePage.module.css';
 
 const STATUS_MAP: Record<ApiTaskStatus, { label: string; color: string; icon: typeof Clock }> = {
@@ -55,6 +56,78 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function addOneHour(time: string | null | undefined): string | null {
+  if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const [h, m] = time.split(':').map(Number);
+  const totalMinutes = (h * 60 + m + 60) % (24 * 60);
+  const nextH = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const nextM = String(totalMinutes % 60).padStart(2, '0');
+  return `${nextH}:${nextM}`;
+}
+
+function getScheduleTechId(item: ApiMaintenanceSchedule): string | null {
+  if (item.status === 'rescheduled') {
+    if (item.rescheduledTechnician && typeof item.rescheduledTechnician === 'object' && '_id' in item.rescheduledTechnician) {
+      return item.rescheduledTechnician._id;
+    }
+    if (typeof item.rescheduledTechnician === 'string') return item.rescheduledTechnician;
+  }
+
+  if (item.technician && typeof item.technician === 'object' && '_id' in item.technician) {
+    return item.technician._id;
+  }
+  if (typeof item.technician === 'string') return item.technician;
+  return null;
+}
+
+function getScheduleTechName(item: ApiMaintenanceSchedule): string {
+  if (item.status === 'rescheduled') {
+    if (item.rescheduledTechnician && typeof item.rescheduledTechnician === 'object' && 'name' in item.rescheduledTechnician) {
+      return item.rescheduledTechnician.name;
+    }
+    return item.rescheduledTechnicianName || '';
+  }
+
+  if (item.technician && typeof item.technician === 'object' && 'name' in item.technician) {
+    return item.technician.name;
+  }
+  return item.technicianName || '';
+}
+
+function scheduleToCalendarTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
+  const date = item.status === 'rescheduled' ? (item.rescheduledDate || item.scheduledDate) : item.scheduledDate;
+  const startTime = item.status === 'rescheduled' ? (item.rescheduledTime || item.scheduledTime) : item.scheduledTime;
+  const endTime = addOneHour(startTime);
+
+  return {
+    _id: `schedule-${item._id}`,
+    title: `جدولة صيانة - ${item.machineName || 'آلة'}`,
+    description: item.rescheduleReason || item.cancellationReason || '',
+    machineInfo: [item.machineName, item.machineDetails].filter(Boolean).join(' - '),
+    location: '',
+    priority: 'medium',
+    status: item.status === 'cancelled' ? 'cancelled' : 'assigned',
+    createdBy: 'system',
+    assignedTo: getScheduleTechName(item) || null,
+    serviceOrder: null,
+    timeLogs: [],
+    totalDurationMs: 0,
+    report: {
+      problemDescription: '',
+      solutionDescription: '',
+      usedParts: [],
+      laborCost: 0,
+      notes: '',
+    },
+    scheduledDate: date,
+    scheduledStartTime: startTime || null,
+    scheduledEndTime: endTime,
+    completedAt: null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
 export default function MaintenancePage() {
   const {
     tasks,
@@ -77,6 +150,7 @@ export default function MaintenancePage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [selectedTechnician, setSelectedTechnician] = useState('');
+  const [scheduleCalendarTasks, setScheduleCalendarTasks] = useState<ApiMaintenanceTask[]>([]);
 
   // Fetch list tasks
   useEffect(() => {
@@ -93,8 +167,36 @@ export default function MaintenancePage() {
       toDate.setDate(toDate.getDate() + 6);
       const to = formatDateISO(toDate);
       fetchCalendarTasks(from, to, selectedTechnician || undefined);
+
+      maintenanceScheduleService
+        .getAll()
+        .then((rows) => {
+          const fromDate = new Date(from);
+          const toDateRange = new Date(to);
+          const mapped = rows
+            .filter((row) => {
+              const dateStr = row.status === 'rescheduled' ? (row.rescheduledDate || row.scheduledDate) : row.scheduledDate;
+              if (!dateStr) return false;
+              const d = new Date(dateStr);
+              if (Number.isNaN(d.getTime())) return false;
+              if (d < fromDate || d > toDateRange) return false;
+
+              if (selectedTechnician) {
+                return getScheduleTechId(row) === selectedTechnician;
+              }
+              return true;
+            })
+            .map(scheduleToCalendarTask);
+
+          setScheduleCalendarTasks(mapped);
+        })
+        .catch(() => setScheduleCalendarTasks([]));
+    } else {
+      setScheduleCalendarTasks([]);
     }
   }, [fetchCalendarTasks, weekStart, selectedTechnician, viewMode]);
+
+  const mergedCalendarTasks = [...calendarTasks, ...scheduleCalendarTasks];
 
   // Always fetch stats & technicians
   useEffect(() => {
@@ -129,12 +231,16 @@ export default function MaintenancePage() {
 
   const handleTaskClick = useCallback(
     (task: ApiMaintenanceTask) => {
+      if (task._id.startsWith('schedule-')) {
+        navigate('/admin/maintenance/maintenance-schedule');
+        return;
+      }
       navigate(`/admin/maintenance/tasks/${task._id}`);
     },
     [navigate],
   );
 
-  if (loading && tasks.length === 0 && calendarTasks.length === 0) {
+  if (loading && tasks.length === 0 && mergedCalendarTasks.length === 0) {
     return (
       <div className={styles.page}>
         <LoadingSpinner />
@@ -251,7 +357,7 @@ export default function MaintenancePage() {
       {/* ── Calendar View ── */}
       {viewMode === 'calendar' && (
         <WeeklyCalendar
-          tasks={calendarTasks}
+          tasks={mergedCalendarTasks}
           weekStart={weekStart}
           onWeekChange={setWeekStart}
           onTaskClick={handleTaskClick}
