@@ -610,6 +610,93 @@
   margin: 0 0 20px;
 }
 
+.calendarModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendarCloseBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.calendarTaskSummary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.calendarTaskTitle {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.calendarTaskSub {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.calendarInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.calendarInfoItem {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendarInfoItem span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.calendarInfoItem strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.calendarActionRow {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.calendarReportBox {
+  margin-top: 14px;
+  border-top: 1px dashed #d1d5db;
+  padding-top: 14px;
+}
+
 .techSelectItem {
   display: flex;
   align-items: center;
@@ -667,4 +754,20 @@
 .viewToggleActive {
   background: var(--color-primary, #90297d) !important;
   color: #fff !important;
+}
+
+@media (max-width: 640px) {
+  .calendarInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendarActionRow {
+    flex-direction: column;
+  }
+
+  .calendarActionRow .btnPrimary,
+  .calendarActionRow .btnSecondary {
+    width: 100%;
+    justify-content: center;
+  }
 }

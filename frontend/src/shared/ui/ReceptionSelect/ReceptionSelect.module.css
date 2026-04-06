@@ -124,9 +124,13 @@
   gap: 8px;
 }
 
-.machineName {
+.machineDetails {
   font-weight: 600;
   color: #111827;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .receptionId {

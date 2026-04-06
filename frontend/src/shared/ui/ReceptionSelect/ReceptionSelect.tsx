@@ -27,7 +27,6 @@ export function ReceptionSelect({
   disabled = false,
   statusFilter = DEFAULT_STATUS_FILTER,
 }: ReceptionSelectProps) {
-  console.log('ReceptionSelect rendered. confirmModal state will be logged in handleItemClick');
   const [receptions, setReceptions] = useState<ApiMachineReception[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +57,11 @@ export function ReceptionSelect({
 
   const getMachineName = (r: ApiMachineReception) => {
     if (r.machine && typeof r.machine === 'object' && 'name' in r.machine) return r.machine.name;
-    return r.machineDetails || 'آلة غير محددة';
+    return '';
+  };
+
+  const getMachineDetails = (r: ApiMachineReception) => {
+    return r.machineDetails?.trim() || getMachineName(r) || 'آلة غير محددة';
   };
 
   const getCustomerName = (r: ApiMachineReception) => {
@@ -67,7 +70,6 @@ export function ReceptionSelect({
   };
 
   const handleItemClick = useCallback((reception: ApiMachineReception) => {
-    console.log('Modal should appear!', reception);
     setConfirmModal(reception);
   }, []);
 
@@ -90,7 +92,7 @@ export function ReceptionSelect({
   }, [onChange]);
 
   const displayValue = value.reception
-    ? `${value.reception.customId} - ${getMachineName(value.reception)}`
+    ? `${value.reception.customId} - ${getMachineDetails(value.reception)} - ${getCustomerName(value.reception) || 'بدون زبون'}`
     : '';
 
   return (
@@ -132,11 +134,11 @@ export function ReceptionSelect({
                     <div className={styles.receptionInfo}>
                       <div className={styles.receptionMain}>
                         <Package size={14} />
-                        <span className={styles.machineName}>{getMachineName(reception)}</span>
+                        <span className={styles.machineDetails}>{getMachineDetails(reception)}</span>
                         <span className={styles.receptionId}>{reception.customId}</span>
                       </div>
                       <div className={styles.receptionDetails}>
-                        <span>الزبون: {getCustomerName(reception)}</span>
+                        <span>الزبون: {getCustomerName(reception) || '—'}</span>
                       </div>
                     </div>
                   </button>

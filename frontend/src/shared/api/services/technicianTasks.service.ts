@@ -28,6 +28,7 @@ export interface UnifiedTask {
   status: string;
   date: string;
   time: string;
+  timeLogs: Array<{ action: string; timestamp: string; pauseReason: string }>;
   pauseReason: string;
   scheduledStartTime: string | null;
   scheduledEndTime: string | null;
@@ -71,7 +72,7 @@ export const technicianTasksService = {
    * بدء العمل على مهمة
    */
   async startTask(type: TaskType, id: string): Promise<TaskApiResponse> {
-    return httpClient.post<TaskApiResponse>(
+    return httpClient.patch<TaskApiResponse>(
       ENDPOINTS.TECHNICIAN_TASKS.START(type, id),
       undefined,
       true,

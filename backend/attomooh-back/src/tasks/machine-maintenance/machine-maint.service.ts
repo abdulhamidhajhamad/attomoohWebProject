@@ -32,6 +32,12 @@ export class MachineMaintService {
       readyForDelivery: status === MaintenanceStatus.READY,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
+      scheduledStartTime: dto.scheduledStartTime
+        ? new Date(dto.scheduledStartTime)
+        : null,
+      scheduledEndTime: dto.scheduledEndTime
+        ? new Date(dto.scheduledEndTime)
+        : null,
     });
   }
 
@@ -58,6 +64,16 @@ export class MachineMaintService {
     if (dto.technician !== undefined && dto.technician) data.technicianName = '';
     if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
     if (dto.status !== undefined) data.readyForDelivery = dto.status === MaintenanceStatus.READY;
+    if (dto.scheduledStartTime !== undefined) {
+      data.scheduledStartTime = dto.scheduledStartTime
+        ? new Date(dto.scheduledStartTime)
+        : null;
+    }
+    if (dto.scheduledEndTime !== undefined) {
+      data.scheduledEndTime = dto.scheduledEndTime
+        ? new Date(dto.scheduledEndTime)
+        : null;
+    }
     if (dto.spareParts !== undefined) {
       data.spareParts = dto.spareParts.map((part) => ({
         name: part.name,

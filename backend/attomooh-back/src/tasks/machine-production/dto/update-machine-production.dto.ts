@@ -8,6 +8,7 @@ import {
   IsArray,
   ValidateNested,
   IsNotEmpty,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -29,4 +30,6 @@ export class UpdateMachineProductionDto {
   @IsBoolean() @IsOptional() readyForDelivery?: boolean;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;
+  @IsDateString() @IsOptional() scheduledStartTime?: string;
+  @IsDateString() @IsOptional() scheduledEndTime?: string;
 }

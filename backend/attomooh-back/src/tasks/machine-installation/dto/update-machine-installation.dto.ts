@@ -5,6 +5,7 @@ import {
   IsNumber,
   Min,
   IsEnum,
+  IsDateString,
 } from 'class-validator';
 import { InstallationStatus } from '../../../common/enums/installation-status.enum.js';
 
@@ -19,4 +20,6 @@ export class UpdateMachineInstallationDto {
   @IsEnum(InstallationStatus) @IsOptional() status?: InstallationStatus;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;
+  @IsDateString() @IsOptional() scheduledStartTime?: string;
+  @IsDateString() @IsOptional() scheduledEndTime?: string;
 }

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   ClipboardList,
+  FileText,
   Plus,
   X,
   Circle,
@@ -82,20 +83,54 @@ const TASK_TYPE_LABEL: Record<TaskType, string> = {
   production: 'إنتاج',
 };
 
-function calcLiveDuration(task: ApiMaintenanceTask): number {
-  let totalMs = task.totalDurationMs || 0;
+type TaskSource = 'legacy' | 'machine' | 'schedule';
 
-  // If currently in_progress, add time since last start/resume
-  if (task.status === 'in_progress' && task.timeLogs.length > 0) {
-    const lastLog = [...task.timeLogs].reverse().find(
-      (l) => l.action === 'start' || l.action === 'resume',
-    );
-    if (lastLog) {
-      totalMs += Date.now() - new Date(lastLog.timestamp).getTime();
+type ReportTaskState = {
+  source: TaskSource;
+  task: ApiMaintenanceTask | UnifiedTask;
+};
+
+function calcLiveDuration(task: ApiMaintenanceTask): number {
+  const active = task.status === 'in_progress';
+  const fromLogs = calcDurationFromLogs(task.timeLogs, active);
+  return fromLogs > 0 ? fromLogs : (task.totalDurationMs || 0);
+}
+
+function calcUnifiedLiveDuration(task: UnifiedTask): number {
+  const active = task.status === 'in_progress' || task.status === 'in_maintenance';
+  const fromLogs = calcDurationFromLogs(task.timeLogs, active);
+  return fromLogs > 0 ? fromLogs : (task.durationMs || 0);
+}
+
+function calcDurationFromLogs(
+  logs: Array<{ action: string; timestamp: string | Date; pauseReason?: string }> | undefined,
+  includeRunning: boolean,
+): number {
+  if (!logs || logs.length === 0) return 0;
+
+  let total = 0;
+  let startAt: Date | null = null;
+
+  for (const log of logs) {
+    const ts = toValidDate(log.timestamp);
+    if (!ts) continue;
+
+    if (log.action === 'start' || log.action === 'resume') {
+      startAt = ts;
+      continue;
+    }
+
+    if ((log.action === 'pause' || log.action === 'finish') && startAt) {
+      total += ts.getTime() - startAt.getTime();
+      startAt = null;
     }
   }
 
-  return totalMs;
+  if (includeRunning && startAt) {
+    total += Date.now() - startAt.getTime();
+  }
+
+  return Math.max(total, 0);
 }
 
 function formatTimer(ms: number): string {
@@ -112,6 +147,151 @@ function addOneHour(time: string | null | undefined): string | null {
   const nextH = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
   const nextM = String(totalMinutes % 60).padStart(2, '0');
   return `${nextH}:${nextM}`;
+}
+
+function toValidDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function to24HourTime(value: unknown): string | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    const hh = String(value.getHours()).padStart(2, '0');
+    const mm = String(value.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  const raw = String(value).trim();
+  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) return raw;
+  if (/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(raw)) return raw.slice(0, 5);
+
+  const ampm = raw.match(/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i);
+  if (ampm) {
+    const hour12 = Number(ampm[1]);
+    const minute = ampm[2];
+    const meridiem = ampm[3].toUpperCase();
+    const normalized = (hour12 % 12) + (meridiem === 'PM' ? 12 : 0);
+    return `${String(normalized).padStart(2, '0')}:${minute}`;
+  }
+
+  const parsed = toValidDate(raw);
+  if (!parsed) return null;
+  const hh = String(parsed.getHours()).padStart(2, '0');
+  const mm = String(parsed.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function parseTimeParts(time: string | null): [number, number] | null {
+  if (!time) return null;
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const [h, m] = time.split(':').map(Number);
+  return [h, m];
+}
+
+function getTaskScheduleMeta(task: ApiMaintenanceTask | UnifiedTask, isMachine: boolean): {
+  dateLabel: string;
+  timeLabel: string;
+  hasSchedule: boolean;
+} {
+  let dateValue: Date | null = null;
+  let startTime: string | null = null;
+  let endTime: string | null = null;
+
+  if (isMachine) {
+    const machineTask = task as UnifiedTask;
+    const startDate = toValidDate(machineTask.scheduledStartTime);
+    const endDate = toValidDate(machineTask.scheduledEndTime);
+
+    dateValue = startDate ?? toValidDate(machineTask.date);
+    startTime = (startDate && to24HourTime(startDate)) || to24HourTime(machineTask.time);
+    endTime = (endDate && to24HourTime(endDate)) || addOneHour(startTime);
+  } else {
+    const legacyTask = task as ApiMaintenanceTask;
+    dateValue = toValidDate(legacyTask.scheduledDate);
+    startTime = to24HourTime(legacyTask.scheduledStartTime);
+    endTime = to24HourTime(legacyTask.scheduledEndTime) || addOneHour(startTime);
+  }
+
+  const dateLabel = dateValue
+    ? dateValue.toLocaleDateString('ar-SA', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'غير محدد';
+  const timeLabel = startTime ? `${startTime}${endTime ? ` - ${endTime}` : ''}` : 'غير محدد';
+
+  return {
+    dateLabel,
+    timeLabel,
+    hasSchedule: Boolean(dateValue || startTime),
+  };
+}
+
+function getTaskSortTimestamp(task: (ApiMaintenanceTask | UnifiedTask) & { source: TaskSource }): number {
+  if (task.source === 'machine') {
+    const machineTask = task as UnifiedTask;
+    const scheduled = toValidDate(machineTask.scheduledStartTime);
+    if (scheduled) return scheduled.getTime();
+
+    const base = toValidDate(machineTask.date);
+    if (base) {
+      const t = parseTimeParts(to24HourTime(machineTask.time));
+      if (t) base.setHours(t[0], t[1], 0, 0);
+      return base.getTime();
+    }
+
+    return toValidDate(machineTask.createdAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  }
+
+  const maintenanceTask = task as ApiMaintenanceTask;
+  const base = toValidDate(maintenanceTask.scheduledDate) || toValidDate(maintenanceTask.createdAt);
+  if (!base) return Number.MAX_SAFE_INTEGER;
+
+  const t = parseTimeParts(to24HourTime(maintenanceTask.scheduledStartTime));
+  if (t) base.setHours(t[0], t[1], 0, 0);
+
+  return base.getTime();
+}
+
+function extractTimeline(logs: Array<{ action: string; timestamp: string | Date }> | undefined): {
+  startedAt: Date | null;
+  finishedAt: Date | null;
+} {
+  let startedAt: Date | null = null;
+  let finishedAt: Date | null = null;
+
+  for (const log of logs || []) {
+    const ts = toValidDate(log.timestamp);
+    if (!ts) continue;
+
+    if ((log.action === 'start' || log.action === 'resume') && !startedAt) {
+      startedAt = ts;
+    }
+
+    if (log.action === 'finish') {
+      finishedAt = ts;
+    }
+  }
+
+  return { startedAt, finishedAt };
+}
+
+function formatDateTimeAr(value: Date | null): string {
+  if (!value) return '—';
+  return value.toLocaleString('ar-SA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function toTechScheduleTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
@@ -192,6 +372,8 @@ export default function TechnicianDashboard() {
   const [viewMode, setViewMode] = useState<'tasks' | 'calendar'>('tasks');
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [scheduleTasks, setScheduleTasks] = useState<ApiMaintenanceTask[]>([]);
+  const [selectedCalendarTask, setSelectedCalendarTask] = useState<any | null>(null);
+  const [reportTask, setReportTask] = useState<ReportTaskState | null>(null);
 
   // Finish form state (for legacy and machine tasks)
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -242,11 +424,64 @@ export default function TechnicianDashboard() {
     }
   }, [fetchCalendarTasks, weekStart, viewMode]);
 
-  const mergedCalendarTasks = [...calendarTasks, ...scheduleTasks];
+  const mergedCalendarTasks = useMemo(() => {
+    const leg = calendarTasks.map(t => ({ ...t, source: 'legacy' as const, originalTask: t }));
+    const sched = scheduleTasks.map(t => ({ ...t, source: 'schedule' as const, originalTask: t }));
+    const mach = machineTasks.map(task => {
+      const scheduledStartDate = toValidDate(task.scheduledStartTime);
+      const scheduledEndDate = toValidDate(task.scheduledEndTime);
+      const fallbackDate = toValidDate(task.date);
+
+      const tDate =
+        (scheduledStartDate && formatDateISO(scheduledStartDate)) ||
+        (fallbackDate && formatDateISO(fallbackDate)) ||
+        '';
+      const tTime =
+        (scheduledStartDate && to24HourTime(scheduledStartDate)) ||
+        to24HourTime(task.time);
+      const tEndTime =
+        (scheduledEndDate && to24HourTime(scheduledEndDate)) ||
+        addOneHour(tTime);
+
+      return {
+        _id: task._id,
+        title: `[${TASK_TYPE_LABEL[task.taskType]}] ${task.machineName}`,
+        description: task.pauseReason || task.rejectionReason || '',
+        machineInfo: task.machineDetails || '',
+        location: '',
+        priority: 'medium',
+        status: task.status as ApiTaskStatus,
+        createdBy: 'system',
+        assignedTo: task.technicianName,
+        serviceOrder: null,
+        timeLogs: [],
+        totalDurationMs: task.durationMs,
+        report: {
+          problemDescription: task.technicianReport,
+          solutionDescription: '',
+          usedParts: task.spareParts?.map(sp => ({ name: sp.name, quantity: sp.quantity, cost: sp.cost || 0 })) || [],
+          laborCost: task.technicianFee,
+          notes: '',
+        },
+        scheduledDate: tDate,
+        scheduledStartTime: tTime || null,
+        scheduledEndTime: tEndTime,
+        completedAt: null,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        source: 'machine' as const,
+        originalTask: task
+      } as unknown as ApiMaintenanceTask & { source: 'machine', originalTask: UnifiedTask };
+    });
+    return [...leg, ...sched, ...mach];
+  }, [calendarTasks, scheduleTasks, machineTasks]);
 
   // Timer tick — update every second for live display
   useEffect(() => {
-    const hasActive = legacyTasks.some((t) => t.status === 'in_progress');
+    const hasActiveLegacy = legacyTasks.some((t) => t.status === 'in_progress');
+    const hasActiveMachine = machineTasks.some((t) => t.status === 'in_progress' || t.status === 'in_maintenance');
+    const hasActive = hasActiveLegacy || hasActiveMachine;
+
     if (hasActive) {
       timerRef.current = setInterval(() => setTick((t) => t + 1), 1000);
     } else {
@@ -255,7 +490,7 @@ export default function TechnicianDashboard() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [legacyTasks]);
+  }, [legacyTasks, machineTasks]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -407,25 +642,36 @@ export default function TechnicianDashboard() {
   // Merge and organize all tasks
   const allActiveTasks = useMemo(() => {
     const legacyActive = legacyTasks
-      .filter((t) => ['assigned', 'in_progress', 'paused'].includes(t.status))
+      .filter((t) => ['pending', 'assigned', 'in_progress', 'paused'].includes(t.status))
       .map((t) => ({ ...t, source: 'legacy' as const }));
 
     const machineActive = machineTasks
-      .filter((t) => ['assigned', 'in_progress', 'in_maintenance', 'postponed'].includes(t.status))
+      .filter((t) => ['waiting', 'assigned', 'in_progress', 'in_maintenance', 'postponed'].includes(t.status))
       .map((t) => ({ ...t, source: 'machine' as const }));
 
     const scheduleActive = scheduleTasks
       .filter((t) => t.status !== 'cancelled')
       .map((t) => ({ ...t, source: 'schedule' as const }));
 
-    return [...legacyActive, ...machineActive, ...scheduleActive];
+    return [...legacyActive, ...machineActive, ...scheduleActive]
+      .sort((a, b) => getTaskSortTimestamp(a) - getTaskSortTimestamp(b));
   }, [legacyTasks, machineTasks, scheduleTasks]);
 
   const completedTasks = useMemo(() => {
-    return legacyTasks
+    const legacyCompleted = legacyTasks
       .filter((t) => ['completed', 'cancelled'].includes(t.status))
       .map((t) => ({ ...t, source: 'legacy' as const }));
-  }, [legacyTasks]);
+
+    const machineCompleted = machineTasks
+      .filter((t) => ['ready', 'rejected'].includes(t.status))
+      .map((t) => ({ ...t, source: 'machine' as const }));
+
+    return [...legacyCompleted, ...machineCompleted].sort((a, b) => {
+      const aTs = toValidDate((a as { updatedAt?: string }).updatedAt)?.getTime() ?? 0;
+      const bTs = toValidDate((b as { updatedAt?: string }).updatedAt)?.getTime() ?? 0;
+      return bTs - aTs;
+    });
+  }, [legacyTasks, machineTasks]);
 
   const loading = legacyLoading || machineLoading;
 
@@ -506,6 +752,7 @@ export default function TechnicianDashboard() {
             weekStart={weekStart}
             onWeekChange={setWeekStart}
             showAssignee={false}
+            onTaskClick={(task) => setSelectedCalendarTask(task)}
           />
         ) : (
         <>
@@ -535,7 +782,15 @@ export default function TechnicianDashboard() {
             const isInProgress = task.status === 'in_progress' || task.status === 'in_maintenance';
             const isPaused = task.status === 'paused' || task.status === 'postponed';
             const isAssigned = task.status === 'assigned';
-            const liveDuration = isLegacy ? calcLiveDuration(task as ApiMaintenanceTask) : (task as UnifiedTask).durationMs;
+            const liveDuration = isMachine
+              ? calcUnifiedLiveDuration(task as UnifiedTask)
+              : isLegacy
+                ? calcLiveDuration(task as ApiMaintenanceTask)
+                : 0;
+            const scheduleMeta = getTaskScheduleMeta(
+              isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+              isMachine,
+            );
 
             return (
               <div key={task._id} className={styles.taskCardTech}>
@@ -566,6 +821,15 @@ export default function TechnicianDashboard() {
                   )}
                 </div>
 
+                <div className={styles.scheduleStrip}>
+                  <span className={styles.schedulePill}>
+                    <CalendarDays size={14} /> {scheduleMeta.dateLabel}
+                  </span>
+                  <span className={styles.schedulePill}>
+                    <Clock size={14} /> {scheduleMeta.timeLabel}
+                  </span>
+                </div>
+
                 {/* Timer */}
                 {(isInProgress || isPaused) && !isSchedule && (
                   <div className={styles.timerDisplay}>
@@ -579,6 +843,19 @@ export default function TechnicianDashboard() {
 
                 {/* Actions */}
                 <div className={styles.actionBtns}>
+                  {!isSchedule && (
+                    <button
+                      className={styles.btnReport}
+                      onClick={() => setReportTask({
+                        source: isMachine ? 'machine' : 'legacy',
+                        task: isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+                      })}
+                    >
+                      <FileText size={16} />
+                      ريبورت
+                    </button>
+                  )}
+
                   {isSchedule && (
                     <button className={styles.btnPause} disabled>
                       هذه مهمة مجدولة
@@ -684,24 +961,54 @@ export default function TechnicianDashboard() {
               المهام المنتهية ({completedTasks.length})
             </h2>
             {completedTasks.map((task) => {
-              const statusInfo = STATUS_MAP[task.status as ApiTaskStatus];
+              const isMachine = task.source === 'machine';
+              const statusInfo = isMachine
+                ? MACHINE_TASK_STATUS_MAP[task.status] || STATUS_MAP[task.status as ApiTaskStatus]
+                : STATUS_MAP[task.status as ApiTaskStatus];
+              const scheduleMeta = getTaskScheduleMeta(
+                isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+                isMachine,
+              );
+              const totalDuration = isMachine
+                ? calcUnifiedLiveDuration(task as UnifiedTask)
+                : (task as ApiMaintenanceTask).totalDurationMs;
+              const completedTitle = isMachine
+                ? `[${TASK_TYPE_LABEL[(task as UnifiedTask).taskType]}] ${(task as UnifiedTask).machineName}`
+                : (task as ApiMaintenanceTask).title;
+
               return (
                 <div key={task._id} className={styles.taskCardTech} style={{ opacity: 0.7 }}>
                   <div className={styles.taskCardHeader}>
-                    <h3 className={styles.taskCardTitle}>{task.title}</h3>
+                    <h3 className={styles.taskCardTitle}>{completedTitle}</h3>
                     <span
                       className={styles.statusBadge}
-                      style={{ background: statusInfo.color }}
+                      style={{ background: statusInfo?.color || '#6b7280' }}
                     >
-                      {statusInfo.label}
+                      {statusInfo?.label || task.status}
                     </span>
                   </div>
                   <div className={styles.taskCardMeta}>
-                    {task.machineInfo && <span>🔧 {task.machineInfo}</span>}
+                    {!isMachine && (task as ApiMaintenanceTask).machineInfo && (
+                      <span>🔧 {(task as ApiMaintenanceTask).machineInfo}</span>
+                    )}
+                    {isMachine && <span>🔧 {(task as UnifiedTask).machineDetails}</span>}
+                    <span>
+                      <CalendarDays size={14} style={{ display: 'inline' }} />{' '}
+                      {scheduleMeta.dateLabel}
+                    </span>
                     <span>
                       <Clock size={14} style={{ display: 'inline' }} />{' '}
-                      {formatTimer(task.totalDurationMs)}
+                      {formatTimer(totalDuration)}
                     </span>
+                    <button
+                      className={styles.btnReport}
+                      onClick={() => setReportTask({
+                        source: isMachine ? 'machine' : 'legacy',
+                        task: isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+                      })}
+                    >
+                      <FileText size={14} /> ريبورت
+                    </button>
                   </div>
                 </div>
               );
@@ -711,6 +1018,307 @@ export default function TechnicianDashboard() {
         </>
         )}
       </div>
+
+      {/* Calendar Task Modal */}
+      {selectedCalendarTask && (() => {
+        const isLegacy = selectedCalendarTask.source === 'legacy';
+        const isMachine = selectedCalendarTask.source === 'machine';
+        const isSchedule = selectedCalendarTask.source === 'schedule';
+        const task = isMachine ? selectedCalendarTask.originalTask : selectedCalendarTask;
+
+        const statusInfo = isMachine
+          ? MACHINE_TASK_STATUS_MAP[task.status] || STATUS_MAP[task.status as ApiTaskStatus]
+          : STATUS_MAP[task.status as ApiTaskStatus];
+
+        const priority = (isLegacy || isSchedule) ? (task as ApiMaintenanceTask).priority : 'medium';
+        const priorityInfo = PRIORITY_MAP[priority || 'medium'];
+        const isInProgress = task.status === 'in_progress' || task.status === 'in_maintenance';
+        const isPaused = task.status === 'paused' || task.status === 'postponed';
+        const isAssigned = task.status === 'assigned';
+        const liveDuration = isMachine
+          ? calcUnifiedLiveDuration(task as UnifiedTask)
+          : isLegacy
+            ? calcLiveDuration(task as ApiMaintenanceTask)
+            : 0;
+        const scheduleMeta = getTaskScheduleMeta(
+          isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+          isMachine,
+        );
+
+        return (
+          <div className={styles.modalOverlay} onClick={() => setSelectedCalendarTask(null)}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ClipboardList size={20} />
+                  تفاصيل المهمة
+                </h3>
+                <button onClick={() => setSelectedCalendarTask(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className={styles.taskCardTech} style={{ margin: 0, boxShadow: 'none', border: '1px solid #e5e7eb' }}>
+                <div className={styles.taskCardHeader}>
+                  <h3 className={styles.taskCardTitle}>
+                    {isMachine && `[${TASK_TYPE_LABEL[(task as UnifiedTask).taskType]}] `}
+                    {isLegacy ? task.title : (task as UnifiedTask).machineName}
+                  </h3>
+                  <span
+                    className={styles.statusBadge}
+                    style={{ background: statusInfo?.color || '#ccc' }}
+                  >
+                    {statusInfo?.label || task.status}
+                  </span>
+                </div>
+
+                <div className={styles.taskCardMeta} style={{ marginTop: 12 }}>
+                  {isLegacy && task.machineInfo && <span>🔧 {task.machineInfo}</span>}
+                  {isMachine && <span>🔧 {(task as UnifiedTask).machineDetails}</span>}
+                  {isLegacy && task.location && <span>📍 {task.location}</span>}
+                  {!isSchedule && priorityInfo && (
+                    <span
+                      className={styles.priorityBadge}
+                      style={{ color: priorityInfo.color, borderColor: priorityInfo.color }}
+                    >
+                      {priorityInfo.label}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.scheduleStrip}>
+                  <span className={styles.schedulePill}>
+                    <CalendarDays size={14} /> {scheduleMeta.dateLabel}
+                  </span>
+                  <span className={styles.schedulePill}>
+                    <Clock size={14} /> {scheduleMeta.timeLabel}
+                  </span>
+                </div>
+
+                <div className={styles.taskCardDesc} style={{ margin: '16px 0', fontSize: '0.95rem', color: '#4b5563' }}>
+                  {isLegacy && task.description && <p>{task.description}</p>}
+                  {isMachine && (task as UnifiedTask).pauseReason && <p><strong>سبب الإيقاف:</strong> {(task as UnifiedTask).pauseReason}</p>}
+                  {isMachine && (task as UnifiedTask).rejectionReason && <p><strong>سبب الرفض:</strong> {(task as UnifiedTask).rejectionReason}</p>}
+                </div>
+
+                {/* Timer */}
+                {(isInProgress || isPaused) && !isSchedule && (
+                  <div className={styles.timerDisplay} style={{ marginBottom: 16 }}>
+                    <Clock size={22} />
+                    <span>{formatTimer(liveDuration)}</span>
+                    <span className={styles.timerLabel}>
+                      {isInProgress ? 'جاري العمل' : 'متوقف مؤقتاً'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className={styles.actionBtns} style={{ marginTop: 24 }}>
+                  {!isSchedule && (
+                    <button
+                      className={styles.btnReport}
+                      onClick={() => {
+                        setReportTask({
+                          source: isMachine ? 'machine' : 'legacy',
+                          task: isMachine ? (task as UnifiedTask) : (task as ApiMaintenanceTask),
+                        });
+                        setSelectedCalendarTask(null);
+                      }}
+                    >
+                      <FileText size={16} />
+                      ريبورت
+                    </button>
+                  )}
+
+                  {isSchedule && (
+                    <button className={styles.btnPause} disabled>
+                      هذه مهمة مجدولة
+                    </button>
+                  )}
+
+                  {isAssigned && !isSchedule && (
+                    <button
+                      className={styles.btnStart}
+                      onClick={() => {
+                        isLegacy
+                          ? handleLegacyAction(task._id, 'start')
+                          : handleMachineAction((task as UnifiedTask).taskType, task._id, 'start');
+                        setSelectedCalendarTask(null);
+                      }}
+                      disabled={actionLoading === task._id}
+                    >
+                      <Play size={16} />
+                      بدء العمل
+                    </button>
+                  )}
+
+                  {isInProgress && !isSchedule && (
+                    <>
+                      <button
+                        className={styles.btnPause}
+                        onClick={() => {
+                          isLegacy
+                            ? handleLegacyAction(task._id, 'pause')
+                            : handleMachineAction((task as UnifiedTask).taskType, task._id, 'pause');
+                          setSelectedCalendarTask(null);
+                        }}
+                        disabled={actionLoading === task._id}
+                      >
+                        <Pause size={16} />
+                        إيقاف مؤقت
+                      </button>
+                      <button
+                        className={styles.btnFinish}
+                        onClick={() => {
+                          openFinishForm(
+                            task._id,
+                            isLegacy ? 'legacy' : (task as UnifiedTask).taskType
+                          );
+                          setSelectedCalendarTask(null);
+                        }}
+                        disabled={actionLoading === task._id}
+                      >
+                        <CheckCircle2 size={16} />
+                        إنهاء المهمة
+                      </button>
+                    </>
+                  )}
+
+                  {isPaused && !isSchedule && (
+                    <>
+                      <button
+                        className={styles.btnResume}
+                        onClick={() => {
+                          isLegacy
+                            ? handleLegacyAction(task._id, 'resume')
+                            : handleMachineAction((task as UnifiedTask).taskType, task._id, 'resume');
+                          setSelectedCalendarTask(null);
+                        }}
+                        disabled={actionLoading === task._id}
+                      >
+                        <RotateCcw size={16} />
+                        استئناف
+                      </button>
+                      <button
+                        className={styles.btnFinish}
+                        onClick={() => {
+                          openFinishForm(
+                            task._id,
+                            isLegacy ? 'legacy' : (task as UnifiedTask).taskType
+                          );
+                          setSelectedCalendarTask(null);
+                        }}
+                        disabled={actionLoading === task._id}
+                      >
+                        <CheckCircle2 size={16} />
+                        إنهاء المهمة
+                      </button>
+                    </>
+                  )}
+
+                  {/* Reject button for machine tasks only */}
+                  {isMachine && (isAssigned || isPaused) && (
+                    <button
+                      className={styles.btnReject}
+                      onClick={() => {
+                        openRejectForm(task._id, (task as UnifiedTask).taskType);
+                        setSelectedCalendarTask(null);
+                      }}
+                      disabled={actionLoading === task._id}
+                    >
+                      <XCircle size={16} />
+                      رفض
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Report Modal */}
+      {reportTask && (() => {
+        const isMachine = reportTask.source === 'machine';
+        const task = reportTask.task;
+        const statusInfo = isMachine
+          ? MACHINE_TASK_STATUS_MAP[(task as UnifiedTask).status] || STATUS_MAP[(task as UnifiedTask).status as ApiTaskStatus]
+          : STATUS_MAP[(task as ApiMaintenanceTask).status as ApiTaskStatus];
+
+        const title = isMachine
+          ? `[${TASK_TYPE_LABEL[(task as UnifiedTask).taskType]}] ${(task as UnifiedTask).machineName}`
+          : (task as ApiMaintenanceTask).title;
+        const machineInfo = isMachine
+          ? (task as UnifiedTask).machineDetails
+          : (task as ApiMaintenanceTask).machineInfo;
+        const durationMs = isMachine
+          ? calcUnifiedLiveDuration(task as UnifiedTask)
+          : calcLiveDuration(task as ApiMaintenanceTask);
+        const scheduleMeta = getTaskScheduleMeta(task, isMachine);
+        const logs = isMachine
+          ? (task as UnifiedTask).timeLogs
+          : (task as ApiMaintenanceTask).timeLogs;
+        const { startedAt, finishedAt } = extractTimeline(logs as Array<{ action: string; timestamp: string | Date }>);
+
+        return (
+          <div className={styles.modalOverlay} onClick={() => setReportTask(null)}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.reportHeader}>
+                <div>
+                  <h3 className={styles.modalTitle}>تقرير المهمة</h3>
+                  <p className={styles.reportSubtitle}>ملخص زمني وحالة التنفيذ</p>
+                </div>
+                <button className={styles.reportCloseBtn} onClick={() => setReportTask(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className={styles.reportHero}>
+                <div>
+                  <div className={styles.reportTaskTitle}>{title}</div>
+                  {machineInfo && <div className={styles.reportTaskInfo}>🔧 {machineInfo}</div>}
+                </div>
+                <span className={styles.statusBadge} style={{ background: statusInfo?.color || '#6b7280' }}>
+                  {statusInfo?.label || 'غير معروف'}
+                </span>
+              </div>
+
+              <div className={styles.reportGrid}>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>المدة الكلية</span>
+                  <strong className={styles.reportValue}>{formatTimer(durationMs)}</strong>
+                </div>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>التاريخ المجدول</span>
+                  <strong className={styles.reportValue}>{scheduleMeta.dateLabel}</strong>
+                </div>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>الوقت المجدول</span>
+                  <strong className={styles.reportValue}>{scheduleMeta.timeLabel}</strong>
+                </div>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>بداية التنفيذ</span>
+                  <strong className={styles.reportValue}>{formatDateTimeAr(startedAt)}</strong>
+                </div>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>نهاية التنفيذ</span>
+                  <strong className={styles.reportValue}>{formatDateTimeAr(finishedAt)}</strong>
+                </div>
+                <div className={styles.reportCard}>
+                  <span className={styles.reportLabel}>عدد سجلات الوقت</span>
+                  <strong className={styles.reportValue}>{logs?.length || 0}</strong>
+                </div>
+              </div>
+
+              <div className={styles.formActions}>
+                <button className={styles.btnSecondary} onClick={() => setReportTask(null)}>
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Finish Modal */}
       {showFinishModal && (

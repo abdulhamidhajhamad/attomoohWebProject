@@ -40,6 +40,24 @@ const createEmptyForm = (): ProductionForm => ({
   scheduledEndTime: '',
 });
 
+const toApiDateTime = (value: string): string | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+const toInputDateTime = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${hh}:${mm}`;
+};
+
 const formToPayload = (form: ProductionForm) => ({
   customId: form.autoCustomId ? undefined : form.customId.trim() || undefined,
   machineName: form.machineName,
@@ -48,8 +66,8 @@ const formToPayload = (form: ProductionForm) => ({
   technician: form.technician.mode === 'select' ? (form.technician.id || undefined) : undefined,
   technicianName: form.technician.mode === 'manual' ? form.technician.name : '',
   status: form.status,
-  scheduledStartTime: form.scheduledStartTime || null,
-  scheduledEndTime: form.scheduledEndTime || null,
+  scheduledStartTime: toApiDateTime(form.scheduledStartTime),
+  scheduledEndTime: toApiDateTime(form.scheduledEndTime),
 });
 
 const productionToForm = (item: ApiMachineProduction): ProductionForm => {
@@ -60,12 +78,8 @@ const productionToForm = (item: ApiMachineProduction): ProductionForm => {
     technician = { id: undefined, name: item.technicianName, mode: 'manual' };
   }
 
-  const scheduledStartTime = item.scheduledStartTime
-    ? new Date(item.scheduledStartTime).toISOString().slice(0, 16)
-    : '';
-  const scheduledEndTime = item.scheduledEndTime
-    ? new Date(item.scheduledEndTime).toISOString().slice(0, 16)
-    : '';
+  const scheduledStartTime = toInputDateTime(item.scheduledStartTime);
+  const scheduledEndTime = toInputDateTime(item.scheduledEndTime);
 
   return {
     autoCustomId: false,

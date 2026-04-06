@@ -117,17 +117,21 @@
 /* ── Technician Dashboard ── */
 .techDashboard {
   min-height: 100vh;
-  background: #f0f2f5;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(59, 130, 246, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 0%, rgba(16, 185, 129, 0.12), transparent 60%),
+    linear-gradient(180deg, #eef2f7 0%, #f5f7fb 100%);
   direction: rtl;
 }
 
 .techTopBar {
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(120deg, #0f172a 0%, #16213e 45%, #1f2937 100%);
   color: #fff;
-  padding: 16px 24px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .techTopBarTitle {
@@ -248,8 +252,8 @@
 }
 
 .techContent {
-  padding: 24px;
-  max-width: 800px;
+  padding: 18px;
+  max-width: 860px;
   margin: 0 auto;
 }
 
@@ -262,16 +266,18 @@
 
 /* ── Task Cards (Technician view) ── */
 .taskCardTech {
-  background: #fff;
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
   padding: 20px;
-  border: 1px solid #f0f0f0;
-  margin-bottom: 12px;
-  transition: box-shadow 0.2s;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  margin-bottom: 14px;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  backdrop-filter: blur(6px);
 }
 
 .taskCardTech:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
 }
 
 .taskCardHeader {
@@ -307,6 +313,26 @@
   margin-bottom: 14px;
 }
 
+.scheduleStrip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.schedulePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #334155;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .priorityBadge {
   padding: 2px 10px;
   border-radius: 12px;
@@ -321,14 +347,15 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px;
-  background: linear-gradient(135deg, #f8f0f6 0%, #faf5ff 100%);
-  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #eff6ff 100%);
+  border-radius: 14px;
   margin-bottom: 14px;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
-  color: var(--color-primary, #90297d);
+  color: #1d4ed8;
   font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(147, 197, 253, 0.5);
 }
 
 .timerLabel {
@@ -358,9 +385,10 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.25);
 }
 
-.btnStart:hover { opacity: 0.9; }
+.btnStart:hover { opacity: 0.94; transform: translateY(-1px); }
 
 .btnPause {
   display: inline-flex;
@@ -376,9 +404,10 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.24);
 }
 
-.btnPause:hover { opacity: 0.9; }
+.btnPause:hover { opacity: 0.94; transform: translateY(-1px); }
 
 .btnResume {
   display: inline-flex;
@@ -394,16 +423,17 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.24);
 }
 
-.btnResume:hover { opacity: 0.9; }
+.btnResume:hover { opacity: 0.94; transform: translateY(-1px); }
 
 .btnFinish {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: var(--color-primary, #90297d);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -412,9 +442,31 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
 }
 
-.btnFinish:hover { opacity: 0.9; }
+.btnFinish:hover { opacity: 0.94; transform: translateY(-1px); }
+
+.btnReport {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #111827;
+  color: #f9fafb;
+  border: 1px solid rgba(17, 24, 39, 0.88);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btnReport:hover {
+  background: #1f2937;
+  transform: translateY(-1px);
+}
 
 .btnReject {
   display: inline-flex;
@@ -473,12 +525,14 @@
 
 .modalContent {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 28px;
   width: 100%;
   max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.24);
 }
 
 .modalTitle {
@@ -493,6 +547,84 @@
   gap: 12px;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.reportHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.reportSubtitle {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.reportCloseBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.reportHero {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.reportTaskTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.reportTaskInfo {
+  color: #475569;
+  font-size: 0.88rem;
+  margin-top: 4px;
+}
+
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reportCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reportLabel {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.reportValue {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 /* ── Parts Row ── */
@@ -551,4 +683,134 @@
 .emptyState p {
   font-size: 1rem;
   margin: 0;
+}
+
+@media (max-width: 900px) {
+  .statusBar {
+    padding: 10px 14px;
+  }
+
+  .techContent {
+    padding: 14px;
+  }
+
+  .taskCardTech {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .taskCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .taskCardTitle {
+    font-size: 0.98rem;
+  }
+
+  .actionBtns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .actionBtns button {
+    justify-content: center;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+
+  .timerDisplay {
+    font-size: 1.2rem;
+    padding: 12px;
+  }
+
+  .modalOverlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modalContent {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    padding: 16px;
+  }
+
+  .reportGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .partsRow {
+    flex-wrap: wrap;
+  }
+
+  .partsRow .formGroup {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .techTopBar {
+    padding: 12px 12px;
+  }
+
+  .techTopBarTitle {
+    font-size: 0.95rem;
+    gap: 6px;
+  }
+
+  .viewToggle {
+    margin-inline-end: 4px;
+  }
+
+  .viewToggleBtn {
+    padding: 6px 8px;
+  }
+
+  .techLogout {
+    padding: 7px 10px;
+    font-size: 0.78rem;
+  }
+
+  .statusBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .statusToggleGroup {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .statusToggleBtn {
+    white-space: nowrap;
+    padding: 7px 12px;
+  }
+
+  .sectionTitle {
+    font-size: 1rem;
+  }
+
+  .scheduleStrip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .formActions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .actionBtns {
+    grid-template-columns: 1fr;
+  }
 }

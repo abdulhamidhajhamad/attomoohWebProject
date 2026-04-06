@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsMongoId, IsNumber, Min, IsArray, ValidateNested, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsMongoId, IsNumber, Min, IsArray, ValidateNested, IsEnum, IsNotEmpty, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { InspectionStatus } from '../../../common/enums/inspection-status.enum.js';
 
@@ -20,4 +20,6 @@ export class UpdateMachineInspectionDto {
   @IsEnum(InspectionStatus) @IsOptional() status?: InspectionStatus;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;
+  @IsDateString() @IsOptional() scheduledStartTime?: string;
+  @IsDateString() @IsOptional() scheduledEndTime?: string;
 }

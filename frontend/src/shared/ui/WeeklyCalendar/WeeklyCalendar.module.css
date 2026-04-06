@@ -182,7 +182,7 @@
   right: 3px;
   left: 3px;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 4px 7px;
   font-size: 0.72rem;
   color: #fff;
   overflow: hidden;
@@ -192,8 +192,9 @@
   min-height: 22px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  line-height: 1.3;
+  justify-content: flex-start;
+  line-height: 1.25;
+  gap: 1px;
 }
 
 .calendarBlock:hover {
@@ -209,16 +210,37 @@
   text-overflow: ellipsis;
 }
 
+.blockMeta {
+  font-weight: 500;
+  opacity: 0.92;
+  font-size: 0.62rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .blockTime {
-  font-weight: 400;
-  opacity: 0.85;
-  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.92;
+  font-size: 0.62rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockTimeRange {
+  direction: ltr;
+  unicode-bidi: plaintext;
+  display: inline-block;
 }
 
 .blockAssignee {
-  font-weight: 500;
-  opacity: 0.85;
-  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0.92;
+  font-size: 0.62rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── All-day bar for unscheduled tasks ── */
@@ -314,5 +336,11 @@
 
   .blockTitle {
     font-size: 0.65rem;
+  }
+
+  .blockMeta,
+  .blockTime,
+  .blockAssignee {
+    font-size: 0.58rem;
   }
 }

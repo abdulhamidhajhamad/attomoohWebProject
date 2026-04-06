@@ -28,6 +28,12 @@ export class MachineInstallationService {
       status,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
+      scheduledStartTime: dto.scheduledStartTime
+        ? new Date(dto.scheduledStartTime)
+        : null,
+      scheduledEndTime: dto.scheduledEndTime
+        ? new Date(dto.scheduledEndTime)
+        : null,
     });
   }
 
@@ -56,6 +62,16 @@ export class MachineInstallationService {
         : null;
     if (dto.technician !== undefined && dto.technician) data.technicianName = '';
     if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
+    if (dto.scheduledStartTime !== undefined) {
+      data.scheduledStartTime = dto.scheduledStartTime
+        ? new Date(dto.scheduledStartTime)
+        : null;
+    }
+    if (dto.scheduledEndTime !== undefined) {
+      data.scheduledEndTime = dto.scheduledEndTime
+        ? new Date(dto.scheduledEndTime)
+        : null;
+    }
     const u = await this.repo.updateById(id, data as any);
     if (!u)
       throw new NotFoundException('Installation record not found');

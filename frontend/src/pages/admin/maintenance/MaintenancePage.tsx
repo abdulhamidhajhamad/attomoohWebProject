@@ -7,6 +7,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  X,
+  FileText,
+  ExternalLink,
   Users,
   BarChart3,
   Filter,
@@ -15,7 +18,13 @@ import {
 } from 'lucide-react';
 import { useMaintenanceStore } from '../../../shared/store/maintenanceStore';
 import { useAdminStore } from '../../../shared/store/adminStore';
-import { maintenanceScheduleService } from '../../../shared/api/services';
+import {
+  maintenanceScheduleService,
+  machineInspectionService,
+  machineInstallationService,
+  machineMaintenanceService,
+  machineProductionService,
+} from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import WeeklyCalendar, {
   getWeekStart,
@@ -23,6 +32,13 @@ import WeeklyCalendar, {
 } from '../../../shared/ui/WeeklyCalendar/WeeklyCalendar';
 import type { ApiMaintenanceTask, ApiMaintenanceSchedule, ApiTaskStatus, ApiServiceOrder } from '../../../shared/api/types';
 import styles from './MaintenancePage.module.css';
+
+const TASK_TYPE_LABEL: Record<string, string> = {
+  inspection: 'فحص',
+  maintenance: 'صيانة',
+  installation: 'تنصيب',
+  production: 'إنتاج',
+};
 
 const STATUS_MAP: Record<ApiTaskStatus, { label: string; color: string; icon: typeof Clock }> = {
   pending: { label: 'قيد الانتظار', color: '#f59e0b', icon: Clock },
@@ -39,6 +55,55 @@ const PRIORITY_MAP: Record<string, { label: string; color: string }> = {
   high: { label: 'عالية', color: '#ef4444' },
   urgent: { label: 'عاجلة', color: '#dc2626' },
 };
+
+const EXTRA_MACHINE_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  waiting: { label: 'بالانتظار', color: '#f59e0b' },
+  in_maintenance: { label: 'قيد الصيانة', color: '#8b5cf6' },
+  postponed: { label: 'مؤجلة', color: '#f59e0b' },
+  ready: { label: 'جاهزة', color: '#10b981' },
+  rejected: { label: 'مرفوضة', color: '#dc2626' },
+};
+
+type CalendarTaskView = ApiMaintenanceTask & { originalType?: string; originalId?: string };
+
+function getTaskStatusMeta(status: string): { label: string; color: string } {
+  return STATUS_MAP[status as ApiTaskStatus] || EXTRA_MACHINE_STATUS_MAP[status] || { label: status, color: '#6b7280' };
+}
+
+function hasTaskReport(task: ApiMaintenanceTask): boolean {
+  const report = task.report;
+  const reportText = [
+    report?.problemDescription,
+    report?.solutionDescription,
+    report?.notes,
+  ]
+    .map((v) => String(v || '').trim())
+    .filter(Boolean);
+
+  const hasParts = (report?.usedParts?.length || 0) > 0;
+  const hasCost = (report?.laborCost || 0) > 0;
+  const hasDuration = (task.totalDurationMs || 0) > 0;
+
+  return hasDuration || hasParts || hasCost || reportText.length > 0;
+}
+
+function getCalendarTaskRoute(task: CalendarTaskView): string {
+  if (task._id.startsWith('schedule-')) {
+    return '/admin/maintenance/maintenance-schedule';
+  }
+
+  if (task.originalType && task.originalId) {
+    const typeUrls: Record<string, string> = {
+      inspection: '/admin/maintenance/machine-inspection',
+      installation: '/admin/maintenance/machine-installation',
+      maintenance: '/admin/maintenance/machine-maintenance',
+      production: '/admin/maintenance/machine-production',
+    };
+    return typeUrls[task.originalType] || '/admin/maintenance';
+  }
+
+  return `/admin/maintenance/tasks/${task._id}`;
+}
 
 function formatDuration(ms: number): string {
   if (ms === 0) return '—';
@@ -63,6 +128,44 @@ function addOneHour(time: string | null | undefined): string | null {
   const nextH = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
   const nextM = String(totalMinutes % 60).padStart(2, '0');
   return `${nextH}:${nextM}`;
+}
+
+function toValidDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function to24HourTime(value: unknown): string | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    const hh = String(value.getHours()).padStart(2, '0');
+    const mm = String(value.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  const raw = String(value).trim();
+  if (/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) return raw;
+  if (/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(raw)) return raw.slice(0, 5);
+
+  const ampm = raw.match(/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i);
+  if (ampm) {
+    const hour12 = Number(ampm[1]);
+    const minute = ampm[2];
+    const meridiem = ampm[3].toUpperCase();
+    const normalized = (hour12 % 12) + (meridiem === 'PM' ? 12 : 0);
+    return `${String(normalized).padStart(2, '0')}:${minute}`;
+  }
+
+  const parsed = toValidDate(raw);
+  if (!parsed) return null;
+  const hh = String(parsed.getHours()).padStart(2, '0');
+  const mm = String(parsed.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 function getScheduleTechId(item: ApiMaintenanceSchedule): string | null {
@@ -94,17 +197,73 @@ function getScheduleTechName(item: ApiMaintenanceSchedule): string {
   return item.technicianName || '';
 }
 
+function firstNonEmptyText(values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
+function getEntityName(entity: unknown): string {
+  if (!entity || typeof entity !== 'object') return '';
+  if ('name' in entity && typeof (entity as { name?: unknown }).name === 'string') {
+    return ((entity as { name?: string }).name || '').trim();
+  }
+  return '';
+}
+
+function extractCustomerName(source: any): string {
+  const reception = source?.machineReception && typeof source.machineReception === 'object'
+    ? source.machineReception
+    : null;
+
+  return firstNonEmptyText([
+    source?.customerName,
+    getEntityName(source?.customer),
+    reception?.customerName,
+    getEntityName(reception?.customer),
+  ]);
+}
+
+function buildMachineSpecs(source: any, fallbackName: string): string {
+  const reception = source?.machineReception && typeof source.machineReception === 'object'
+    ? source.machineReception
+    : null;
+
+  const details = firstNonEmptyText([
+    source?.machineDetails,
+    source?.machineNameAndDetails,
+    reception?.machineDetails,
+    fallbackName,
+  ]);
+
+  const serial = firstNonEmptyText([
+    source?.serialNumber,
+    reception?.serialNumber,
+  ]);
+
+  if (details && serial) return `${details} - SN: ${serial}`;
+  if (details) return details;
+  if (serial) return `SN: ${serial}`;
+  return fallbackName;
+}
+
 function scheduleToCalendarTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
   const date = item.status === 'rescheduled' ? (item.rescheduledDate || item.scheduledDate) : item.scheduledDate;
   const startTime = item.status === 'rescheduled' ? (item.rescheduledTime || item.scheduledTime) : item.scheduledTime;
   const endTime = addOneHour(startTime);
+  const machineName = item.machineName || 'آلة';
+  const machineSpecs = buildMachineSpecs(item, machineName);
+  const customerName = extractCustomerName(item);
 
   return {
     _id: `schedule-${item._id}`,
-    title: `جدولة صيانة - ${item.machineName || 'آلة'}`,
+    title: `جدولة صيانة - ${machineName}`,
     description: item.rescheduleReason || item.cancellationReason || '',
-    machineInfo: [item.machineName, item.machineDetails].filter(Boolean).join(' - '),
-    location: '',
+    machineInfo: machineSpecs,
+    location: customerName,
     priority: 'medium',
     status: item.status === 'cancelled' ? 'cancelled' : 'assigned',
     createdBy: 'system',
@@ -151,6 +310,9 @@ export default function MaintenancePage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [selectedTechnician, setSelectedTechnician] = useState('');
   const [scheduleCalendarTasks, setScheduleCalendarTasks] = useState<ApiMaintenanceTask[]>([]);
+  const [machineCalendarTasks, setMachineCalendarTasks] = useState<ApiMaintenanceTask[]>([]);
+  const [selectedCalendarTask, setSelectedCalendarTask] = useState<CalendarTaskView | null>(null);
+  const [showCalendarReport, setShowCalendarReport] = useState(false);
 
   // Fetch list tasks
   useEffect(() => {
@@ -191,12 +353,107 @@ export default function MaintenancePage() {
           setScheduleCalendarTasks(mapped);
         })
         .catch(() => setScheduleCalendarTasks([]));
+
+      // Fetch machine tasks (inspection, installation, maintenance, production)
+      Promise.allSettled([
+        machineInspectionService.getAll(),
+        machineInstallationService.getAll(),
+        machineMaintenanceService.getAll(),
+        machineProductionService.getAll(),
+      ]).then((results) => {
+        const inspections = results[0].status === 'fulfilled' ? results[0].value : [];
+        const installations = results[1].status === 'fulfilled' ? results[1].value : [];
+        const maintenances = results[2].status === 'fulfilled' ? results[2].value : [];
+        const productions = results[3].status === 'fulfilled' ? results[3].value : [];
+        
+        const mapMachineTask = (row: any, type: string): ApiMaintenanceTask | null => {
+          const scheduledStartDate = toValidDate(row.scheduledStartTime);
+          const scheduledEndDate = toValidDate(row.scheduledEndTime);
+          const fallbackDate = toValidDate(row.date);
+          const dateStr =
+            (scheduledStartDate && formatDateISO(scheduledStartDate)) ||
+            (fallbackDate && formatDateISO(fallbackDate)) ||
+            '';
+
+          if (!dateStr || dateStr < from || dateStr > to) return null;
+
+          const techIdRaw = row.technician?._id || row.technician || '';
+          const techId = typeof techIdRaw === 'string' ? techIdRaw : String(techIdRaw || '');
+          if (selectedTechnician && techId !== selectedTechnician) return null;
+
+          const techName = row.technician?.name || row.technicianName || 'فني';
+          const machineName = row.machineName || row.machineType?.name || 'آلة';
+          const machineSpecs = buildMachineSpecs(row, machineName);
+          const customerName = extractCustomerName(row);
+          const startTime =
+            (scheduledStartDate && to24HourTime(scheduledStartDate)) ||
+            to24HourTime(row.time);
+          const endTime =
+            (scheduledEndDate && to24HourTime(scheduledEndDate)) ||
+            addOneHour(startTime);
+
+          const usedPartsRaw = row.spareParts || row.materialsAndParts || [];
+          const totalDuration =
+            row.durationMs ||
+            row.inspectionDurationMs ||
+            row.maintenanceDurationMs ||
+            row.installationDurationMs ||
+            row.productionDurationMs ||
+            0;
+
+          return {
+            _id: `machine-${type}-${row._id}`,
+            title: `[${TASK_TYPE_LABEL[type] || 'آلة'}] ${machineName}`,
+            description: row.pauseReason || row.rejectionReason || row.notes || '',
+            machineInfo: machineSpecs,
+            location: customerName,
+            priority: 'medium',
+            status: row.status as ApiTaskStatus,
+            createdBy: 'system',
+            assignedTo: techName,
+            serviceOrder: null,
+            timeLogs: [],
+            totalDurationMs: totalDuration,
+            report: {
+              problemDescription: row.technicianReport || '',
+              solutionDescription: '',
+              usedParts: usedPartsRaw.map((sp: any) => ({
+                name: sp.name,
+                quantity: sp.quantity,
+                cost: sp.cost || 0,
+              })),
+              laborCost: row.technicianFee || 0,
+              notes: '',
+            },
+            scheduledDate: dateStr,
+            scheduledStartTime: startTime || null,
+            scheduledEndTime: endTime,
+            completedAt: null,
+            createdAt: row.createdAt || new Date().toISOString(),
+            updatedAt: row.updatedAt || new Date().toISOString(),
+            // Adding a small hack to be able to navigate to the correct page on click
+            originalType: type,
+            originalId: row._id,
+          } as unknown as ApiMaintenanceTask;
+        };
+
+        const allMapped = [
+          ...inspections.map(r => mapMachineTask(r, 'inspection')),
+          ...installations.map(r => mapMachineTask(r, 'installation')),
+          ...maintenances.map(r => mapMachineTask(r, 'maintenance')),
+          ...productions.map(r => mapMachineTask(r, 'production'))
+        ].filter(Boolean) as ApiMaintenanceTask[];
+
+        setMachineCalendarTasks(allMapped);
+      }).catch(() => setMachineCalendarTasks([]));
+
     } else {
       setScheduleCalendarTasks([]);
+      setMachineCalendarTasks([]);
     }
   }, [fetchCalendarTasks, weekStart, selectedTechnician, viewMode]);
 
-  const mergedCalendarTasks = [...calendarTasks, ...scheduleCalendarTasks];
+  const mergedCalendarTasks = [...calendarTasks, ...scheduleCalendarTasks, ...machineCalendarTasks];
 
   // Always fetch stats & technicians
   useEffect(() => {
@@ -229,13 +486,16 @@ export default function MaintenancePage() {
     return task.assignedTo.name;
   };
 
-  const handleTaskClick = useCallback(
-    (task: ApiMaintenanceTask) => {
-      if (task._id.startsWith('schedule-')) {
-        navigate('/admin/maintenance/maintenance-schedule');
-        return;
-      }
-      navigate(`/admin/maintenance/tasks/${task._id}`);
+  const handleTaskClick = useCallback((task: CalendarTaskView) => {
+    setSelectedCalendarTask(task);
+    setShowCalendarReport(false);
+  }, []);
+
+  const handleOpenCalendarTask = useCallback(
+    (task: CalendarTaskView) => {
+      navigate(getCalendarTaskRoute(task));
+      setSelectedCalendarTask(null);
+      setShowCalendarReport(false);
     },
     [navigate],
   );
@@ -474,6 +734,153 @@ export default function MaintenancePage() {
           )}
         </>
       )}
+
+      {selectedCalendarTask && (() => {
+        const statusMeta = getTaskStatusMeta(selectedCalendarTask.status);
+        const dateLabel = selectedCalendarTask.scheduledDate
+          ? formatDate(selectedCalendarTask.scheduledDate)
+          : '—';
+        const timeLabel = selectedCalendarTask.scheduledStartTime
+          ? `${selectedCalendarTask.scheduledStartTime}${selectedCalendarTask.scheduledEndTime ? ` - ${selectedCalendarTask.scheduledEndTime}` : ''}`
+          : '—';
+        const reportAvailable = hasTaskReport(selectedCalendarTask);
+
+        return (
+          <div
+            className={styles.modalOverlay}
+            onClick={() => {
+              setSelectedCalendarTask(null);
+              setShowCalendarReport(false);
+            }}
+          >
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+              <div className={styles.calendarModalHeader}>
+                <h3 className={styles.modalTitle}>تفاصيل مهمة التقويم</h3>
+                <button
+                  className={styles.calendarCloseBtn}
+                  onClick={() => {
+                    setSelectedCalendarTask(null);
+                    setShowCalendarReport(false);
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className={styles.calendarTaskSummary}>
+                <div>
+                  <h4 className={styles.calendarTaskTitle}>{selectedCalendarTask.title}</h4>
+                  {selectedCalendarTask.machineInfo && (
+                    <p className={styles.calendarTaskSub}>🔧 {selectedCalendarTask.machineInfo}</p>
+                  )}
+                </div>
+                <span className={styles.statusBadge} style={{ background: statusMeta.color }}>
+                  {statusMeta.label}
+                </span>
+              </div>
+
+              <div className={styles.calendarInfoGrid}>
+                <div className={styles.calendarInfoItem}>
+                  <span>الفني</span>
+                  <strong>{getAssigneeName(selectedCalendarTask)}</strong>
+                </div>
+                <div className={styles.calendarInfoItem}>
+                  <span>التاريخ المجدول</span>
+                  <strong>{dateLabel}</strong>
+                </div>
+                <div className={styles.calendarInfoItem}>
+                  <span>الوقت المجدول</span>
+                  <strong>{timeLabel}</strong>
+                </div>
+                <div className={styles.calendarInfoItem}>
+                  <span>الوقت المستغرق</span>
+                  <strong>{formatDuration(selectedCalendarTask.totalDurationMs || 0)}</strong>
+                </div>
+              </div>
+
+              {selectedCalendarTask.description && (
+                <div className={styles.reportField}>
+                  <div className={styles.reportFieldLabel}>ملاحظات المهمة</div>
+                  <div className={styles.reportFieldValue}>{selectedCalendarTask.description}</div>
+                </div>
+              )}
+
+              <div className={styles.calendarActionRow}>
+                {!selectedCalendarTask._id.startsWith('schedule-') && (
+                  <button
+                    className={styles.btnSecondary}
+                    onClick={() => setShowCalendarReport((v) => !v)}
+                  >
+                    <FileText size={16} />
+                    {showCalendarReport ? 'إخفاء التقرير' : 'عرض التقرير'}
+                  </button>
+                )}
+
+                <button className={styles.btnPrimary} onClick={() => handleOpenCalendarTask(selectedCalendarTask)}>
+                  <ExternalLink size={16} />
+                  فتح المهمة
+                </button>
+              </div>
+
+              {showCalendarReport && !selectedCalendarTask._id.startsWith('schedule-') && (
+                <div className={styles.calendarReportBox}>
+                  {reportAvailable ? (
+                    <>
+                      <div className={styles.reportField}>
+                        <div className={styles.reportFieldLabel}>ملخص التقرير</div>
+                        <div className={styles.reportFieldValue}>
+                          {selectedCalendarTask.report.problemDescription || 'لا يوجد وصف للمشكلة'}
+                        </div>
+                      </div>
+
+                      {selectedCalendarTask.report.solutionDescription && (
+                        <div className={styles.reportField}>
+                          <div className={styles.reportFieldLabel}>الحل المنفذ</div>
+                          <div className={styles.reportFieldValue}>
+                            {selectedCalendarTask.report.solutionDescription}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedCalendarTask.report.notes && (
+                        <div className={styles.reportField}>
+                          <div className={styles.reportFieldLabel}>ملاحظات الفني</div>
+                          <div className={styles.reportFieldValue}>{selectedCalendarTask.report.notes}</div>
+                        </div>
+                      )}
+
+                      {(selectedCalendarTask.report.laborCost || 0) > 0 && (
+                        <div className={styles.reportField}>
+                          <div className={styles.reportFieldLabel}>أجرة الفني</div>
+                          <div className={styles.reportFieldValue}>
+                            {selectedCalendarTask.report.laborCost.toLocaleString('ar-SA')} ل.س
+                          </div>
+                        </div>
+                      )}
+
+                      {(selectedCalendarTask.report.usedParts?.length || 0) > 0 && (
+                        <div className={styles.reportField}>
+                          <div className={styles.reportFieldLabel}>القطع المستخدمة</div>
+                          <div className={styles.partsList}>
+                            {selectedCalendarTask.report.usedParts.map((part, idx) => (
+                              <div key={`${part.name}-${idx}`} className={styles.partItem}>
+                                <span>{part.name} × {part.quantity}</span>
+                                <span>{(part.cost || 0).toLocaleString('ar-SA')} ل.س</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className={styles.reportFieldValue}>لا يوجد تقرير مكتمل لهذه المهمة حتى الآن.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

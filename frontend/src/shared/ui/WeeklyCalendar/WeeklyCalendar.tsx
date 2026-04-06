@@ -14,7 +14,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
-import type { ApiMaintenanceTask, ApiTechnician, ApiTaskStatus } from '../../api/types';
+import type { ApiMaintenanceTask, ApiTechnician } from '../../api/types';
 import styles from './WeeklyCalendar.module.css';
 
 /* ═══════════════════════════════════
@@ -22,20 +22,25 @@ import styles from './WeeklyCalendar.module.css';
    ═══════════════════════════════════ */
 
 /** Calendar displays hours from START_HOUR to END_HOUR */
-const START_HOUR = 7;
-const END_HOUR = 21;
+const START_HOUR = 8;
+const END_HOUR = 20;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 const HOUR_HEIGHT = 60; // px per hour
 
 const DAY_NAMES_AR = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
-const STATUS_COLORS: Record<ApiTaskStatus, string> = {
+const STATUS_COLORS: Record<string, string> = {
+  waiting: '#f59e0b',
   pending: '#f59e0b',
   assigned: '#3b82f6',
   in_progress: '#8b5cf6',
+  in_maintenance: '#8b5cf6',
   paused: '#ef4444',
+  postponed: '#f59e0b',
   completed: '#10b981',
+  ready: '#10b981',
   cancelled: '#6b7280',
+  rejected: '#dc2626',
 };
 
 /* ═══════════════════════════════════
@@ -75,6 +80,18 @@ function timeToOffset(time: string | null): number | null {
   return h + m / 60 - START_HOUR;
 }
 
+function isOutsideVisibleRange(start: string | null, end: string | null): boolean {
+  const startOffset = timeToOffset(start);
+  const endOffset = timeToOffset(end);
+  if (startOffset === null || endOffset === null) return true;
+
+  const totalRange = END_HOUR - START_HOUR;
+  if (endOffset <= 0 || startOffset >= totalRange) return true;
+  if (startOffset < 0 || endOffset > totalRange) return true;
+
+  return false;
+}
+
 /** Check if two dates are the same calendar day */
 function isSameDay(a: Date, b: Date): boolean {
   return (
@@ -87,6 +104,12 @@ function isSameDay(a: Date, b: Date): boolean {
 /** Format "HH:mm" label */
 function formatHour(h: number): string {
   return `${String(h).padStart(2, '0')}:00`;
+}
+
+function formatTaskTimeRange(task: ApiMaintenanceTask): string {
+  const start = task.scheduledStartTime || '--:--';
+  const end = task.scheduledEndTime || '--:--';
+  return `${start} - ${end}`;
 }
 
 /** Get assignee name from task */
@@ -158,7 +181,8 @@ export default function WeeklyCalendar({
       const dayIdx = days.findIndex((d) => isSameDay(d, taskDate));
       if (dayIdx < 0) continue;
 
-      if (task.scheduledStartTime && task.scheduledEndTime) {
+      const hasTimedRange = task.scheduledStartTime && task.scheduledEndTime;
+      if (hasTimedRange && !isOutsideVisibleRange(task.scheduledStartTime, task.scheduledEndTime)) {
         dayTasks[dayIdx].push(task);
       } else {
         allDayTasks[dayIdx].push(task);
@@ -248,11 +272,13 @@ export default function WeeklyCalendar({
                 <span
                   key={task._id}
                   className={styles.allDayChip}
-                  style={{ background: STATUS_COLORS[task.status] }}
+                  style={{ background: STATUS_COLORS[task.status] || '#ccc', cursor: 'pointer' }}
                   onClick={() => onTaskClick?.(task)}
-                  title={task.title}
+                  title={`${task.title}${task.scheduledStartTime ? ` (${formatTaskTimeRange(task)})` : ''}`}
                 >
-                  {task.title}
+                  {task.scheduledStartTime
+                    ? `${task.title} (${formatTaskTimeRange(task)})`
+                    : task.title}
                 </span>
               ))}
             </div>
@@ -343,6 +369,19 @@ function DayCell({ hour, tasks, onTaskClick, showAssignee }: DayCellProps) {
         const startOffset = timeToOffset(task.scheduledStartTime)!;
         const endOffset = timeToOffset(task.scheduledEndTime)!;
         const durationHours = Math.max(endOffset - startOffset, 0.25); // minimum visible height
+        const assigneeName = getAssigneeName(task);
+        const machineSpecs = (task.machineInfo || '').trim();
+        const customerName = (task.location || '').trim();
+        const timeRange = formatTaskTimeRange(task);
+        const tooltip = [
+          task.title,
+          machineSpecs ? `المواصفات: ${machineSpecs}` : '',
+          customerName ? `الزبون: ${customerName}` : '',
+          `الوقت: ${timeRange}`,
+          showAssignee && assigneeName ? `الفني: ${assigneeName}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
 
         // Position within the cell: fractional minutes past the hour
         const minutesFraction = (startOffset - Math.floor(startOffset)) * HOUR_HEIGHT;
@@ -355,20 +394,23 @@ function DayCell({ hour, tasks, onTaskClick, showAssignee }: DayCellProps) {
             style={{
               top: `${minutesFraction}px`,
               height: `${height}px`,
-              background: STATUS_COLORS[task.status],
+              background: STATUS_COLORS[task.status] || '#ccc',
+              cursor: 'pointer',
             }}
             onClick={(e) => {
               e.stopPropagation();
               onTaskClick?.(task);
             }}
-            title={`${task.title}\n${task.scheduledStartTime} – ${task.scheduledEndTime}`}
+            title={tooltip}
           >
             <span className={styles.blockTitle}>{task.title}</span>
+            {machineSpecs && <span className={styles.blockMeta}>المواصفات: {machineSpecs}</span>}
+            {customerName && <span className={styles.blockMeta}>الزبون: {customerName}</span>}
             <span className={styles.blockTime}>
-              {task.scheduledStartTime} – {task.scheduledEndTime}
+              من <span className={styles.blockTimeRange} dir="ltr">{timeRange}</span>
             </span>
-            {showAssignee && getAssigneeName(task) && (
-              <span className={styles.blockAssignee}>{getAssigneeName(task)}</span>
+            {showAssignee && assigneeName && (
+              <span className={styles.blockAssignee}>الفني: {assigneeName}</span>
             )}
           </div>
         );
