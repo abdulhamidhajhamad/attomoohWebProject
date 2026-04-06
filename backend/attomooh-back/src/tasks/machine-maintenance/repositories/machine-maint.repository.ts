@@ -70,4 +70,25 @@ export class MachineMaintRepository {
   ): Promise<MachineMaintDocument | null> {
     return this.model.findByIdAndDelete(id).exec();
   }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+    return this.model
+      .find({ technician: technicianId })
+      .sort({ createdAt: -1 })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+    return this.model
+      .find({
+        technician: technicianId,
+        status: { $nin: ['ready', 'rejected'] },
+      })
+      .sort({ createdAt: -1 })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
+  }
 }

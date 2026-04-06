@@ -32,6 +32,10 @@ export class MachineProduction {
   @Prop({ default: false }) readyForDelivery: boolean;
   @Prop({ default: 0 }) technicianFee: number;
   @Prop({ default: 0 }) companyFee: number;
+  @Prop({ type: Date, default: null }) scheduledStartTime: Date | null;
+  @Prop({ type: Date, default: null }) scheduledEndTime: Date | null;
+  @Prop({ default: '' }) rejectionReason: string;
+  @Prop({ default: 'assigned' }) status: string;
 
   createdAt: Date;
   updatedAt: Date;

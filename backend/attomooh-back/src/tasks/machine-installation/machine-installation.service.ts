@@ -5,6 +5,7 @@ import { MachineInstallationDocument } from './schemas/machine-installation.sche
 import { CreateMachineInstallationDto } from './dto/create-machine-installation.dto.js';
 import { UpdateMachineInstallationDto } from './dto/update-machine-installation.dto.js';
 import { InstallationStatus } from '../../common/enums/installation-status.enum.js';
+import { MachineTaskReportDto } from '../../common/dto/machine-task-report.dto.js';
 
 @Injectable()
 export class MachineInstallationService {
@@ -70,7 +71,7 @@ export class MachineInstallationService {
       timestamp: new Date(),
       pauseReason: '',
     } as any);
-    d.status = InstallationStatus.POSTPONED;
+    d.status = InstallationStatus.IN_PROGRESS;
     return d.save();
   }
 
@@ -97,12 +98,13 @@ export class MachineInstallationService {
       timestamp: new Date(),
       pauseReason: '',
     } as any);
-    d.status = InstallationStatus.POSTPONED;
+    d.status = InstallationStatus.IN_PROGRESS;
     return d.save();
   }
 
   async finishWork(
     id: Types.ObjectId,
+    report?: MachineTaskReportDto,
   ): Promise<MachineInstallationDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
@@ -112,7 +114,31 @@ export class MachineInstallationService {
     } as any);
     d.status = InstallationStatus.READY;
     d.installationDurationMs = this.calcDuration(d.timeLogs as any);
+
+    if (report) {
+      if (report.pauseReason !== undefined) d.pauseReason = report.pauseReason;
+      if (report.technicianReport !== undefined) d.technicianReport = report.technicianReport;
+      if (report.technicianFee !== undefined) d.technicianFee = report.technicianFee;
+      if (report.companyFee !== undefined) d.companyFee = report.companyFee;
+    }
+
     return d.save();
+  }
+
+  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineInstallationDocument> {
+    const d = await this.findById(id);
+    d.status = InstallationStatus.REJECTED;
+    (d as any).rejectionReason = reason;
+    d.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    return d.save();
+  }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+    return this.repo.findByTechnician(technicianId);
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+    return this.repo.findActiveByTechnician(technicianId);
   }
 
   async delete(id: Types.ObjectId): Promise<void> {

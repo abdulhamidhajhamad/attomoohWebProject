@@ -8,6 +8,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MaintenanceStatus } from '../../../common/enums/maintenance-status.enum.js';
@@ -30,4 +31,6 @@ export class CreateMachineMaintDto {
   @IsEnum(MaintenanceStatus) @IsOptional() status?: MaintenanceStatus;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;
+  @IsDateString() @IsOptional() scheduledStartTime?: string;
+  @IsDateString() @IsOptional() scheduledEndTime?: string;
 }

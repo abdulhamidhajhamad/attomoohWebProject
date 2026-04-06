@@ -6,6 +6,7 @@ import { CreateMachineProductionDto } from './dto/create-machine-production.dto.
 import { UpdateMachineProductionDto } from './dto/update-machine-production.dto.js';
 import { IdGeneratorService } from '../../common/services/id-generator.service.js';
 import { IdPrefix } from '../../common/enums/id-prefix.enum.js';
+import { MachineTaskReportDto } from '../../common/dto/machine-task-report.dto.js';
 
 @Injectable()
 export class MachineProductionService {
@@ -113,6 +114,7 @@ export class MachineProductionService {
       timestamp: new Date(),
       pauseReason: '',
     } as any);
+    (d as any).status = 'in_progress';
     return d.save();
   }
 
@@ -126,6 +128,7 @@ export class MachineProductionService {
       timestamp: new Date(),
       pauseReason: reason ?? '',
     } as any);
+    (d as any).status = 'postponed';
     return d.save();
   }
 
@@ -138,11 +141,13 @@ export class MachineProductionService {
       timestamp: new Date(),
       pauseReason: '',
     } as any);
+    (d as any).status = 'in_progress';
     return d.save();
   }
 
   async finishWork(
     id: Types.ObjectId,
+    report?: MachineTaskReportDto,
   ): Promise<MachineProductionDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
@@ -151,8 +156,33 @@ export class MachineProductionService {
       pauseReason: '',
     } as any);
     d.readyForDelivery = true;
+    (d as any).status = 'ready';
     d.productionDurationMs = this.calcDuration(d.timeLogs as any);
+
+    if (report) {
+      if (report.pauseReason !== undefined) d.pauseReason = report.pauseReason;
+      if (report.spareParts !== undefined) d.materialsAndParts = report.spareParts as any;
+      if (report.technicianFee !== undefined) d.technicianFee = report.technicianFee;
+      if (report.companyFee !== undefined) d.companyFee = report.companyFee;
+    }
+
     return d.save();
+  }
+
+  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineProductionDocument> {
+    const d = await this.findById(id);
+    (d as any).status = 'rejected';
+    (d as any).rejectionReason = reason;
+    d.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    return d.save();
+  }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+    return this.repo.findByTechnician(technicianId);
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+    return this.repo.findActiveByTechnician(technicianId);
   }
 
   async delete(id: Types.ObjectId): Promise<void> {

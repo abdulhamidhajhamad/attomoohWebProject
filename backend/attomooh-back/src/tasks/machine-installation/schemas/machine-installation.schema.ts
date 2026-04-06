@@ -35,6 +35,9 @@ export class MachineInstallation {
   status: InstallationStatus;
   @Prop({ default: 0 }) technicianFee: number;
   @Prop({ default: 0 }) companyFee: number;
+  @Prop({ type: Date, default: null }) scheduledStartTime: Date | null;
+  @Prop({ type: Date, default: null }) scheduledEndTime: Date | null;
+  @Prop({ default: '' }) rejectionReason: string;
 
   createdAt: Date;
   updatedAt: Date;

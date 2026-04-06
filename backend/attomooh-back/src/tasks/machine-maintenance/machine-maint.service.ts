@@ -5,6 +5,7 @@ import { MachineMaintDocument } from './schemas/machine-maint.schema.js';
 import { CreateMachineMaintDto } from './dto/create-machine-maint.dto.js';
 import { UpdateMachineMaintDto } from './dto/update-machine-maint.dto.js';
 import { MaintenanceStatus } from '../../common/enums/maintenance-status.enum.js';
+import { MachineTaskReportDto } from '../../common/dto/machine-task-report.dto.js';
 
 @Injectable()
 export class MachineMaintService {
@@ -105,7 +106,7 @@ export class MachineMaintService {
     return d.save();
   }
 
-  async finishWork(id: Types.ObjectId): Promise<MachineMaintDocument> {
+  async finishWork(id: Types.ObjectId, report?: MachineTaskReportDto): Promise<MachineMaintDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
       action: 'finish',
@@ -113,8 +114,34 @@ export class MachineMaintService {
       pauseReason: '',
     } as any);
     d.status = MaintenanceStatus.READY;
+    d.readyForDelivery = true;
     d.maintenanceDurationMs = this.calcDuration(d.timeLogs as any);
+
+    if (report) {
+      if (report.pauseReason !== undefined) d.pauseReason = report.pauseReason;
+      if (report.spareParts !== undefined) d.spareParts = report.spareParts as any;
+      if (report.technicianReport !== undefined) d.technicianReport = report.technicianReport;
+      if (report.technicianFee !== undefined) d.technicianFee = report.technicianFee;
+      if (report.companyFee !== undefined) d.companyFee = report.companyFee;
+    }
+
     return d.save();
+  }
+
+  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineMaintDocument> {
+    const d = await this.findById(id);
+    d.status = MaintenanceStatus.REJECTED;
+    (d as any).rejectionReason = reason;
+    d.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    return d.save();
+  }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+    return this.repo.findByTechnician(technicianId);
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+    return this.repo.findActiveByTechnician(technicianId);
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
