@@ -72,4 +72,25 @@ export class MachineInstallationRepository {
   ): Promise<MachineInstallationDocument | null> {
     return this.model.findByIdAndDelete(id).exec();
   }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+    return this.model
+      .find({ technician: technicianId })
+      .sort({ createdAt: -1 })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+    return this.model
+      .find({
+        technician: technicianId,
+        status: { $nin: ['ready', 'rejected'] },
+      })
+      .sort({ createdAt: -1 })
+      .populate('machineReception')
+      .populate('technician', 'name phone')
+      .exec();
+  }
 }

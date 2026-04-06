@@ -26,6 +26,9 @@ export { transportService } from './transport.service';
 export { customerCallService } from './customerCall.service';
 export { maintenanceScheduleService } from './maintenanceSchedule.service';
 
+// مهام الفني الموحدة (Unified Technician Tasks)
+export { technicianTasksService, type UnifiedTask, type TaskType, type TaskReportPayload } from './technicianTasks.service';
+
 // المحاسبة (Accounting)
 export { financialDocumentsService } from './financialDocuments.service';
 export { purchaseOrdersService } from './purchaseOrders.service';

@@ -40,6 +40,9 @@ import { TransportModule } from './tasks/transport/transport.module.js';
 import { CustomerCallModule } from './tasks/customer-call/customer-call.module.js';
 import { MaintenanceScheduleModule } from './tasks/maintenance-schedule/maintenance-schedule.module.js';
 
+// ── Technician Tasks (Unified) ──
+import { TechnicianTasksModule } from './technician-tasks/technician-tasks.module.js';
+
 // ── المحاسبة (Accounting) ──
 import { FinancialDocumentsModule } from './accounting/financial-documents/financial-documents.module.js';
 import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orders.module.js';
@@ -98,6 +101,9 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
     TransportModule,
     CustomerCallModule,
     MaintenanceScheduleModule,
+
+    // ── Technician Tasks (Unified) ──
+    TechnicianTasksModule,
 
     // ── المحاسبة (Accounting) ──
     FinancialDocumentsModule,

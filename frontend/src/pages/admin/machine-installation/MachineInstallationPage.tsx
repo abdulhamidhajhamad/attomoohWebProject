@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { MonitorCog, Plus, Search, Trash2, Pencil, X, Check, FileText } from 'lucide-react';
+import { MonitorCog, Plus, Search, Trash2, Pencil, X, Check, FileText, Eye, Clock } from 'lucide-react';
 import { useMachineInstallationStore } from '../../../shared/store/machineInstallationStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import type { ApiMachineInstallation } from '../../../shared/api/types';
@@ -9,7 +9,13 @@ import type { ReceptionValue } from '../../../shared/ui/ReceptionSelect';
 import type { TechnicianValue } from '../../../shared/ui/TechnicianSelect';
 import styles from '../shared/CrudPage.module.css';
 
-const statusMap: Record<string, { label: string; cls: string }> = { postponed: { label: 'مؤجل', cls: 'badgeYellow' }, ready: { label: 'جاهز', cls: 'badgeGreen' }, rejected: { label: 'مرفوض', cls: 'badgeRed' } };
+const statusMap: Record<string, { label: string; cls: string }> = {
+  assigned: { label: 'معين', cls: 'badgeBlue' },
+  in_progress: { label: 'قيد التنصيب', cls: 'badgeBlue' },
+  postponed: { label: 'مؤجل', cls: 'badgeYellow' },
+  ready: { label: 'جاهز', cls: 'badgeGreen' },
+  rejected: { label: 'مرفوض', cls: 'badgeRed' },
+};
 const fmtMin = (ms: number) => ms > 0 ? Math.round(ms / 60000) + ' دقيقة' : '—';
 
 interface InstallationForm {
@@ -18,12 +24,10 @@ interface InstallationForm {
   machineDetails: string;
   date: string;
   time: string;
-  pauseReason: string;
   technician: TechnicianValue;
-  technicianReport: string;
-  status: 'postponed' | 'ready' | 'rejected';
-  technicianFee: number;
-  companyFee: number;
+  status: 'assigned' | 'in_progress' | 'postponed' | 'ready' | 'rejected';
+  scheduledStartTime: string;
+  scheduledEndTime: string;
 }
 
 const nowParts = () => {
@@ -41,12 +45,10 @@ const createEmptyForm = (): InstallationForm => {
     machineDetails: '',
     date,
     time,
-    pauseReason: '',
     technician: { ...EMPTY_TECHNICIAN },
-    technicianReport: '',
-    status: 'postponed',
-    technicianFee: 0,
-    companyFee: 0,
+    status: 'assigned',
+    scheduledStartTime: '',
+    scheduledEndTime: '',
   };
 };
 
@@ -62,13 +64,11 @@ const formToPayload = (form: InstallationForm) => ({
   machineReception: form.machineReception.id,
   machineName: form.machineName,
   machineDetails: form.machineDetails,
-  pauseReason: form.pauseReason,
   technician: form.technician.mode === 'select' ? (form.technician.id || undefined) : undefined,
   technicianName: form.technician.mode === 'manual' ? form.technician.name : '',
-  technicianReport: form.technicianReport,
   status: form.status,
-  technicianFee: Number(form.technicianFee) || 0,
-  companyFee: Number(form.companyFee) || 0,
+  scheduledStartTime: form.scheduledStartTime || null,
+  scheduledEndTime: form.scheduledEndTime || null,
 });
 
 const installationToForm = (item: ApiMachineInstallation): InstallationForm => {
@@ -92,18 +92,23 @@ const installationToForm = (item: ApiMachineInstallation): InstallationForm => {
     technician = { id: undefined, name: item.technicianName, mode: 'manual' };
   }
 
+  const scheduledStartTime = item.scheduledStartTime
+    ? new Date(item.scheduledStartTime).toISOString().slice(0, 16)
+    : '';
+  const scheduledEndTime = item.scheduledEndTime
+    ? new Date(item.scheduledEndTime).toISOString().slice(0, 16)
+    : '';
+
   return {
     machineReception,
     machineName: item.machineName || '',
     machineDetails: item.machineDetails || '',
     date,
     time,
-    pauseReason: item.pauseReason || '',
     technician,
-    technicianReport: item.technicianReport || '',
-    status: (item.status || 'postponed') as InstallationForm['status'],
-    technicianFee: Number(item.technicianFee) || 0,
-    companyFee: Number(item.companyFee) || 0,
+    status: (item.status || 'assigned') as InstallationForm['status'],
+    scheduledStartTime,
+    scheduledEndTime,
   };
 };
 
@@ -127,8 +132,10 @@ export default function MachineInstallationPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<InstallationForm>(createEmptyForm());
   const [saving, setSaving] = useState(false);
+  const [reportModal, setReportModal] = useState<ApiMachineInstallation | null>(null);
 
   useEffect(() => { const t = setTimeout(() => fetchAll(search || undefined), 300); return () => clearTimeout(t); }, [fetchAll, search]);
+
   const handleAdd = useCallback(async () => {
     if (!addForm.machineReception.id) return;
     setSaving(true);
@@ -161,6 +168,7 @@ export default function MachineInstallationPage() {
       setSaving(false);
     }
   }, [editId, editForm, updateItem]);
+
   const handleDel = useCallback(async (id: string) => { if (!confirm('هل أنت متأكد من الحذف؟')) return; try { await deleteItem(id); } catch {} }, [deleteItem]);
 
   const cancelForm = useCallback(() => {
@@ -255,6 +263,8 @@ export default function MachineInstallationPage() {
                 value={activeForm.status}
                 onChange={(e) => setActiveForm({ ...activeForm, status: e.target.value as InstallationForm['status'] })}
               >
+                <option value="assigned">معين</option>
+                <option value="in_progress">قيد التنصيب</option>
                 <option value="postponed">مؤجلة</option>
                 <option value="ready">جاهزة</option>
                 <option value="rejected">مرفوضة</option>
@@ -266,45 +276,25 @@ export default function MachineInstallationPage() {
               <input className={styles.formInput} value={isEditing ? fmtMin(items.find((row) => row._id === editId)?.installationDurationMs ?? 0) : '—'} readOnly />
             </div>
 
-            <div className={`${styles.formField} ${styles.fullWidth}`}>
-              <label className={styles.formLabel}>سبب الإيقاف / الاستمرار</label>
-              <textarea
-                className={styles.formTextarea}
-                placeholder="أدخل سبب الإيقاف أو ملاحظة الاستمرار"
-                value={activeForm.pauseReason}
-                onChange={(e) => setActiveForm({ ...activeForm, pauseReason: e.target.value })}
+            <div className={styles.formSectionLabel}><Clock size={14} />جدولة المهمة</div>
+
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>وقت البدء المجدول</label>
+              <input
+                type="datetime-local"
+                className={styles.formInput}
+                value={activeForm.scheduledStartTime}
+                onChange={(e) => setActiveForm({ ...activeForm, scheduledStartTime: e.target.value })}
               />
             </div>
 
             <div className={styles.formField}>
-              <label className={styles.formLabel}>أجرة فني الصيانة</label>
+              <label className={styles.formLabel}>وقت الانتهاء المجدول</label>
               <input
-                type="number"
-                min={0}
+                type="datetime-local"
                 className={styles.formInput}
-                value={activeForm.technicianFee}
-                onChange={(e) => setActiveForm({ ...activeForm, technicianFee: Number(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>أجرة الشركة</label>
-              <input
-                type="number"
-                min={0}
-                className={styles.formInput}
-                value={activeForm.companyFee}
-                onChange={(e) => setActiveForm({ ...activeForm, companyFee: Number(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className={`${styles.formField} ${styles.fullWidth}`}>
-              <label className={styles.formLabel}>تقرير الفني</label>
-              <textarea
-                className={styles.formTextarea}
-                placeholder="أدخل تقرير الفني"
-                value={activeForm.technicianReport}
-                onChange={(e) => setActiveForm({ ...activeForm, technicianReport: e.target.value })}
+                value={activeForm.scheduledEndTime}
+                onChange={(e) => setActiveForm({ ...activeForm, scheduledEndTime: e.target.value })}
               />
             </div>
           </div>
@@ -331,13 +321,70 @@ export default function MachineInstallationPage() {
                 <td>{r.time || (r.date ? new Date(r.date).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : '—')}</td>
                 <td><span className={`${styles.badge} ${styles[statusMap[r.status]?.cls || 'badgeGray']}`}>{statusMap[r.status]?.label || r.status}</span></td>
                 <td>{fmtMin(r.installationDurationMs)}</td>
-                <td><div className={styles.actions}><button className={styles.btnSecondary} onClick={() => startEdit(r)} title="تعديل"><Pencil size={14} /></button><button className={styles.btnDanger} onClick={() => handleDel(r._id)} title="حذف"><Trash2 size={14} /></button></div></td>
+                <td>
+                  <div className={styles.actions}>
+                    {r.status === 'ready' && (
+                      <button className={styles.btnSecondary} onClick={() => setReportModal(r)} title="عرض التقرير">
+                        <Eye size={14} />
+                      </button>
+                    )}
+                    <button className={styles.btnSecondary} onClick={() => startEdit(r)} title="تعديل"><Pencil size={14} /></button>
+                    <button className={styles.btnDanger} onClick={() => handleDel(r._id)} title="حذف"><Trash2 size={14} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
             {items.length === 0 && <tr><td colSpan={8}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>
+
+      {reportModal && (
+        <div className={styles.modalOverlay} onClick={() => setReportModal(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3><FileText size={18} /> تقرير الفني</h3>
+              <button className={styles.modalClose} onClick={() => setReportModal(null)}><X size={18} /></button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.reportSection}>
+                <label>اسم الآلة</label>
+                <p>{reportModal.machineName || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>الفني</label>
+                <p>{getTechnicianName(reportModal)}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>مدة التنصيب</label>
+                <p>{fmtMin(reportModal.installationDurationMs)}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>سبب الإيقاف</label>
+                <p>{reportModal.pauseReason || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>تقرير الفني</label>
+                <p>{reportModal.technicianReport || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>أجرة الفني</label>
+                <p>{reportModal.technicianFee?.toLocaleString('ar') || 0} ل.س</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>أجرة الشركة</label>
+                <p>{reportModal.companyFee?.toLocaleString('ar') || 0} ل.س</p>
+              </div>
+              {reportModal.rejectionReason && (
+                <div className={styles.reportSection}>
+                  <label>سبب الرفض</label>
+                  <p style={{ color: '#dc2626' }}>{reportModal.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
