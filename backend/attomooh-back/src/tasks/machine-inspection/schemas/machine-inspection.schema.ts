@@ -59,6 +59,15 @@ export class MachineInspection {
   @Prop({ default: 0 })
   companyFee: number;
 
+  @Prop({ type: Date, default: null })
+  scheduledStartTime: Date | null;
+
+  @Prop({ type: Date, default: null })
+  scheduledEndTime: Date | null;
+
+  @Prop({ default: '' })
+  rejectionReason: string;
+
   createdAt: Date;
   updatedAt: Date;
 }

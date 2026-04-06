@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Search as SearchIcon, Plus, Search, Trash2, Pencil, X, Check, FileText, Wrench } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Search as SearchIcon, Plus, Search, Trash2, Pencil, X, Check, FileText, Eye, Clock } from 'lucide-react';
 import { useMachineInspectionStore } from '../../../shared/store/machineInspectionStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import type { ApiMachineInspection } from '../../../shared/api/types';
@@ -10,6 +10,7 @@ import type { TechnicianValue } from '../../../shared/ui/TechnicianSelect';
 import styles from '../shared/CrudPage.module.css';
 
 const statusMap: Record<string, { label: string; cls: string }> = {
+  assigned: { label: 'معين', cls: 'badgeBlue' },
   in_progress: { label: 'قيد الفحص', cls: 'badgeBlue' },
   postponed: { label: 'مؤجل', cls: 'badgeYellow' },
   ready: { label: 'جاهز', cls: 'badgeGreen' },
@@ -17,28 +18,17 @@ const statusMap: Record<string, { label: string; cls: string }> = {
 };
 const fmtMin = (ms: number) => ms > 0 ? Math.round(ms / 60000) + ' دقيقة' : '—';
 
-interface SparePartForm {
-  name: string;
-  quantity: number;
-  cost: number;
-}
-
 interface InspectionForm {
   machineReception: ReceptionValue;
   machineName: string;
   machineDetails: string;
   date: string;
   time: string;
-  pauseReason: string;
   technician: TechnicianValue;
-  spareParts: SparePartForm[];
-  technicianReport: string;
-  status: 'in_progress' | 'postponed' | 'ready' | 'rejected';
-  technicianFee: number;
-  companyFee: number;
+  status: 'assigned' | 'in_progress' | 'postponed' | 'ready' | 'rejected';
+  scheduledStartTime: string;
+  scheduledEndTime: string;
 }
-
-const EMPTY_PART: SparePartForm = { name: '', quantity: 1, cost: 0 };
 
 const nowParts = () => {
   const now = new Date();
@@ -55,13 +45,10 @@ const createEmptyForm = (): InspectionForm => {
     machineDetails: '',
     date,
     time,
-    pauseReason: '',
     technician: { ...EMPTY_TECHNICIAN },
-    spareParts: [{ ...EMPTY_PART }],
-    technicianReport: '',
-    status: 'in_progress',
-    technicianFee: 0,
-    companyFee: 0,
+    status: 'assigned',
+    scheduledStartTime: '',
+    scheduledEndTime: '',
   };
 };
 
@@ -77,20 +64,11 @@ const formToPayload = (form: InspectionForm) => ({
   machineReception: form.machineReception.id,
   machineName: form.machineName,
   machineDetails: form.machineDetails,
-  pauseReason: form.pauseReason,
   technician: form.technician.mode === 'select' ? (form.technician.id || undefined) : undefined,
   technicianName: form.technician.mode === 'manual' ? form.technician.name : '',
-  spareParts: form.spareParts
-    .filter((part) => part.name.trim())
-    .map((part) => ({
-      name: part.name.trim(),
-      quantity: Number(part.quantity) || 0,
-      cost: Number(part.cost) || 0,
-    })),
-  technicianReport: form.technicianReport,
   status: form.status,
-  technicianFee: Number(form.technicianFee) || 0,
-  companyFee: Number(form.companyFee) || 0,
+  scheduledStartTime: form.scheduledStartTime || null,
+  scheduledEndTime: form.scheduledEndTime || null,
 });
 
 const inspectionToForm = (item: ApiMachineInspection): InspectionForm => {
@@ -114,25 +92,23 @@ const inspectionToForm = (item: ApiMachineInspection): InspectionForm => {
     technician = { id: undefined, name: item.technicianName, mode: 'manual' };
   }
 
+  const scheduledStartTime = item.scheduledStartTime
+    ? new Date(item.scheduledStartTime).toISOString().slice(0, 16)
+    : '';
+  const scheduledEndTime = item.scheduledEndTime
+    ? new Date(item.scheduledEndTime).toISOString().slice(0, 16)
+    : '';
+
   return {
     machineReception,
     machineName: item.machineName || '',
     machineDetails: item.machineDetails || '',
     date,
     time,
-    pauseReason: item.pauseReason || '',
     technician,
-    spareParts: item.spareParts?.length
-      ? item.spareParts.map((part) => ({
-          name: part.name || '',
-          quantity: Number(part.quantity) || 0,
-          cost: Number(part.cost) || 0,
-        }))
-      : [{ ...EMPTY_PART }],
-    technicianReport: item.technicianReport || '',
-    status: (item.status || 'in_progress') as InspectionForm['status'],
-    technicianFee: Number(item.technicianFee) || 0,
-    companyFee: Number(item.companyFee) || 0,
+    status: (item.status || 'assigned') as InspectionForm['status'],
+    scheduledStartTime,
+    scheduledEndTime,
   };
 };
 
@@ -156,6 +132,7 @@ export default function MachineInspectionPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<InspectionForm>(createEmptyForm());
   const [saving, setSaving] = useState(false);
+  const [reportModal, setReportModal] = useState<ApiMachineInspection | null>(null);
 
   useEffect(() => { const t = setTimeout(() => fetchAll(search || undefined), 300); return () => clearTimeout(t); }, [fetchAll, search]);
 
@@ -205,12 +182,6 @@ export default function MachineInspectionPage() {
   const setActiveForm = showAdd ? setAddForm : setEditForm;
   const isEditing = !!editId;
 
-  const readyForDelivery = activeForm?.status === 'ready';
-  const totalSpareCost = useMemo(() => {
-    if (!activeForm) return 0;
-    return activeForm.spareParts.reduce((acc, part) => acc + (Number(part.quantity) || 0) * (Number(part.cost) || 0), 0);
-  }, [activeForm]);
-
   const handleReceptionChange = useCallback(
     (value: ReceptionValue) => {
       const machineName = getReceptionMachineName(value.reception);
@@ -222,33 +193,6 @@ export default function MachineInspectionPage() {
         machineName,
         machineDetails,
       });
-    },
-    [activeForm, setActiveForm]
-  );
-
-  const updatePart = useCallback(
-    (index: number, key: keyof SparePartForm, value: string | number) => {
-      if (!activeForm) return;
-      const spareParts = [...activeForm.spareParts];
-      spareParts[index] = {
-        ...spareParts[index],
-        [key]: key === 'name' ? String(value) : Number(value) || 0,
-      };
-      setActiveForm({ ...activeForm, spareParts });
-    },
-    [activeForm, setActiveForm]
-  );
-
-  const addPart = useCallback(() => {
-    if (!activeForm) return;
-    setActiveForm({ ...activeForm, spareParts: [...activeForm.spareParts, { ...EMPTY_PART }] });
-  }, [activeForm, setActiveForm]);
-
-  const removePart = useCallback(
-    (index: number) => {
-      if (!activeForm) return;
-      const spareParts = activeForm.spareParts.filter((_, i) => i !== index);
-      setActiveForm({ ...activeForm, spareParts: spareParts.length > 0 ? spareParts : [{ ...EMPTY_PART }] });
     },
     [activeForm, setActiveForm]
   );
@@ -319,6 +263,7 @@ export default function MachineInspectionPage() {
                 value={activeForm.status}
                 onChange={(e) => setActiveForm({ ...activeForm, status: e.target.value as InspectionForm['status'] })}
               >
+                <option value="assigned">معين</option>
                 <option value="in_progress">قيد الفحص</option>
                 <option value="postponed">مؤجلة</option>
                 <option value="ready">جاهزة</option>
@@ -327,93 +272,29 @@ export default function MachineInspectionPage() {
             </div>
 
             <div className={styles.formField}>
-              <label className={styles.formLabel}>جاهزة للتسليم (تلقائي)</label>
-              <input className={styles.formInput} value={readyForDelivery ? 'نعم' : 'لا'} readOnly />
-            </div>
-
-            <div className={styles.formField}>
               <label className={styles.formLabel}>مدة الفحص</label>
               <input className={styles.formInput} value={isEditing ? fmtMin(items.find((row) => row._id === editId)?.inspectionDurationMs ?? 0) : '—'} readOnly />
             </div>
 
-            <div className={`${styles.formField} ${styles.fullWidth}`}>
-              <label className={styles.formLabel}>سبب الإيقاف / الاستمرار</label>
-              <textarea
-                className={styles.formTextarea}
-                placeholder="أدخل سبب الإيقاف أو ملاحظة الاستمرار"
-                value={activeForm.pauseReason}
-                onChange={(e) => setActiveForm({ ...activeForm, pauseReason: e.target.value })}
-              />
-            </div>
-
-            <div className={styles.formSectionLabel}><Wrench size={14} />قطع الغيار وتكلفتها</div>
-
-            <div className={`${styles.formField} ${styles.fullWidth}`}>
-              {activeForm.spareParts.map((part, index) => (
-                <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
-                  <input
-                    className={styles.formInput}
-                    placeholder="اسم القطعة"
-                    value={part.name}
-                    onChange={(e) => updatePart(index, 'name', e.target.value)}
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    placeholder="الكمية"
-                    value={part.quantity}
-                    onChange={(e) => updatePart(index, 'quantity', e.target.value)}
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    className={styles.formInput}
-                    placeholder="التكلفة"
-                    value={part.cost}
-                    onChange={(e) => updatePart(index, 'cost', e.target.value)}
-                  />
-                  <button type="button" className={styles.btnDanger} onClick={() => removePart(index)}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                <button type="button" className={styles.btnSecondary} onClick={addPart}><Plus size={14} />إضافة قطعة</button>
-                <span style={{ fontWeight: 600 }}>الإجمالي: {totalSpareCost.toLocaleString('ar')} ل.س</span>
-              </div>
-            </div>
+            <div className={styles.formSectionLabel}><Clock size={14} />جدولة المهمة</div>
 
             <div className={styles.formField}>
-              <label className={styles.formLabel}>أجرة فني الصيانة</label>
+              <label className={styles.formLabel}>وقت البدء المجدول</label>
               <input
-                type="number"
-                min={0}
+                type="datetime-local"
                 className={styles.formInput}
-                value={activeForm.technicianFee}
-                onChange={(e) => setActiveForm({ ...activeForm, technicianFee: Number(e.target.value) || 0 })}
+                value={activeForm.scheduledStartTime}
+                onChange={(e) => setActiveForm({ ...activeForm, scheduledStartTime: e.target.value })}
               />
             </div>
 
             <div className={styles.formField}>
-              <label className={styles.formLabel}>أجرة الشركة</label>
+              <label className={styles.formLabel}>وقت الانتهاء المجدول</label>
               <input
-                type="number"
-                min={0}
+                type="datetime-local"
                 className={styles.formInput}
-                value={activeForm.companyFee}
-                onChange={(e) => setActiveForm({ ...activeForm, companyFee: Number(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className={`${styles.formField} ${styles.fullWidth}`}>
-              <label className={styles.formLabel}>تقرير الفني</label>
-              <textarea
-                className={styles.formTextarea}
-                placeholder="أدخل تقرير الفني"
-                value={activeForm.technicianReport}
-                onChange={(e) => setActiveForm({ ...activeForm, technicianReport: e.target.value })}
+                value={activeForm.scheduledEndTime}
+                onChange={(e) => setActiveForm({ ...activeForm, scheduledEndTime: e.target.value })}
               />
             </div>
           </div>
@@ -441,13 +322,83 @@ export default function MachineInspectionPage() {
                 <td><span className={`${styles.badge} ${styles[statusMap[r.status]?.cls || 'badgeGray']}`}>{statusMap[r.status]?.label || r.status}</span></td>
                 <td><span className={`${styles.badge} ${r.readyForDelivery ? styles.badgeGreen : styles.badgeGray}`}>{r.readyForDelivery ? 'نعم' : 'لا'}</span></td>
                 <td>{fmtMin(r.inspectionDurationMs)}</td>
-                <td><div className={styles.actions}><button className={styles.btnSecondary} onClick={() => startEdit(r)} title="تعديل"><Pencil size={14} /></button><button className={styles.btnDanger} onClick={() => handleDel(r._id)} title="حذف"><Trash2 size={14} /></button></div></td>
+                <td>
+                  <div className={styles.actions}>
+                    {r.status === 'ready' && (
+                      <button className={styles.btnSecondary} onClick={() => setReportModal(r)} title="عرض التقرير">
+                        <Eye size={14} />
+                      </button>
+                    )}
+                    <button className={styles.btnSecondary} onClick={() => startEdit(r)} title="تعديل"><Pencil size={14} /></button>
+                    <button className={styles.btnDanger} onClick={() => handleDel(r._id)} title="حذف"><Trash2 size={14} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
             {items.length === 0 && <tr><td colSpan={9}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>
+
+      {reportModal && (
+        <div className={styles.modalOverlay} onClick={() => setReportModal(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3><FileText size={18} /> تقرير الفني</h3>
+              <button className={styles.modalClose} onClick={() => setReportModal(null)}><X size={18} /></button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.reportSection}>
+                <label>اسم الآلة</label>
+                <p>{reportModal.machineName || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>الفني</label>
+                <p>{getTechnicianName(reportModal)}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>مدة الفحص</label>
+                <p>{fmtMin(reportModal.inspectionDurationMs)}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>سبب الإيقاف</label>
+                <p>{reportModal.pauseReason || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>تقرير الفني</label>
+                <p>{reportModal.technicianReport || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>قطع الغيار</label>
+                {reportModal.spareParts && reportModal.spareParts.length > 0 ? (
+                  <table className={styles.miniTable}>
+                    <thead><tr><th>القطعة</th><th>الكمية</th><th>التكلفة</th></tr></thead>
+                    <tbody>
+                      {reportModal.spareParts.map((part, i) => (
+                        <tr key={i}><td>{part.name}</td><td>{part.quantity}</td><td>{part.cost.toLocaleString('ar')} ل.س</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <p>—</p>}
+              </div>
+              <div className={styles.reportSection}>
+                <label>أجرة الفني</label>
+                <p>{reportModal.technicianFee?.toLocaleString('ar') || 0} ل.س</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>أجرة الشركة</label>
+                <p>{reportModal.companyFee?.toLocaleString('ar') || 0} ل.س</p>
+              </div>
+              {reportModal.rejectionReason && (
+                <div className={styles.reportSection}>
+                  <label>سبب الرفض</label>
+                  <p style={{ color: '#dc2626' }}>{reportModal.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

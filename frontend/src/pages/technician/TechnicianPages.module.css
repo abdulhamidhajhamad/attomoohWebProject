@@ -416,6 +416,29 @@
 
 .btnFinish:hover { opacity: 0.9; }
 
+.btnReject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btnReject:hover { opacity: 0.9; }
+
+.btnReject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btnSecondary {
   display: inline-flex;
   align-items: center;

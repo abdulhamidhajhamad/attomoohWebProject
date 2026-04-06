@@ -5,6 +5,7 @@ import { MachineInspectionDocument } from './schemas/machine-inspection.schema.j
 import { CreateMachineInspectionDto } from './dto/create-machine-inspection.dto.js';
 import { UpdateMachineInspectionDto } from './dto/update-machine-inspection.dto.js';
 import { InspectionStatus } from '../../common/enums/inspection-status.enum.js';
+import { MachineTaskReportDto } from '../../common/dto/machine-task-report.dto.js';
 
 @Injectable()
 export class MachineInspectionService {
@@ -68,26 +69,56 @@ export class MachineInspectionService {
   async startWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
     const doc = await this.findById(id);
     doc.timeLogs.push({ action: 'start', timestamp: new Date(), pauseReason: '' } as any);
+    doc.status = InspectionStatus.IN_PROGRESS;
     return doc.save();
   }
 
   async pauseWork(id: Types.ObjectId, reason: string): Promise<MachineInspectionDocument> {
     const doc = await this.findById(id);
     doc.timeLogs.push({ action: 'pause', timestamp: new Date(), pauseReason: reason ?? '' } as any);
+    doc.status = InspectionStatus.POSTPONED;
     return doc.save();
   }
 
   async resumeWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
     const doc = await this.findById(id);
     doc.timeLogs.push({ action: 'resume', timestamp: new Date(), pauseReason: '' } as any);
+    doc.status = InspectionStatus.IN_PROGRESS;
     return doc.save();
   }
 
-  async finishWork(id: Types.ObjectId): Promise<MachineInspectionDocument> {
+  async finishWork(id: Types.ObjectId, report?: MachineTaskReportDto): Promise<MachineInspectionDocument> {
     const doc = await this.findById(id);
     doc.timeLogs.push({ action: 'finish', timestamp: new Date(), pauseReason: '' } as any);
     doc.inspectionDurationMs = this.calculateDuration(doc.timeLogs as any);
+    doc.status = InspectionStatus.READY;
+    doc.readyForDelivery = true;
+
+    if (report) {
+      if (report.pauseReason !== undefined) doc.pauseReason = report.pauseReason;
+      if (report.spareParts !== undefined) doc.spareParts = report.spareParts as any;
+      if (report.technicianReport !== undefined) doc.technicianReport = report.technicianReport;
+      if (report.technicianFee !== undefined) doc.technicianFee = report.technicianFee;
+      if (report.companyFee !== undefined) doc.companyFee = report.companyFee;
+    }
+
     return doc.save();
+  }
+
+  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineInspectionDocument> {
+    const doc = await this.findById(id);
+    doc.status = InspectionStatus.REJECTED;
+    (doc as any).rejectionReason = reason;
+    doc.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    return doc.save();
+  }
+
+  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineInspectionDocument[]> {
+    return this.repo.findByTechnician(technicianId);
+  }
+
+  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineInspectionDocument[]> {
+    return this.repo.findActiveByTechnician(technicianId);
   }
 
   async delete(id: Types.ObjectId): Promise<void> {

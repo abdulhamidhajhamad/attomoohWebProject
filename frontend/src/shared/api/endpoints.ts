@@ -189,6 +189,16 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/machine-types/${id}`,
   },
 
+  // ── مهام الفني (Unified Technician Tasks) ──
+  TECHNICIAN_TASKS: {
+    MY_TASKS: '/technician-tasks/my-tasks',
+    START: (type: string, id: string) => `/technician-tasks/${type}/${id}/start`,
+    PAUSE: (type: string, id: string) => `/technician-tasks/${type}/${id}/pause`,
+    RESUME: (type: string, id: string) => `/technician-tasks/${type}/${id}/resume`,
+    FINISH: (type: string, id: string) => `/technician-tasks/${type}/${id}/finish`,
+    REJECT: (type: string, id: string) => `/technician-tasks/${type}/${id}/reject`,
+  },
+
   SERVICE_ORDERS: {
     BASE: '/service-orders',
     BY_ID: (id: string) => `/service-orders/${id}`,

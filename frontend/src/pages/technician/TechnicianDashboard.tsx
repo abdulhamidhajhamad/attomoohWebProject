@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Wrench,
@@ -14,8 +14,11 @@ import {
   Circle,
   CalendarDays,
   List,
+  XCircle,
+  Trash2,
 } from 'lucide-react';
 import { useMaintenanceStore } from '../../shared/store/maintenanceStore';
+import { useTechnicianTasksStore } from '../../shared/store/technicianTasksStore';
 import { useTechnicianAuthStore } from '../../shared/store/technicianAuthStore';
 import { maintenanceScheduleService } from '../../shared/api/services';
 import { LoadingSpinner } from '../../shared/ui/LoadingSpinner/LoadingSpinner';
@@ -31,6 +34,7 @@ import type {
   ApiTechnicianStatus,
   TaskReportRequest,
 } from '../../shared/api/types';
+import type { UnifiedTask, TaskType, TaskReportPayload } from '../../shared/api/services';
 import styles from './TechnicianPages.module.css';
 
 /* ═══════════════════════════════════
@@ -44,6 +48,15 @@ const STATUS_MAP: Record<ApiTaskStatus, { label: string; color: string }> = {
   paused: { label: 'متوقفة', color: '#ef4444' },
   completed: { label: 'مكتملة', color: '#10b981' },
   cancelled: { label: 'ملغاة', color: '#6b7280' },
+};
+
+const MACHINE_TASK_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  assigned: { label: 'معيّنة', color: '#3b82f6' },
+  in_progress: { label: 'قيد التنفيذ', color: '#8b5cf6' },
+  in_maintenance: { label: 'قيد الصيانة', color: '#8b5cf6' },
+  postponed: { label: 'مؤجلة', color: '#f59e0b' },
+  ready: { label: 'جاهزة', color: '#10b981' },
+  rejected: { label: 'مرفوضة', color: '#dc2626' },
 };
 
 const PRIORITY_MAP: Record<string, { label: string; color: string }> = {
@@ -60,6 +73,13 @@ const TECH_STATUS_MAP: Record<
   available: { label: 'متاح', color: '#10b981', icon: '🟢' },
   on_task: { label: 'مشغول بمهمة', color: '#f59e0b', icon: '🟡' },
   off_duty: { label: 'غير متواجد', color: '#6b7280', icon: '🔴' },
+};
+
+const TASK_TYPE_LABEL: Record<TaskType, string> = {
+  inspection: 'فحص',
+  maintenance: 'صيانة',
+  installation: 'تنصيب',
+  production: 'إنتاج',
 };
 
 function calcLiveDuration(task: ApiMaintenanceTask): number {
@@ -134,20 +154,34 @@ function toTechScheduleTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
 export default function TechnicianDashboard() {
   const navigate = useNavigate();
   const logout = useTechnicianAuthStore((s) => s.logout);
+
+  // Legacy maintenance store
   const {
-    myTasks,
+    myTasks: legacyTasks,
     calendarTasks,
     myStatus,
-    loading,
-    fetchMyTasks,
+    loading: legacyLoading,
+    fetchMyTasks: fetchLegacyTasks,
     fetchCalendarTasks,
     fetchMyStatus,
     updateMyStatus,
-    startTask,
-    pauseTask,
-    resumeTask,
-    finishTask,
+    startTask: startLegacyTask,
+    pauseTask: pauseLegacyTask,
+    resumeTask: resumeLegacyTask,
+    finishTask: finishLegacyTask,
   } = useMaintenanceStore();
+
+  // New unified machine tasks store
+  const {
+    tasks: machineTasks,
+    loading: machineLoading,
+    fetchMyTasks: fetchMachineTasks,
+    startTask: startMachineTask,
+    pauseTask: pauseMachineTask,
+    resumeTask: resumeMachineTask,
+    finishTask: finishMachineTask,
+    rejectTask: rejectMachineTask,
+  } = useTechnicianTasksStore();
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -159,19 +193,36 @@ export default function TechnicianDashboard() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [scheduleTasks, setScheduleTasks] = useState<ApiMaintenanceTask[]>([]);
 
-  // Finish form state
+  // Finish form state (for legacy and machine tasks)
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishTaskId, setFinishTaskId] = useState('');
+  const [finishTaskType, setFinishTaskType] = useState<'legacy' | TaskType | null>(null);
+
+  // Legacy task fields
   const [problemDesc, setProblemDesc] = useState('');
   const [solutionDesc, setSolutionDesc] = useState('');
   const [laborCost, setLaborCost] = useState('');
   const [notes, setNotes] = useState('');
   const [usedParts, setUsedParts] = useState<{ name: string; quantity: number; cost: number }[]>([]);
 
+  // Machine task fields
+  const [pauseReason, setPauseReason] = useState('');
+  const [spareParts, setSpareParts] = useState<{ name: string; quantity: number; cost?: number }[]>([]);
+  const [technicianReport, setTechnicianReport] = useState('');
+  const [technicianFee, setTechnicianFee] = useState('');
+  const [companyFee, setCompanyFee] = useState('');
+
+  // Reject modal
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectTaskId, setRejectTaskId] = useState('');
+  const [rejectTaskType, setRejectTaskType] = useState<TaskType | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   useEffect(() => {
-    fetchMyTasks();
+    fetchLegacyTasks();
+    fetchMachineTasks();
     fetchMyStatus();
-  }, [fetchMyTasks, fetchMyStatus]);
+  }, [fetchLegacyTasks, fetchMachineTasks, fetchMyStatus]);
 
   // Fetch calendar tasks when in calendar mode
   useEffect(() => {
@@ -195,7 +246,7 @@ export default function TechnicianDashboard() {
 
   // Timer tick — update every second for live display
   useEffect(() => {
-    const hasActive = myTasks.some((t) => t.status === 'in_progress');
+    const hasActive = legacyTasks.some((t) => t.status === 'in_progress');
     if (hasActive) {
       timerRef.current = setInterval(() => setTick((t) => t + 1), 1000);
     } else {
@@ -204,7 +255,7 @@ export default function TechnicianDashboard() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [myTasks]);
+  }, [legacyTasks]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -223,48 +274,119 @@ export default function TechnicianDashboard() {
     [myStatus, updateMyStatus],
   );
 
-  const handleAction = useCallback(
+  // Legacy task actions
+  const handleLegacyAction = useCallback(
     async (taskId: string, action: 'start' | 'pause' | 'resume') => {
       setActionLoading(taskId);
       try {
-        if (action === 'start') await startTask(taskId);
-        else if (action === 'pause') await pauseTask(taskId);
-        else if (action === 'resume') await resumeTask(taskId);
-        await fetchMyTasks();
+        if (action === 'start') await startLegacyTask(taskId);
+        else if (action === 'pause') await pauseLegacyTask(taskId);
+        else if (action === 'resume') await resumeLegacyTask(taskId);
+        await fetchLegacyTasks();
       } catch { /* handled by store */ }
       setActionLoading(null);
     },
-    [startTask, pauseTask, resumeTask, fetchMyTasks],
+    [startLegacyTask, pauseLegacyTask, resumeLegacyTask, fetchLegacyTasks],
   );
 
-  const openFinishForm = useCallback((taskId: string) => {
+  // Machine task actions
+  const handleMachineAction = useCallback(
+    async (taskType: TaskType, taskId: string, action: 'start' | 'pause' | 'resume') => {
+      setActionLoading(taskId);
+      try {
+        if (action === 'start') await startMachineTask(taskType, taskId);
+        else if (action === 'pause') await pauseMachineTask(taskType, taskId);
+        else if (action === 'resume') await resumeMachineTask(taskType, taskId);
+      } catch { /* handled by store */ }
+      setActionLoading(null);
+    },
+    [startMachineTask, pauseMachineTask, resumeMachineTask],
+  );
+
+  const openFinishForm = useCallback((taskId: string, taskType: 'legacy' | TaskType) => {
     setFinishTaskId(taskId);
+    setFinishTaskType(taskType);
+
+    // Reset all fields
     setProblemDesc('');
     setSolutionDesc('');
     setLaborCost('');
     setNotes('');
     setUsedParts([]);
+    setPauseReason('');
+    setSpareParts([]);
+    setTechnicianReport('');
+    setTechnicianFee('');
+    setCompanyFee('');
+
     setShowFinishModal(true);
   }, []);
 
   const handleFinish = useCallback(async () => {
-    if (!finishTaskId) return;
+    if (!finishTaskId || !finishTaskType) return;
     setActionLoading(finishTaskId);
+
     try {
-      const report: TaskReportRequest = {
-        problemDescription: problemDesc.trim() || undefined,
-        solutionDescription: solutionDesc.trim() || undefined,
-        laborCost: laborCost ? Number(laborCost) : undefined,
-        notes: notes.trim() || undefined,
-        usedParts: usedParts.length > 0 ? usedParts.filter((p) => p.name) : undefined,
-      };
-      await finishTask(finishTaskId, report);
+      if (finishTaskType === 'legacy') {
+        const report: TaskReportRequest = {
+          problemDescription: problemDesc.trim() || undefined,
+          solutionDescription: solutionDesc.trim() || undefined,
+          laborCost: laborCost ? Number(laborCost) : undefined,
+          notes: notes.trim() || undefined,
+          usedParts: usedParts.length > 0 ? usedParts.filter((p) => p.name) : undefined,
+        };
+        await finishLegacyTask(finishTaskId, report);
+        await fetchLegacyTasks();
+      } else {
+        const report: TaskReportPayload = {
+          pauseReason: pauseReason.trim() || undefined,
+          spareParts: spareParts.length > 0 ? spareParts.filter((p) => p.name.trim()) : undefined,
+          technicianReport: technicianReport.trim() || undefined,
+          technicianFee: technicianFee ? Number(technicianFee) : undefined,
+          companyFee: companyFee ? Number(companyFee) : undefined,
+        };
+        await finishMachineTask(finishTaskType, finishTaskId, report);
+      }
       setShowFinishModal(false);
-      await fetchMyTasks();
     } catch { /* handled */ }
     setActionLoading(null);
-  }, [finishTaskId, problemDesc, solutionDesc, laborCost, notes, usedParts, finishTask, fetchMyTasks]);
+  }, [
+    finishTaskId,
+    finishTaskType,
+    problemDesc,
+    solutionDesc,
+    laborCost,
+    notes,
+    usedParts,
+    pauseReason,
+    spareParts,
+    technicianReport,
+    technicianFee,
+    companyFee,
+    finishLegacyTask,
+    finishMachineTask,
+    fetchLegacyTasks,
+  ]);
 
+  const openRejectForm = useCallback((taskId: string, taskType: TaskType) => {
+    setRejectTaskId(taskId);
+    setRejectTaskType(taskType);
+    setRejectReason('');
+    setShowRejectModal(true);
+  }, []);
+
+  const handleReject = useCallback(async () => {
+    if (!rejectTaskId || !rejectTaskType || !rejectReason.trim()) return;
+    setActionLoading(rejectTaskId);
+
+    try {
+      await rejectMachineTask(rejectTaskType, rejectTaskId, rejectReason.trim());
+      setShowRejectModal(false);
+    } catch { /* handled */ }
+    setActionLoading(null);
+  }, [rejectTaskId, rejectTaskType, rejectReason, rejectMachineTask]);
+
+  // Legacy parts handlers
   const addPart = () => setUsedParts([...usedParts, { name: '', quantity: 1, cost: 0 }]);
   const removePart = (i: number) => setUsedParts(usedParts.filter((_, idx) => idx !== i));
   const updatePart = (i: number, field: keyof typeof usedParts[number], value: string | number) => {
@@ -273,17 +395,41 @@ export default function TechnicianDashboard() {
     setUsedParts(copy);
   };
 
-  // Separate active tasks and completed/cancelled
-  const baseActiveTasks = myTasks.filter((t) =>
-    ['assigned', 'in_progress', 'paused'].includes(t.status),
-  );
-  const activeScheduleTasks = scheduleTasks.filter((t) => t.status !== 'cancelled');
-  const activeTasks = [...baseActiveTasks, ...activeScheduleTasks];
-  const completedTasks = myTasks.filter((t) =>
-    ['completed', 'cancelled'].includes(t.status),
-  );
+  // Machine task spare parts handlers
+  const addSparePart = () => setSpareParts([...spareParts, { name: '', quantity: 1, cost: 0 }]);
+  const removeSparePart = (i: number) => setSpareParts(spareParts.filter((_, idx) => idx !== i));
+  const updateSparePart = (i: number, field: keyof typeof spareParts[number], value: string | number) => {
+    const copy = [...spareParts];
+    copy[i] = { ...copy[i], [field]: value };
+    setSpareParts(copy);
+  };
 
-  if (loading && myTasks.length === 0) {
+  // Merge and organize all tasks
+  const allActiveTasks = useMemo(() => {
+    const legacyActive = legacyTasks
+      .filter((t) => ['assigned', 'in_progress', 'paused'].includes(t.status))
+      .map((t) => ({ ...t, source: 'legacy' as const }));
+
+    const machineActive = machineTasks
+      .filter((t) => ['assigned', 'in_progress', 'in_maintenance', 'postponed'].includes(t.status))
+      .map((t) => ({ ...t, source: 'machine' as const }));
+
+    const scheduleActive = scheduleTasks
+      .filter((t) => t.status !== 'cancelled')
+      .map((t) => ({ ...t, source: 'schedule' as const }));
+
+    return [...legacyActive, ...machineActive, ...scheduleActive];
+  }, [legacyTasks, machineTasks, scheduleTasks]);
+
+  const completedTasks = useMemo(() => {
+    return legacyTasks
+      .filter((t) => ['completed', 'cancelled'].includes(t.status))
+      .map((t) => ({ ...t, source: 'legacy' as const }));
+  }, [legacyTasks]);
+
+  const loading = legacyLoading || machineLoading;
+
+  if (loading && legacyTasks.length === 0 && machineTasks.length === 0) {
     return (
       <div className={styles.techDashboard}>
         <LoadingSpinner />
@@ -366,28 +512,38 @@ export default function TechnicianDashboard() {
         {/* Active Tasks */}
         <h2 className={styles.sectionTitle}>
           <ClipboardList size={20} style={{ display: 'inline', verticalAlign: 'middle' }} />{' '}
-          المهام النشطة ({activeTasks.length})
+          المهام النشطة ({allActiveTasks.length})
         </h2>
 
-        {activeTasks.length === 0 ? (
+        {allActiveTasks.length === 0 ? (
           <div className={styles.emptyState}>
             <CheckCircle2 size={48} />
             <p>لا توجد مهام نشطة حالياً</p>
           </div>
         ) : (
-          activeTasks.map((task) => {
-            const statusInfo = STATUS_MAP[task.status];
-            const priorityInfo = PRIORITY_MAP[task.priority];
-            const isInProgress = task.status === 'in_progress';
-            const isPaused = task.status === 'paused';
+          allActiveTasks.map((task) => {
+            const isLegacy = task.source === 'legacy';
+            const isMachine = task.source === 'machine';
+            const isSchedule = task.source === 'schedule';
+
+            const statusInfo = isMachine
+              ? MACHINE_TASK_STATUS_MAP[task.status] || STATUS_MAP[task.status as ApiTaskStatus]
+              : STATUS_MAP[task.status as ApiTaskStatus];
+
+            const priority = (isLegacy || isSchedule) ? (task as ApiMaintenanceTask).priority : 'medium';
+            const priorityInfo = PRIORITY_MAP[priority || 'medium'];
+            const isInProgress = task.status === 'in_progress' || task.status === 'in_maintenance';
+            const isPaused = task.status === 'paused' || task.status === 'postponed';
             const isAssigned = task.status === 'assigned';
-            const isSyntheticSchedule = task._id.startsWith('tech-schedule-');
-            const liveDuration = calcLiveDuration(task);
+            const liveDuration = isLegacy ? calcLiveDuration(task as ApiMaintenanceTask) : (task as UnifiedTask).durationMs;
 
             return (
               <div key={task._id} className={styles.taskCardTech}>
                 <div className={styles.taskCardHeader}>
-                  <h3 className={styles.taskCardTitle}>{task.title}</h3>
+                  <h3 className={styles.taskCardTitle}>
+                    {isMachine && `[${TASK_TYPE_LABEL[(task as UnifiedTask).taskType]}] `}
+                    {isLegacy ? task.title : (task as UnifiedTask).machineName}
+                  </h3>
                   <span
                     className={styles.statusBadge}
                     style={{ background: statusInfo.color }}
@@ -397,18 +553,21 @@ export default function TechnicianDashboard() {
                 </div>
 
                 <div className={styles.taskCardMeta}>
-                  {task.machineInfo && <span>🔧 {task.machineInfo}</span>}
-                  {task.location && <span>📍 {task.location}</span>}
-                  <span
-                    className={styles.priorityBadge}
-                    style={{ color: priorityInfo.color, borderColor: priorityInfo.color }}
-                  >
-                    {priorityInfo.label}
-                  </span>
+                  {isLegacy && task.machineInfo && <span>🔧 {task.machineInfo}</span>}
+                  {isMachine && <span>🔧 {(task as UnifiedTask).machineDetails}</span>}
+                  {isLegacy && task.location && <span>📍 {task.location}</span>}
+                  {!isSchedule && (
+                    <span
+                      className={styles.priorityBadge}
+                      style={{ color: priorityInfo.color, borderColor: priorityInfo.color }}
+                    >
+                      {priorityInfo.label}
+                    </span>
+                  )}
                 </div>
 
                 {/* Timer */}
-                {(isInProgress || isPaused) && (
+                {(isInProgress || isPaused) && !isSchedule && (
                   <div className={styles.timerDisplay}>
                     <Clock size={22} />
                     <span>{formatTimer(liveDuration)}</span>
@@ -420,16 +579,20 @@ export default function TechnicianDashboard() {
 
                 {/* Actions */}
                 <div className={styles.actionBtns}>
-                  {task._id.startsWith('tech-schedule-') && (
+                  {isSchedule && (
                     <button className={styles.btnPause} disabled>
                       هذه مهمة مجدولة
                     </button>
                   )}
 
-                  {isAssigned && !isSyntheticSchedule && (
+                  {isAssigned && !isSchedule && (
                     <button
                       className={styles.btnStart}
-                      onClick={() => handleAction(task._id, 'start')}
+                      onClick={() =>
+                        isLegacy
+                          ? handleLegacyAction(task._id, 'start')
+                          : handleMachineAction((task as UnifiedTask).taskType, task._id, 'start')
+                      }
                       disabled={actionLoading === task._id}
                     >
                       <Play size={16} />
@@ -437,11 +600,15 @@ export default function TechnicianDashboard() {
                     </button>
                   )}
 
-                  {isInProgress && !isSyntheticSchedule && (
+                  {isInProgress && !isSchedule && (
                     <>
                       <button
                         className={styles.btnPause}
-                        onClick={() => handleAction(task._id, 'pause')}
+                        onClick={() =>
+                          isLegacy
+                            ? handleLegacyAction(task._id, 'pause')
+                            : handleMachineAction((task as UnifiedTask).taskType, task._id, 'pause')
+                        }
                         disabled={actionLoading === task._id}
                       >
                         <Pause size={16} />
@@ -449,7 +616,12 @@ export default function TechnicianDashboard() {
                       </button>
                       <button
                         className={styles.btnFinish}
-                        onClick={() => openFinishForm(task._id)}
+                        onClick={() =>
+                          openFinishForm(
+                            task._id,
+                            isLegacy ? 'legacy' : (task as UnifiedTask).taskType
+                          )
+                        }
                         disabled={actionLoading === task._id}
                       >
                         <CheckCircle2 size={16} />
@@ -458,11 +630,15 @@ export default function TechnicianDashboard() {
                     </>
                   )}
 
-                  {isPaused && !isSyntheticSchedule && (
+                  {isPaused && !isSchedule && (
                     <>
                       <button
                         className={styles.btnResume}
-                        onClick={() => handleAction(task._id, 'resume')}
+                        onClick={() =>
+                          isLegacy
+                            ? handleLegacyAction(task._id, 'resume')
+                            : handleMachineAction((task as UnifiedTask).taskType, task._id, 'resume')
+                        }
                         disabled={actionLoading === task._id}
                       >
                         <RotateCcw size={16} />
@@ -470,13 +646,30 @@ export default function TechnicianDashboard() {
                       </button>
                       <button
                         className={styles.btnFinish}
-                        onClick={() => openFinishForm(task._id)}
+                        onClick={() =>
+                          openFinishForm(
+                            task._id,
+                            isLegacy ? 'legacy' : (task as UnifiedTask).taskType
+                          )
+                        }
                         disabled={actionLoading === task._id}
                       >
                         <CheckCircle2 size={16} />
                         إنهاء المهمة
                       </button>
                     </>
+                  )}
+
+                  {/* Reject button for machine tasks only */}
+                  {isMachine && (isAssigned || isPaused) && (
+                    <button
+                      className={styles.btnReject}
+                      onClick={() => openRejectForm(task._id, (task as UnifiedTask).taskType)}
+                      disabled={actionLoading === task._id}
+                    >
+                      <XCircle size={16} />
+                      رفض
+                    </button>
                   )}
                 </div>
               </div>
@@ -491,7 +684,7 @@ export default function TechnicianDashboard() {
               المهام المنتهية ({completedTasks.length})
             </h2>
             {completedTasks.map((task) => {
-              const statusInfo = STATUS_MAP[task.status];
+              const statusInfo = STATUS_MAP[task.status as ApiTaskStatus];
               return (
                 <div key={task._id} className={styles.taskCardTech} style={{ opacity: 0.7 }}>
                   <div className={styles.taskCardHeader}>
@@ -518,98 +711,197 @@ export default function TechnicianDashboard() {
         </>
         )}
       </div>
+
+      {/* Finish Modal */}
       {showFinishModal && (
         <div className={styles.modalOverlay} onClick={() => setShowFinishModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>تقرير إنهاء المهمة</h3>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>وصف المشكلة</label>
-              <textarea
-                className={styles.formTextarea}
-                value={problemDesc}
-                onChange={(e) => setProblemDesc(e.target.value)}
-                placeholder="صِف المشكلة التي وجدتها..."
-              />
-            </div>
+            {finishTaskType === 'legacy' ? (
+              <>
+                {/* Legacy Task Fields */}
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>وصف المشكلة</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    value={problemDesc}
+                    onChange={(e) => setProblemDesc(e.target.value)}
+                    placeholder="صِف المشكلة التي وجدتها..."
+                  />
+                </div>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>الحل المطبّق</label>
-              <textarea
-                className={styles.formTextarea}
-                value={solutionDesc}
-                onChange={(e) => setSolutionDesc(e.target.value)}
-                placeholder="ما الذي قمت به لحل المشكلة..."
-              />
-            </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>الحل المطبّق</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    value={solutionDesc}
+                    onChange={(e) => setSolutionDesc(e.target.value)}
+                    placeholder="ما الذي قمت به لحل المشكلة..."
+                  />
+                </div>
 
-            {/* Used Parts */}
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>القطع المستخدمة</label>
-              {usedParts.map((part, i) => (
-                <div key={i} className={styles.partsRow}>
-                  <div className={styles.formGroup}>
-                    <input
-                      className={styles.formInput}
-                      value={part.name}
-                      onChange={(e) => updatePart(i, 'name', e.target.value)}
-                      placeholder="اسم القطعة"
-                    />
-                  </div>
-                  <div className={styles.formGroup} style={{ maxWidth: 80 }}>
-                    <input
-                      className={styles.formInput}
-                      type="number"
-                      min={1}
-                      value={part.quantity}
-                      onChange={(e) => updatePart(i, 'quantity', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className={styles.formGroup} style={{ maxWidth: 100 }}>
-                    <input
-                      className={styles.formInput}
-                      type="number"
-                      min={0}
-                      value={part.cost}
-                      onChange={(e) => updatePart(i, 'cost', Number(e.target.value))}
-                      placeholder="التكلفة"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.removePartBtn}
-                    onClick={() => removePart(i)}
-                  >
-                    <X size={16} />
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>القطع المستخدمة</label>
+                  {usedParts.map((part, i) => (
+                    <div key={i} className={styles.partsRow}>
+                      <div className={styles.formGroup}>
+                        <input
+                          className={styles.formInput}
+                          value={part.name}
+                          onChange={(e) => updatePart(i, 'name', e.target.value)}
+                          placeholder="اسم القطعة"
+                        />
+                      </div>
+                      <div className={styles.formGroup} style={{ maxWidth: 80 }}>
+                        <input
+                          className={styles.formInput}
+                          type="number"
+                          min={1}
+                          value={part.quantity}
+                          onChange={(e) => updatePart(i, 'quantity', Number(e.target.value))}
+                        />
+                      </div>
+                      <div className={styles.formGroup} style={{ maxWidth: 100 }}>
+                        <input
+                          className={styles.formInput}
+                          type="number"
+                          min={0}
+                          value={part.cost}
+                          onChange={(e) => updatePart(i, 'cost', Number(e.target.value))}
+                          placeholder="التكلفة"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.removePartBtn}
+                        onClick={() => removePart(i)}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" className={styles.addPartBtn} onClick={addPart}>
+                    <Plus size={14} style={{ display: 'inline' }} /> إضافة قطعة
                   </button>
                 </div>
-              ))}
-              <button type="button" className={styles.addPartBtn} onClick={addPart}>
-                <Plus size={14} style={{ display: 'inline' }} /> إضافة قطعة
-              </button>
-            </div>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>تكلفة العمالة (₪)</label>
-              <input
-                className={styles.formInput}
-                type="number"
-                min={0}
-                value={laborCost}
-                onChange={(e) => setLaborCost(e.target.value)}
-                placeholder="0"
-              />
-            </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>تكلفة العمالة (ل.س)</label>
+                  <input
+                    className={styles.formInput}
+                    type="number"
+                    min={0}
+                    value={laborCost}
+                    onChange={(e) => setLaborCost(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>ملاحظات إضافية</label>
-              <textarea
-                className={styles.formTextarea}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="أي ملاحظات أخرى..."
-              />
-            </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>ملاحظات إضافية</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="أي ملاحظات أخرى..."
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Machine Task Fields */}
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>سبب الإيقاف / الاستمرار</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    value={pauseReason}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    placeholder="أدخل سبب الإيقاف أو ملاحظة الاستمرار..."
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>قطع الغيار</label>
+                  {spareParts.map((part, i) => (
+                    <div key={i} className={styles.partsRow}>
+                      <div className={styles.formGroup}>
+                        <input
+                          className={styles.formInput}
+                          value={part.name}
+                          onChange={(e) => updateSparePart(i, 'name', e.target.value)}
+                          placeholder="اسم القطعة"
+                        />
+                      </div>
+                      <div className={styles.formGroup} style={{ maxWidth: 80 }}>
+                        <input
+                          className={styles.formInput}
+                          type="number"
+                          min={1}
+                          value={part.quantity}
+                          onChange={(e) => updateSparePart(i, 'quantity', Number(e.target.value))}
+                          placeholder="الكمية"
+                        />
+                      </div>
+                      <div className={styles.formGroup} style={{ maxWidth: 100 }}>
+                        <input
+                          className={styles.formInput}
+                          type="number"
+                          min={0}
+                          value={part.cost || 0}
+                          onChange={(e) => updateSparePart(i, 'cost', Number(e.target.value))}
+                          placeholder="التكلفة"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.removePartBtn}
+                        onClick={() => removeSparePart(i)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" className={styles.addPartBtn} onClick={addSparePart}>
+                    <Plus size={14} style={{ display: 'inline' }} /> إضافة قطعة
+                  </button>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>تقرير الفني</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    value={technicianReport}
+                    onChange={(e) => setTechnicianReport(e.target.value)}
+                    placeholder="أدخل تقرير الفني..."
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>أجرة فني الصيانة (ل.س)</label>
+                  <input
+                    className={styles.formInput}
+                    type="number"
+                    min={0}
+                    value={technicianFee}
+                    onChange={(e) => setTechnicianFee(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>أجرة الشركة (ل.س)</label>
+                  <input
+                    className={styles.formInput}
+                    type="number"
+                    min={0}
+                    value={companyFee}
+                    onChange={(e) => setCompanyFee(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              </>
+            )}
 
             <div className={styles.formActions}>
               <button
@@ -629,7 +921,42 @@ export default function TechnicianDashboard() {
           </div>
         </div>
       )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowRejectModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <h3 className={styles.modalTitle}>رفض المهمة</h3>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>سبب الرفض *</label>
+              <textarea
+                className={styles.formTextarea}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="أدخل سبب رفض المهمة..."
+                rows={4}
+              />
+            </div>
+
+            <div className={styles.formActions}>
+              <button
+                className={styles.btnSecondary}
+                onClick={() => setShowRejectModal(false)}
+              >
+                إلغاء
+              </button>
+              <button
+                className={styles.btnReject}
+                onClick={handleReject}
+                disabled={!!actionLoading || !rejectReason.trim()}
+              >
+                {actionLoading ? 'جاري الرفض...' : 'رفض المهمة'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

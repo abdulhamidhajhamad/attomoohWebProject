@@ -570,7 +570,6 @@ export interface ApiVehicle {
    ═══════════════════════════════════ */
 
 export type ApiReceptionStatus = 'waiting' | 'in_maintenance' | 'postponed' | 'ready' | 'rejected' | 'delivered';
-export type ApiMachineCondition = 'complete' | 'incomplete';
 
 export interface ApiMachineReception {
   _id: string;
@@ -618,7 +617,7 @@ export interface ApiMachineDelivery {
    Machine Inspection (فحص الآلات)
    ═══════════════════════════════════ */
 
-export type ApiInspectionStatus = 'in_progress' | 'postponed' | 'ready' | 'rejected';
+export type ApiInspectionStatus = 'assigned' | 'in_progress' | 'postponed' | 'ready' | 'rejected';
 
 export interface ApiInspectionSparePart {
   name: string;
@@ -643,6 +642,9 @@ export interface ApiMachineInspection {
   status: ApiInspectionStatus;
   technicianFee: number;
   companyFee: number;
+  scheduledStartTime: string | null;
+  scheduledEndTime: string | null;
+  rejectionReason: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -651,7 +653,7 @@ export interface ApiMachineInspection {
    Machine Maintenance (صيانة الآلات)
    ═══════════════════════════════════ */
 
-export type ApiMaintenanceStatus = 'waiting' | 'in_maintenance' | 'postponed' | 'ready' | 'rejected';
+export type ApiMaintenanceStatus = 'waiting' | 'assigned' | 'in_maintenance' | 'postponed' | 'ready' | 'rejected';
 
 export interface ApiMachineMaint {
   _id: string;
@@ -670,6 +672,9 @@ export interface ApiMachineMaint {
   status: ApiMaintenanceStatus;
   technicianFee: number;
   companyFee: number;
+  scheduledStartTime: string | null;
+  scheduledEndTime: string | null;
+  rejectionReason: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -678,7 +683,7 @@ export interface ApiMachineMaint {
    Machine Installation (تنصيب الآلات)
    ═══════════════════════════════════ */
 
-export type ApiInstallationStatus = 'postponed' | 'ready' | 'rejected';
+export type ApiInstallationStatus = 'assigned' | 'in_progress' | 'postponed' | 'ready' | 'rejected';
 
 export interface ApiMachineInstallation {
   _id: string;
@@ -695,6 +700,9 @@ export interface ApiMachineInstallation {
   status: ApiInstallationStatus;
   technicianFee: number;
   companyFee: number;
+  scheduledStartTime: string | null;
+  scheduledEndTime: string | null;
+  rejectionReason: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -718,6 +726,10 @@ export interface ApiMachineProduction {
   readyForDelivery: boolean;
   technicianFee: number;
   companyFee: number;
+  scheduledStartTime: string | null;
+  scheduledEndTime: string | null;
+  rejectionReason: string;
+  status: string;
   createdAt: string;
   updatedAt: string;
 }
