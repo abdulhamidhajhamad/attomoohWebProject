@@ -12,6 +12,7 @@ import type {
   ApiMachineMaint,
   ApiMachineInstallation,
   ApiMachineProduction,
+  ApiMachineReception,
   ApiInspectionSparePart,
 } from '../types';
 
@@ -39,7 +40,7 @@ export interface UnifiedTask {
   technicianFee: number;
   companyFee: number;
   readyForDelivery: boolean;
-  machineReception: unknown;
+  machineReception: ApiMachineReception | string | null;
   createdAt: string;
   updatedAt: string;
 }

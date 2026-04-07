@@ -238,6 +238,7 @@ export default function MachineInstallationPage() {
                 onChange={handleReceptionChange}
                 placeholder="اختر من قائمة الاستلام"
                 statusFilter={['waiting', 'in_maintenance', 'postponed', 'ready', 'rejected']}
+                excludeAssignedTasks
               />
             </div>
 

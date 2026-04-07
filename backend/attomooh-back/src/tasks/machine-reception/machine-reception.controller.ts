@@ -18,7 +18,13 @@ export class MachineReceptionController {
   async create(@Body() dto: CreateMachineReceptionDto) { return this.svc.create(dto); }
 
   @Get()
-  async findAll(@Query('status') status?: string) { return this.svc.findAll(status); }
+  async findAll(
+    @Query('status') status?: string,
+    @Query('excludeAssigned') excludeAssigned?: string,
+  ) {
+    const shouldExcludeAssigned = excludeAssigned === 'true' || excludeAssigned === '1';
+    return this.svc.findAll(status, { excludeAssigned: shouldExcludeAssigned });
+  }
 
   @Get(':id')
   async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) { return this.svc.findById(id); }

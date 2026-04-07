@@ -714,6 +714,7 @@ export interface ApiMachineInstallation {
 export interface ApiMachineProduction {
   _id: string;
   customId: string;
+  machineReception: ApiMachineReception | string | null;
   machineName: string;
   machineDetails: string;
   machineNameAndDetails: string;

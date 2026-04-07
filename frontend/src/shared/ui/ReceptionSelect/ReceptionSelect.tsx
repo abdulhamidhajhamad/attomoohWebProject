@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Package, ChevronDown, X, Check, Info } from 'lucide-react';
 import { machineReceptionService } from '../../api/services';
 import type { ApiMachineReception } from '../../api/types';
@@ -16,6 +16,8 @@ interface ReceptionSelectProps {
   disabled?: boolean;
   /** Filter by status - default shows only 'ready' machines */
   statusFilter?: string[];
+  /** Hide receptions already assigned in inspection/maintenance tables */
+  excludeAssignedTasks?: boolean;
 }
 
 const DEFAULT_STATUS_FILTER = ['ready'];
@@ -26,6 +28,7 @@ export function ReceptionSelect({
   placeholder = 'اختر الآلة المستلمة',
   disabled = false,
   statusFilter = DEFAULT_STATUS_FILTER,
+  excludeAssignedTasks = false,
 }: ReceptionSelectProps) {
   const [receptions, setReceptions] = useState<ApiMachineReception[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,27 +36,52 @@ export function ReceptionSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ApiMachineReception | null>(null);
 
+  const statusFilterKey = useMemo(() => statusFilter.join('|'), [statusFilter]);
+
   useEffect(() => {
-    if (receptions.length === 0) {
-      setLoading(true);
-      setError(null);
-      (async () => {
-        try {
-          const canQuerySingleStatus = statusFilter.length === 1;
-          const data = canQuerySingleStatus
-            ? await machineReceptionService.getAll({ status: statusFilter[0] })
-            : await machineReceptionService.getAll();
-          const filtered = data.filter(r => statusFilter.includes(r.status));
-          setReceptions(filtered);
-        } catch (e) {
-          setReceptions([]);
-          setError('تعذر تحميل الآلات');
-        } finally {
-          setLoading(false);
+    let isMounted = true;
+
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const normalizedFilter = statusFilter.map((s) => s.trim()).filter(Boolean);
+        const canQuerySingleStatus = normalizedFilter.length === 1;
+        const data = canQuerySingleStatus
+          ? await machineReceptionService.getAll({
+              status: normalizedFilter[0],
+              excludeAssigned: excludeAssignedTasks,
+            })
+          : await machineReceptionService.getAll({ excludeAssigned: excludeAssignedTasks });
+
+        const filtered = normalizedFilter.length > 0
+          ? data.filter((r) => normalizedFilter.includes(r.status))
+          : data;
+
+        // Keep current form value visible while editing even if now filtered out.
+        const selected = value.reception;
+        const withCurrentSelection =
+          selected && !filtered.some((r) => r._id === selected._id)
+            ? [selected, ...filtered]
+            : filtered;
+
+        if (isMounted) {
+          setReceptions(withCurrentSelection);
         }
-      })();
-    }
-  }, [receptions.length, statusFilter]);
+      } catch {
+        if (isMounted) {
+          setReceptions(value.reception ? [value.reception] : []);
+          setError('تعذر تحميل الآلات');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [statusFilterKey, excludeAssignedTasks, value.reception]);
 
   const getMachineName = (r: ApiMachineReception) => {
     if (r.machine && typeof r.machine === 'object' && 'name' in r.machine) return r.machine.name;
@@ -118,7 +146,7 @@ export function ReceptionSelect({
             ) : error ? (
               <div className={styles.dropdownEmpty} style={{ color: '#ef4444' }}>{error}</div>
             ) : receptions.length === 0 ? (
-              <div className={styles.dropdownEmpty}>لا يوجد آلات جاهزة للتسليم</div>
+              <div className={styles.dropdownEmpty}>لا يوجد آلات متاحة</div>
             ) : (
               <>
                 <button type="button" className={styles.dropdownItem} onClick={clearSelection}>

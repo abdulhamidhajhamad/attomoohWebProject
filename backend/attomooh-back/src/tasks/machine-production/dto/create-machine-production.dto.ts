@@ -20,6 +20,7 @@ class MaterialPartDto {
 
 export class CreateMachineProductionDto {
   @IsString() @IsOptional() customId?: string;
+  @IsMongoId() @IsOptional() machineReception?: string;
   @IsString() @IsOptional() machineName?: string;
   @IsString() @IsOptional() machineDetails?: string;
   @IsString() @IsOptional() machineNameAndDetails?: string;

@@ -18,6 +18,8 @@ export type MachineProductionDocument =
 })
 export class MachineProduction {
   @Prop({ unique: true, required: true }) customId: string;
+  @Prop({ type: Types.ObjectId, ref: 'MachineReception', default: null })
+  machineReception: Types.ObjectId;
   @Prop({ default: '' }) machineName: string;
   @Prop({ default: '' }) machineDetails: string;
   @Prop({ required: true }) machineNameAndDetails: string;

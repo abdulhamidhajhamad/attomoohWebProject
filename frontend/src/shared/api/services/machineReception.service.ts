@@ -3,7 +3,9 @@ import { ENDPOINTS } from '../endpoints';
 import type { ApiMachineReception } from '../types';
 
 export const machineReceptionService = {
-  async getAll(searchOrParams?: string | { search?: string; status?: string }): Promise<ApiMachineReception[]> {
+  async getAll(
+    searchOrParams?: string | { search?: string; status?: string; excludeAssigned?: boolean },
+  ): Promise<ApiMachineReception[]> {
     const query = new URLSearchParams();
 
     if (typeof searchOrParams === 'string') {
@@ -11,6 +13,7 @@ export const machineReceptionService = {
     } else if (searchOrParams) {
       if (searchOrParams.search?.trim()) query.set('search', searchOrParams.search.trim());
       if (searchOrParams.status?.trim()) query.set('status', searchOrParams.status.trim());
+      if (searchOrParams.excludeAssigned) query.set('excludeAssigned', 'true');
     }
 
     const qs = query.toString();

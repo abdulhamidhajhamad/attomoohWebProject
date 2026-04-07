@@ -29,6 +29,9 @@ export class MachineProductionService {
 
     return this.repo.create({
       customId,
+      machineReception: dto.machineReception
+        ? new Types.ObjectId(dto.machineReception)
+        : undefined,
       machineName,
       machineDetails,
       machineNameAndDetails,
@@ -74,6 +77,12 @@ export class MachineProductionService {
     const data: Record<string, unknown> = { ...dto };
 
     if (dto.customId !== undefined) data.customId = dto.customId.trim();
+
+    if (dto.machineReception !== undefined) {
+      data.machineReception = dto.machineReception
+        ? new Types.ObjectId(dto.machineReception)
+        : null;
+    }
 
     if (dto.technician !== undefined)
       data.technician = dto.technician

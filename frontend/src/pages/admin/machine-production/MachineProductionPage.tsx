@@ -3,7 +3,9 @@ import { Factory, Plus, Search, Trash2, Pencil, X, Check, FileText, Eye, Clock }
 import { useMachineProductionStore } from '../../../shared/store/machineProductionStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import type { ApiMachineProduction } from '../../../shared/api/types';
+import { ReceptionSelect, EMPTY_RECEPTION } from '../../../shared/ui/ReceptionSelect';
 import { TechnicianSelect, EMPTY_TECHNICIAN } from '../../../shared/ui/TechnicianSelect';
+import type { ReceptionValue } from '../../../shared/ui/ReceptionSelect';
 import type { TechnicianValue } from '../../../shared/ui/TechnicianSelect';
 import styles from '../shared/CrudPage.module.css';
 
@@ -19,6 +21,7 @@ const fmtMin = (ms: number) => ms > 0 ? Math.round(ms / 60000) + ' دقيقة' :
 interface ProductionForm {
   autoCustomId: boolean;
   customId: string;
+  machineReception: ReceptionValue;
   machineName: string;
   machineDetails: string;
   date: string;
@@ -31,6 +34,7 @@ interface ProductionForm {
 const createEmptyForm = (): ProductionForm => ({
   autoCustomId: true,
   customId: '',
+  machineReception: { ...EMPTY_RECEPTION },
   machineName: '',
   machineDetails: '',
   date: new Date().toISOString().split('T')[0] ?? '',
@@ -58,8 +62,17 @@ const toInputDateTime = (value: string | null | undefined): string => {
   return `${y}-${m}-${day}T${hh}:${mm}`;
 };
 
+const getReceptionMachineName = (reception: ReceptionValue['reception']) => {
+  if (!reception) return '';
+  if (reception.machine && typeof reception.machine === 'object' && 'name' in reception.machine) {
+    return reception.machine.name;
+  }
+  return reception.machineDetails || '';
+};
+
 const formToPayload = (form: ProductionForm) => ({
   customId: form.autoCustomId ? undefined : form.customId.trim() || undefined,
+  machineReception: form.machineReception.id,
   machineName: form.machineName,
   machineDetails: form.machineDetails,
   machineNameAndDetails: [form.machineName, form.machineDetails].filter(Boolean).join(' - '),
@@ -71,6 +84,16 @@ const formToPayload = (form: ProductionForm) => ({
 });
 
 const productionToForm = (item: ApiMachineProduction): ProductionForm => {
+  let machineReception: ReceptionValue = { ...EMPTY_RECEPTION };
+  if (item.machineReception && typeof item.machineReception === 'object' && '_id' in item.machineReception) {
+    machineReception = {
+      id: item.machineReception._id,
+      reception: item.machineReception,
+    };
+  } else if (typeof item.machineReception === 'string') {
+    machineReception = { id: item.machineReception, reception: undefined };
+  }
+
   let technician: TechnicianValue = { ...EMPTY_TECHNICIAN };
   if (item.technician && typeof item.technician === 'object' && '_id' in item.technician) {
     technician = { id: item.technician._id, name: item.technician.name, mode: 'select' };
@@ -84,6 +107,7 @@ const productionToForm = (item: ApiMachineProduction): ProductionForm => {
   return {
     autoCustomId: false,
     customId: item.customId || '',
+    machineReception,
     machineName: item.machineName || '',
     machineDetails: item.machineDetails || '',
     date: item.date ? item.date.split('T')[0] : '',
@@ -157,6 +181,22 @@ export default function MachineProductionPage() {
   const setActiveForm = showAdd ? setAddForm : setEditForm;
   const isEditing = !!editId;
 
+  const handleReceptionChange = useCallback(
+    (value: ReceptionValue) => {
+      const machineName = getReceptionMachineName(value.reception);
+      const machineDetails = value.reception?.machineDetails || '';
+      if (!activeForm) return;
+
+      setActiveForm({
+        ...activeForm,
+        machineReception: value,
+        machineName,
+        machineDetails,
+      });
+    },
+    [activeForm, setActiveForm],
+  );
+
   if (loading && items.length === 0) return <div className={styles.page}><LoadingSpinner /></div>;
 
   return (
@@ -177,6 +217,17 @@ export default function MachineProductionPage() {
           </h3>
 
           <div className={styles.formGrid}>
+            <div className={styles.formField}>
+              <label className={styles.formLabel}>رمز تعريف الآلة من الاستلام</label>
+              <ReceptionSelect
+                value={activeForm.machineReception}
+                onChange={handleReceptionChange}
+                placeholder="اختر من قائمة الاستلام (اختياري)"
+                statusFilter={['waiting', 'in_maintenance', 'postponed', 'ready', 'rejected']}
+                excludeAssignedTasks
+              />
+            </div>
+
             <div className={styles.formField}>
               <label className={styles.switchLabel}>
                 <input

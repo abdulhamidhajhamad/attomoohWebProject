@@ -13,13 +13,22 @@ export class MachineInstallationRepository {
     private readonly model: Model<MachineInstallationDocument>,
   ) {}
 
+  private readonly receptionPopulate = {
+    path: 'machineReception',
+    populate: [
+      { path: 'receivedBy', select: 'name phone' },
+      { path: 'customer', select: 'name phone address' },
+      { path: 'machine', select: 'name' },
+    ],
+  };
+
   async create(
     data: Partial<MachineInstallation>,
   ): Promise<MachineInstallationDocument> {
     const doc = await new this.model(data).save();
     return this.model
       .findById(doc._id)
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .orFail()
       .exec();
@@ -30,7 +39,7 @@ export class MachineInstallationRepository {
   ): Promise<MachineInstallationDocument | null> {
     return this.model
       .findById(id)
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -51,7 +60,7 @@ export class MachineInstallationRepository {
     return this.model
       .find(filter)
       .sort({ createdAt: -1 })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -62,7 +71,7 @@ export class MachineInstallationRepository {
   ): Promise<MachineInstallationDocument | null> {
     return this.model
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -77,7 +86,7 @@ export class MachineInstallationRepository {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -89,7 +98,7 @@ export class MachineInstallationRepository {
         status: { $nin: ['ready', 'rejected'] },
       })
       .sort({ createdAt: -1 })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }

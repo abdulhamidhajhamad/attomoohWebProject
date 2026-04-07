@@ -7,16 +7,25 @@ import { MachineInspection, MachineInspectionDocument } from '../schemas/machine
 export class MachineInspectionRepository {
   constructor(@InjectModel(MachineInspection.name) private readonly model: Model<MachineInspectionDocument>) {}
 
+  private readonly receptionPopulate = {
+    path: 'machineReception',
+    populate: [
+      { path: 'receivedBy', select: 'name phone' },
+      { path: 'customer', select: 'name phone address' },
+      { path: 'machine', select: 'name' },
+    ],
+  };
+
   async create(data: Partial<MachineInspection>): Promise<MachineInspectionDocument> {
     const doc = await new this.model(data).save();
     return this.model
       .findById(doc._id)
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .orFail()
       .exec();
   }
-  async findById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findById(id).populate('machineReception').populate('technician', 'name phone').exec(); }
+  async findById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findById(id).populate(this.receptionPopulate).populate('technician', 'name phone').exec(); }
   async findAll(params: { status?: string; search?: string } = {}): Promise<MachineInspectionDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.status) filter.status = params.status;
@@ -30,12 +39,12 @@ export class MachineInspectionRepository {
         { pauseReason: rx },
       ];
     }
-    return this.model.find(filter).sort({ createdAt: -1 }).populate('machineReception').populate('technician', 'name phone').exec();
+    return this.model.find(filter).sort({ createdAt: -1 }).populate(this.receptionPopulate).populate('technician', 'name phone').exec();
   }
   async updateById(id: Types.ObjectId, data: Partial<MachineInspection>): Promise<MachineInspectionDocument | null> {
     return this.model
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -45,7 +54,7 @@ export class MachineInspectionRepository {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -57,7 +66,7 @@ export class MachineInspectionRepository {
         status: { $nin: ['ready', 'rejected'] },
       })
       .sort({ createdAt: -1 })
-      .populate('machineReception')
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }

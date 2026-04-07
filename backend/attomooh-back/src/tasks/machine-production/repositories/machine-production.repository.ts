@@ -13,12 +13,22 @@ export class MachineProductionRepository {
     private readonly model: Model<MachineProductionDocument>,
   ) {}
 
+  private readonly receptionPopulate = {
+    path: 'machineReception',
+    populate: [
+      { path: 'receivedBy', select: 'name phone' },
+      { path: 'customer', select: 'name phone address' },
+      { path: 'machine', select: 'name' },
+    ],
+  };
+
   async create(
     data: Partial<MachineProduction>,
   ): Promise<MachineProductionDocument> {
     const doc = await new this.model(data).save();
     return this.model
       .findById(doc._id)
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .orFail()
       .exec();
@@ -29,6 +39,7 @@ export class MachineProductionRepository {
   ): Promise<MachineProductionDocument | null> {
     return this.model
       .findById(id)
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -49,6 +60,7 @@ export class MachineProductionRepository {
     return this.model
       .find(filter)
       .sort({ createdAt: -1 })
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -59,6 +71,7 @@ export class MachineProductionRepository {
   ): Promise<MachineProductionDocument | null> {
     return this.model
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -73,6 +86,7 @@ export class MachineProductionRepository {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
@@ -84,6 +98,7 @@ export class MachineProductionRepository {
         status: { $nin: ['ready', 'rejected'] },
       })
       .sort({ createdAt: -1 })
+      .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }

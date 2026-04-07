@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { MachineReceptionRepository } from './repositories/machine-reception.repository.js';
 import { MachineReceptionDocument } from './schemas/machine-reception.schema.js';
 import { CreateMachineReceptionDto } from './dto/create-machine-reception.dto.js';
@@ -7,12 +8,24 @@ import { UpdateMachineReceptionDto } from './dto/update-machine-reception.dto.js
 import { IdGeneratorService } from '../../common/services/id-generator.service.js';
 import { IdPrefix } from '../../common/enums/id-prefix.enum.js';
 import { ReceptionStatus } from '../../common/enums/reception-status.enum.js';
+import { MachineInspection, MachineInspectionDocument } from '../machine-inspection/schemas/machine-inspection.schema.js';
+import { MachineMaint, MachineMaintDocument } from '../machine-maintenance/schemas/machine-maint.schema.js';
+import { MachineInstallation, MachineInstallationDocument } from '../machine-installation/schemas/machine-installation.schema.js';
+import { MachineProduction, MachineProductionDocument } from '../machine-production/schemas/machine-production.schema.js';
 
 @Injectable()
 export class MachineReceptionService {
   constructor(
     private readonly repo: MachineReceptionRepository,
     private readonly idGen: IdGeneratorService,
+    @InjectModel(MachineInspection.name)
+    private readonly inspectionModel: Model<MachineInspectionDocument>,
+    @InjectModel(MachineMaint.name)
+    private readonly maintenanceModel: Model<MachineMaintDocument>,
+    @InjectModel(MachineInstallation.name)
+    private readonly installationModel: Model<MachineInstallationDocument>,
+    @InjectModel(MachineProduction.name)
+    private readonly productionModel: Model<MachineProductionDocument>,
   ) {}
 
   async create(dto: CreateMachineReceptionDto): Promise<MachineReceptionDocument> {
@@ -38,9 +51,20 @@ export class MachineReceptionService {
     });
   }
 
-  async findAll(status?: string): Promise<MachineReceptionDocument[]> {
-    if (status) return this.repo.findByStatus(status);
-    return this.repo.findAll();
+  async findAll(
+    status?: string,
+    options: { excludeAssigned?: boolean } = {},
+  ): Promise<MachineReceptionDocument[]> {
+    const rows = status ? await this.repo.findByStatus(status) : await this.repo.findAll();
+
+    if (!options.excludeAssigned) return rows;
+
+    const assignedReceptionIds = await this.getAssignedReceptionIds();
+    return rows.filter((row) => {
+      const receptionId = String(row._id);
+      const isDelivered = row.status === ReceptionStatus.DELIVERED;
+      return !isDelivered && !assignedReceptionIds.has(receptionId);
+    });
   }
 
   async findById(id: Types.ObjectId): Promise<MachineReceptionDocument> {
@@ -119,5 +143,25 @@ export class MachineReceptionService {
       }
     }
     return total;
+  }
+
+  private async getAssignedReceptionIds(): Promise<Set<string>> {
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
+      this.inspectionModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+      }),
+      this.maintenanceModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+      }),
+      this.installationModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+      }),
+      this.productionModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+      }),
+    ]);
+
+    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    return new Set(allIds);
   }
 }

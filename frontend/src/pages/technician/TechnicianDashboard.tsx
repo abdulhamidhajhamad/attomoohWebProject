@@ -17,6 +17,11 @@ import {
   List,
   XCircle,
   Trash2,
+  Info,
+  User,
+  Phone,
+  MapPin,
+  Package,
 } from 'lucide-react';
 import { useMaintenanceStore } from '../../shared/store/maintenanceStore';
 import { useTechnicianTasksStore } from '../../shared/store/technicianTasksStore';
@@ -30,6 +35,7 @@ import WeeklyCalendar, {
 import { TECH_TOKEN_KEY } from '../../shared/api/httpClient';
 import type {
   ApiMaintenanceTask,
+  ApiMachineReception,
   ApiMaintenanceSchedule,
   ApiTaskStatus,
   ApiTechnicianStatus,
@@ -88,6 +94,23 @@ type TaskSource = 'legacy' | 'machine' | 'schedule';
 type ReportTaskState = {
   source: TaskSource;
   task: ApiMaintenanceTask | UnifiedTask;
+};
+
+type ReceptionInfoSnapshot = {
+  customId: string;
+  machineDetails: string;
+  serialNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  warranty: boolean | null;
+  condition: string;
+  receivedParts: string;
+  customerProblemDesc: string;
+  notes: string;
+  receivedByName: string;
+  receptionDate: Date | null;
+  expectedDeliveryDate: Date | null;
 };
 
 function calcLiveDuration(task: ApiMaintenanceTask): number {
@@ -294,6 +317,46 @@ function formatDateTimeAr(value: Date | null): string {
   });
 }
 
+function firstText(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function getNameFromEntity(entity: unknown): string {
+  if (!entity || typeof entity !== 'object') return '';
+  if ('name' in entity && typeof (entity as { name?: unknown }).name === 'string') {
+    return ((entity as { name?: string }).name || '').trim();
+  }
+  return '';
+}
+
+function toReceptionInfoSnapshot(receptionRaw: UnifiedTask['machineReception']): ReceptionInfoSnapshot | null {
+  if (!receptionRaw || typeof receptionRaw !== 'object') return null;
+
+  const reception = receptionRaw as ApiMachineReception;
+  const customerName = firstText(reception.customerName, getNameFromEntity(reception.customer));
+  const receivedByName = firstText(reception.receivedByName, getNameFromEntity(reception.receivedBy));
+
+  return {
+    customId: firstText(reception.customId),
+    machineDetails: firstText(reception.machineDetails),
+    serialNumber: firstText(reception.serialNumber),
+    customerName,
+    customerPhone: firstText(reception.customerPhone),
+    customerAddress: firstText(reception.customerAddress),
+    warranty: typeof reception.warranty === 'boolean' ? reception.warranty : null,
+    condition: firstText(reception.condition),
+    receivedParts: firstText(reception.receivedParts),
+    customerProblemDesc: firstText(reception.customerProblemDesc),
+    notes: firstText(reception.notes),
+    receivedByName,
+    receptionDate: toValidDate(reception.receptionDate),
+    expectedDeliveryDate: toValidDate(reception.expectedDeliveryDate),
+  };
+}
+
 function toTechScheduleTask(item: ApiMaintenanceSchedule): ApiMaintenanceTask {
   const scheduleDate = item.status === 'rescheduled' ? (item.rescheduledDate || item.scheduledDate) : item.scheduledDate;
   const scheduleTime = item.status === 'rescheduled' ? (item.rescheduledTime || item.scheduledTime) : item.scheduledTime;
@@ -374,6 +437,7 @@ export default function TechnicianDashboard() {
   const [scheduleTasks, setScheduleTasks] = useState<ApiMaintenanceTask[]>([]);
   const [selectedCalendarTask, setSelectedCalendarTask] = useState<any | null>(null);
   const [reportTask, setReportTask] = useState<ReportTaskState | null>(null);
+  const [receptionInfoTask, setReceptionInfoTask] = useState<UnifiedTask | null>(null);
 
   // Finish form state (for legacy and machine tasks)
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -826,7 +890,8 @@ export default function TechnicianDashboard() {
                     <CalendarDays size={14} /> {scheduleMeta.dateLabel}
                   </span>
                   <span className={styles.schedulePill}>
-                    <Clock size={14} /> {scheduleMeta.timeLabel}
+                    <Clock size={14} />
+                    <span className={styles.timeRangeText} dir="ltr">{scheduleMeta.timeLabel}</span>
                   </span>
                 </div>
 
@@ -853,6 +918,16 @@ export default function TechnicianDashboard() {
                     >
                       <FileText size={16} />
                       ريبورت
+                    </button>
+                  )}
+
+                  {isMachine && (
+                    <button
+                      className={styles.btnInfo}
+                      onClick={() => setReceptionInfoTask(task as UnifiedTask)}
+                    >
+                      <Info size={16} />
+                      معلومات الطلب
                     </button>
                   )}
 
@@ -1009,6 +1084,14 @@ export default function TechnicianDashboard() {
                     >
                       <FileText size={14} /> ريبورت
                     </button>
+                    {isMachine && (
+                      <button
+                        className={styles.btnInfo}
+                        onClick={() => setReceptionInfoTask(task as UnifiedTask)}
+                      >
+                        <Info size={14} /> معلومات الطلب
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -1091,7 +1174,8 @@ export default function TechnicianDashboard() {
                     <CalendarDays size={14} /> {scheduleMeta.dateLabel}
                   </span>
                   <span className={styles.schedulePill}>
-                    <Clock size={14} /> {scheduleMeta.timeLabel}
+                    <Clock size={14} />
+                    <span className={styles.timeRangeText} dir="ltr">{scheduleMeta.timeLabel}</span>
                   </span>
                 </div>
 
@@ -1127,6 +1211,19 @@ export default function TechnicianDashboard() {
                     >
                       <FileText size={16} />
                       ريبورت
+                    </button>
+                  )}
+
+                  {isMachine && (
+                    <button
+                      className={styles.btnInfo}
+                      onClick={() => {
+                        setReceptionInfoTask(task as UnifiedTask);
+                        setSelectedCalendarTask(null);
+                      }}
+                    >
+                      <Info size={16} />
+                      معلومات الطلب
                     </button>
                   )}
 
@@ -1294,7 +1391,9 @@ export default function TechnicianDashboard() {
                 </div>
                 <div className={styles.reportCard}>
                   <span className={styles.reportLabel}>الوقت المجدول</span>
-                  <strong className={styles.reportValue}>{scheduleMeta.timeLabel}</strong>
+                  <strong className={styles.reportValue}>
+                    <span className={styles.timeRangeText} dir="ltr">{scheduleMeta.timeLabel}</span>
+                  </strong>
                 </div>
                 <div className={styles.reportCard}>
                   <span className={styles.reportLabel}>بداية التنفيذ</span>
@@ -1312,6 +1411,110 @@ export default function TechnicianDashboard() {
 
               <div className={styles.formActions}>
                 <button className={styles.btnSecondary} onClick={() => setReportTask(null)}>
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Reception Details Modal */}
+      {receptionInfoTask && (() => {
+        const reception = toReceptionInfoSnapshot(receptionInfoTask.machineReception);
+        const taskLabel = `[${TASK_TYPE_LABEL[receptionInfoTask.taskType]}] ${receptionInfoTask.machineName}`;
+
+        return (
+          <div className={styles.modalOverlay} onClick={() => setReceptionInfoTask(null)}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.reportHeader}>
+                <div>
+                  <h3 className={styles.modalTitle}>معلومات الطلب</h3>
+                  <p className={styles.reportSubtitle}>بيانات الاستلام المرتبطة بالمهمة</p>
+                </div>
+                <button className={styles.reportCloseBtn} onClick={() => setReceptionInfoTask(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className={styles.reportHero}>
+                <div>
+                  <div className={styles.reportTaskTitle}>{taskLabel}</div>
+                  <div className={styles.reportTaskInfo}>🔧 {receptionInfoTask.machineDetails || '—'}</div>
+                </div>
+              </div>
+
+              {!reception ? (
+                <div className={styles.receptionEmpty}>
+                  لا توجد بيانات استلام مفصلة لهذه المهمة.
+                </div>
+              ) : (
+                <div className={styles.receptionInfoGrid}>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}><Package size={14} /> رمز الاستلام</span>
+                    <strong className={styles.reportValue}>{reception.customId || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>الرقم التسلسلي</span>
+                    <strong className={styles.reportValue}>{reception.serialNumber || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}><User size={14} /> اسم الزبون</span>
+                    <strong className={styles.reportValue}>{reception.customerName || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}><Phone size={14} /> هاتف الزبون</span>
+                    <strong className={styles.reportValue} dir="ltr">{reception.customerPhone || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}><MapPin size={14} /> عنوان الزبون</span>
+                    <strong className={styles.reportValue}>{reception.customerAddress || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>المستلم</span>
+                    <strong className={styles.reportValue}>{reception.receivedByName || '—'}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>تاريخ الاستلام</span>
+                    <strong className={styles.reportValue}>{formatDateTimeAr(reception.receptionDate)}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>موعد التسليم المتوقع</span>
+                    <strong className={styles.reportValue}>{formatDateTimeAr(reception.expectedDeliveryDate)}</strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>حالة الجهاز عند الاستلام</span>
+                    <strong className={styles.reportValue}>
+                      {reception.condition === 'complete' ? 'كاملة' : reception.condition === 'incomplete' ? 'ناقصة' : '—'}
+                    </strong>
+                  </div>
+                  <div className={styles.receptionInfoItem}>
+                    <span className={styles.reportLabel}>الضمان</span>
+                    <strong className={styles.reportValue}>
+                      {reception.warranty === null ? '—' : reception.warranty ? 'ضمن الضمان' : 'خارج الضمان'}
+                    </strong>
+                  </div>
+                  <div className={`${styles.receptionInfoItem} ${styles.receptionInfoItemWide}`}>
+                    <span className={styles.reportLabel}>تفاصيل الآلة</span>
+                    <strong className={styles.reportValue}>{reception.machineDetails || receptionInfoTask.machineDetails || '—'}</strong>
+                  </div>
+                  <div className={`${styles.receptionInfoItem} ${styles.receptionInfoItemWide}`}>
+                    <span className={styles.reportLabel}>القطع المستلمة</span>
+                    <strong className={styles.reportValue}>{reception.receivedParts || '—'}</strong>
+                  </div>
+                  <div className={`${styles.receptionInfoItem} ${styles.receptionInfoItemWide}`}>
+                    <span className={styles.reportLabel}>وصف المشكلة عند الاستلام</span>
+                    <strong className={styles.reportValue}>{reception.customerProblemDesc || '—'}</strong>
+                  </div>
+                  <div className={`${styles.receptionInfoItem} ${styles.receptionInfoItemWide}`}>
+                    <span className={styles.reportLabel}>ملاحظات الاستلام</span>
+                    <strong className={styles.reportValue}>{reception.notes || '—'}</strong>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.formActions}>
+                <button className={styles.btnSecondary} onClick={() => setReceptionInfoTask(null)}>
                   إغلاق
                 </button>
               </div>
