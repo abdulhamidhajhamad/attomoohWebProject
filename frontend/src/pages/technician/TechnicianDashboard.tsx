@@ -89,6 +89,8 @@ const TASK_TYPE_LABEL: Record<TaskType, string> = {
   production: 'إنتاج',
 };
 
+const TECH_DASHBOARD_REFRESH_MS = 15_000;
+
 type TaskSource = 'legacy' | 'machine' | 'schedule';
 
 type ReportTaskState = {
@@ -217,6 +219,39 @@ function parseTimeParts(time: string | null): [number, number] | null {
   return [h, m];
 }
 
+function toDateOnly(value: unknown): Date | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
+  }
+
+  const raw = String(value).trim();
+  const ymd = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymd) {
+    return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 0, 0, 0, 0);
+  }
+
+  const parsed = toValidDate(raw);
+  if (!parsed) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+}
+
+function composeDateTime(dateValue: unknown, timeValue: unknown, fallbackToDayEnd = false): Date | null {
+  const base = toDateOnly(dateValue);
+  if (!base) return null;
+
+  const timeParts = parseTimeParts(to24HourTime(timeValue));
+  if (timeParts) {
+    base.setHours(timeParts[0], timeParts[1], 0, 0);
+  } else if (fallbackToDayEnd) {
+    base.setHours(23, 59, 59, 999);
+  }
+
+  return base;
+}
+
 function getTaskScheduleMeta(task: ApiMaintenanceTask | UnifiedTask, isMachine: boolean): {
   dateLabel: string;
   timeLabel: string;
@@ -263,22 +298,17 @@ function getTaskSortTimestamp(task: (ApiMaintenanceTask | UnifiedTask) & { sourc
     const scheduled = toValidDate(machineTask.scheduledStartTime);
     if (scheduled) return scheduled.getTime();
 
-    const base = toValidDate(machineTask.date);
-    if (base) {
-      const t = parseTimeParts(to24HourTime(machineTask.time));
-      if (t) base.setHours(t[0], t[1], 0, 0);
-      return base.getTime();
-    }
+    const fromDate = composeDateTime(machineTask.date, machineTask.time, true);
+    if (fromDate) return fromDate.getTime();
 
     return toValidDate(machineTask.createdAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
   }
 
   const maintenanceTask = task as ApiMaintenanceTask;
-  const base = toValidDate(maintenanceTask.scheduledDate) || toValidDate(maintenanceTask.createdAt);
+  const base =
+    composeDateTime(maintenanceTask.scheduledDate, maintenanceTask.scheduledStartTime, true) ||
+    toValidDate(maintenanceTask.createdAt);
   if (!base) return Number.MAX_SAFE_INTEGER;
-
-  const t = parseTimeParts(to24HourTime(maintenanceTask.scheduledStartTime));
-  if (t) base.setHours(t[0], t[1], 0, 0);
 
   return base.getTime();
 }
@@ -430,6 +460,7 @@ export default function TechnicianDashboard() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [, setTick] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const syncRef = useRef(false);
 
   // View mode: 'tasks' (original) or 'calendar'
   const [viewMode, setViewMode] = useState<'tasks' | 'calendar'>('tasks');
@@ -464,29 +495,75 @@ export default function TechnicianDashboard() {
   const [rejectTaskType, setRejectTaskType] = useState<TaskType | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  useEffect(() => {
-    fetchLegacyTasks();
-    fetchMachineTasks();
-    fetchMyStatus();
+  const refreshCoreData = useCallback(async () => {
+    await Promise.allSettled([
+      fetchLegacyTasks(),
+      fetchMachineTasks(),
+      fetchMyStatus(),
+    ]);
   }, [fetchLegacyTasks, fetchMachineTasks, fetchMyStatus]);
 
-  // Fetch calendar tasks when in calendar mode
-  useEffect(() => {
-    if (viewMode === 'calendar') {
-      const from = formatDateISO(weekStart);
-      const toDate = new Date(weekStart);
-      toDate.setDate(toDate.getDate() + 6);
-      const to = formatDateISO(toDate);
-      fetchCalendarTasks(from, to, undefined, TECH_TOKEN_KEY);
+  const refreshCalendarData = useCallback(async () => {
+    if (viewMode !== 'calendar') {
+      setScheduleTasks([]);
+      return;
+    }
 
-      maintenanceScheduleService
-        .getAll(undefined, TECH_TOKEN_KEY, from, to)
-        .then((rows) => setScheduleTasks(rows.map(toTechScheduleTask)))
-        .catch(() => setScheduleTasks([]));
+    const from = formatDateISO(weekStart);
+    const toDate = new Date(weekStart);
+    toDate.setDate(toDate.getDate() + 6);
+    const to = formatDateISO(toDate);
+
+    const [, scheduleResult] = await Promise.allSettled([
+      fetchCalendarTasks(from, to, undefined, TECH_TOKEN_KEY),
+      maintenanceScheduleService.getAll(undefined, TECH_TOKEN_KEY, from, to),
+    ]);
+
+    if (scheduleResult.status === 'fulfilled') {
+      setScheduleTasks(scheduleResult.value.map(toTechScheduleTask));
     } else {
       setScheduleTasks([]);
     }
   }, [fetchCalendarTasks, weekStart, viewMode]);
+
+  useEffect(() => {
+    void refreshCoreData();
+  }, [refreshCoreData]);
+
+  // Fetch calendar tasks when in calendar mode
+  useEffect(() => {
+    void refreshCalendarData();
+  }, [refreshCalendarData]);
+
+  // Keep technician data in sync with admin updates without manual reload.
+  useEffect(() => {
+    const refreshAll = async () => {
+      if (syncRef.current) return;
+      syncRef.current = true;
+      try {
+        await refreshCoreData();
+        await refreshCalendarData();
+      } finally {
+        syncRef.current = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshAll();
+    }, TECH_DASHBOARD_REFRESH_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshAll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshCalendarData, refreshCoreData]);
 
   const mergedCalendarTasks = useMemo(() => {
     const leg = calendarTasks.map(t => ({ ...t, source: 'legacy' as const, originalTask: t }));
@@ -718,7 +795,11 @@ export default function TechnicianDashboard() {
       .map((t) => ({ ...t, source: 'schedule' as const }));
 
     return [...legacyActive, ...machineActive, ...scheduleActive]
-      .sort((a, b) => getTaskSortTimestamp(a) - getTaskSortTimestamp(b));
+      .sort((a, b) => {
+        const diff = getTaskSortTimestamp(a) - getTaskSortTimestamp(b);
+        if (diff !== 0) return diff;
+        return a._id.localeCompare(b._id);
+      });
   }, [legacyTasks, machineTasks, scheduleTasks]);
 
   const completedTasks = useMemo(() => {

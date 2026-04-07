@@ -78,6 +78,19 @@ const toInputDateTime = (value: string | null | undefined): string => {
   return `${y}-${m}-${day}T${hh}:${mm}`;
 };
 
+const getScheduleValidationMessage = (start: string, end: string): string | null => {
+  if (!start || !end) return null;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return 'تنسيق وقت الجدولة غير صالح.';
+  }
+  if (endDate.getTime() <= startDate.getTime()) {
+    return 'وقت الانتهاء يجب أن يكون بعد وقت البدء.';
+  }
+  return null;
+};
+
 const formToPayload = (form: InstallationForm) => ({
   machineReception: form.machineReception.id,
   machineName: form.machineName,
@@ -152,6 +165,11 @@ export default function MachineInstallationPage() {
 
   const handleAdd = useCallback(async () => {
     if (!addForm.machineReception.id) return;
+    const scheduleError = getScheduleValidationMessage(addForm.scheduledStartTime, addForm.scheduledEndTime);
+    if (scheduleError) {
+      alert(scheduleError);
+      return;
+    }
     setSaving(true);
     try {
       await createItem(formToPayload(addForm) as unknown as Record<string, unknown>);
@@ -172,6 +190,11 @@ export default function MachineInstallationPage() {
 
   const saveEdit = useCallback(async () => {
     if (!editId || !editForm.machineReception.id) return;
+    const scheduleError = getScheduleValidationMessage(editForm.scheduledStartTime, editForm.scheduledEndTime);
+    if (scheduleError) {
+      alert(scheduleError);
+      return;
+    }
     setSaving(true);
     try {
       await updateItem(editId, formToPayload(editForm) as unknown as Record<string, unknown>);
@@ -309,6 +332,7 @@ export default function MachineInstallationPage() {
                 type="datetime-local"
                 className={styles.formInput}
                 value={activeForm.scheduledEndTime}
+                min={activeForm.scheduledStartTime || undefined}
                 onChange={(e) => setActiveForm({ ...activeForm, scheduledEndTime: e.target.value })}
               />
             </div>
