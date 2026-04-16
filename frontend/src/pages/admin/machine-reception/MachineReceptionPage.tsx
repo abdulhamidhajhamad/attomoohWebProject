@@ -115,9 +115,15 @@ const receptionToForm = (r: ApiMachineReception): ReceptionForm => {
   };
 };
 
-const getMachineName = (r: ApiMachineReception) => {
-  if (r.machine && typeof r.machine === 'object' && 'name' in r.machine) return r.machine.name;
-  return r.machineDetails || '—';
+const getMachineDisplay = (r: ApiMachineReception) => {
+  const name = r.machine && typeof r.machine === 'object' && 'name' in r.machine ? r.machine.name : '';
+  const details = (r.machineDetails || '').trim();
+
+  if (name && details && details !== name) {
+    return `${name} - ${details}`;
+  }
+
+  return name || details || '—';
 };
 
 const getCustomerName = (r: ApiMachineReception) => {
@@ -373,7 +379,7 @@ export default function MachineReceptionPage() {
           <thead>
             <tr>
               <th>الرمز</th>
-              <th>الآلة</th>
+              <th>الآلة والوصف</th>
               <th>الزبون</th>
               <th>الهاتف</th>
               <th>الحالة</th>
@@ -386,7 +392,7 @@ export default function MachineReceptionPage() {
             {items.map(r => (
               <tr key={r._id}>
                 <td><span className={styles.customId}>{r.customId}</span></td>
-                <td style={{ fontWeight: 600 }}>{getMachineName(r)}</td>
+                <td style={{ fontWeight: 600 }}>{getMachineDisplay(r)}</td>
                 <td>{getCustomerName(r)}</td>
                 <td dir="ltr" style={{ textAlign: 'right' }}>{r.customerPhone || '—'}</td>
                 <td>

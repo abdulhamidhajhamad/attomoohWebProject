@@ -396,6 +396,10 @@ export default function MachineProductionPage() {
                 <p>{reportModal.machineName || '—'}</p>
               </div>
               <div className={styles.reportSection}>
+                <label>تفاصيل الآلة</label>
+                <p>{reportModal.machineDetails || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
                 <label>الفني</label>
                 <p>{getTechnicianName(reportModal)}</p>
               </div>

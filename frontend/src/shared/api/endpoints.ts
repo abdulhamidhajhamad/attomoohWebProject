@@ -202,6 +202,7 @@ export const ENDPOINTS = {
   SERVICE_ORDERS: {
     BASE: '/service-orders',
     BY_ID: (id: string) => `/service-orders/${id}`,
+    BY_TECHNICIAN: (id: string) => `/service-orders/technician/${id}`,
     STATS: '/service-orders/stats',
     ASSIGN: (id: string) => `/service-orders/${id}/assign`,
     DELIVER: (id: string) => `/service-orders/${id}/deliver`,

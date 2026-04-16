@@ -381,7 +381,36 @@ export class ServiceOrdersService {
   }
 
   async reportByTechnician() {
-    return this.orderRepo.countByTechnician();
+    const [reportRows, technicians] = await Promise.all([
+      this.orderRepo.countByTechnician(),
+      this.employeesService.findTechnicians(),
+    ]);
+
+    const statsByTechnicianId = new Map(
+      reportRows.map((row) => [String(row.technicianId), row]),
+    );
+
+    return technicians
+      .map((tech) => {
+        const technicianId = tech._id.toString();
+        const stats = statsByTechnicianId.get(technicianId);
+
+        return {
+          technicianId,
+          technicianName: tech.name,
+          count: stats?.count ?? 0,
+          completed: stats?.completed ?? 0,
+          customId: tech.customId,
+          phone: tech.phone,
+          email: tech.email,
+          technicianStatus: tech.technicianStatus,
+          isActive: tech.isActive,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.count - a.count || a.technicianName.localeCompare(b.technicianName, 'ar'),
+      );
   }
 
   async reportByCustomer() {

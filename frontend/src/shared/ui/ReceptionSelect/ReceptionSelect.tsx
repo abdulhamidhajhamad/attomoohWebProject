@@ -88,8 +88,15 @@ export function ReceptionSelect({
     return '';
   };
 
-  const getMachineDetails = (r: ApiMachineReception) => {
-    return r.machineDetails?.trim() || getMachineName(r) || 'آلة غير محددة';
+  const getMachineDisplay = (r: ApiMachineReception) => {
+    const name = getMachineName(r).trim();
+    const details = (r.machineDetails || '').trim();
+
+    if (name && details && details !== name) {
+      return `${name} - ${details}`;
+    }
+
+    return name || details || 'آلة غير محددة';
   };
 
   const getCustomerName = (r: ApiMachineReception) => {
@@ -120,7 +127,7 @@ export function ReceptionSelect({
   }, [onChange]);
 
   const displayValue = value.reception
-    ? `${value.reception.customId} - ${getMachineDetails(value.reception)} - ${getCustomerName(value.reception) || 'بدون زبون'}`
+    ? `${value.reception.customId} - ${getMachineDisplay(value.reception)} - ${getCustomerName(value.reception) || 'بدون زبون'}`
     : '';
 
   return (
@@ -162,7 +169,7 @@ export function ReceptionSelect({
                     <div className={styles.receptionInfo}>
                       <div className={styles.receptionMain}>
                         <Package size={14} />
-                        <span className={styles.machineDetails}>{getMachineDetails(reception)}</span>
+                        <span className={styles.machineDetails}>{getMachineDisplay(reception)}</span>
                         <span className={styles.receptionId}>{reception.customId}</span>
                       </div>
                       <div className={styles.receptionDetails}>

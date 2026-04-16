@@ -92,6 +92,7 @@ const TASK_TYPE_LABEL: Record<TaskType, string> = {
 const TECH_DASHBOARD_REFRESH_MS = 15_000;
 
 type TaskSource = 'legacy' | 'machine' | 'schedule';
+type TimelineTask = (ApiMaintenanceTask | UnifiedTask) & { source: TaskSource };
 
 type ReportTaskState = {
   source: TaskSource;
@@ -292,7 +293,7 @@ function getTaskScheduleMeta(task: ApiMaintenanceTask | UnifiedTask, isMachine: 
   };
 }
 
-function getTaskSortTimestamp(task: (ApiMaintenanceTask | UnifiedTask) & { source: TaskSource }): number {
+function getTaskSortTimestamp(task: TimelineTask): number {
   if (task.source === 'machine') {
     const machineTask = task as UnifiedTask;
     const scheduled = toValidDate(machineTask.scheduledStartTime);
@@ -311,6 +312,82 @@ function getTaskSortTimestamp(task: (ApiMaintenanceTask | UnifiedTask) & { sourc
   if (!base) return Number.MAX_SAFE_INTEGER;
 
   return base.getTime();
+}
+
+function getTaskScheduleDateKey(task: TimelineTask): string | null {
+  if (task.source === 'machine') {
+    const machineTask = task as UnifiedTask;
+    const scheduled = toValidDate(machineTask.scheduledStartTime);
+    if (scheduled) return formatDateISO(scheduled);
+
+    const fallbackDate = toDateOnly(machineTask.date);
+    if (fallbackDate) return formatDateISO(fallbackDate);
+
+    const created = toValidDate(machineTask.createdAt);
+    return created ? formatDateISO(created) : null;
+  }
+
+  const maintenanceTask = task as ApiMaintenanceTask;
+  const scheduled = toDateOnly(maintenanceTask.scheduledDate);
+  if (scheduled) return formatDateISO(scheduled);
+
+  const created = toValidDate(maintenanceTask.createdAt);
+  return created ? formatDateISO(created) : null;
+}
+
+function getTaskCompletionDateKey(task: TimelineTask): string | null {
+  if (task.source === 'machine') {
+    const machineTask = task as UnifiedTask;
+    const updated = toValidDate(machineTask.updatedAt);
+    if (updated) return formatDateISO(updated);
+    return getTaskScheduleDateKey(task);
+  }
+
+  const maintenanceTask = task as ApiMaintenanceTask;
+  const completed = toValidDate(maintenanceTask.completedAt);
+  if (completed) return formatDateISO(completed);
+
+  const updated = toValidDate(maintenanceTask.updatedAt);
+  if (updated) return formatDateISO(updated);
+
+  return getTaskScheduleDateKey(task);
+}
+
+function getTaskCompletionSortTimestamp(task: TimelineTask): number {
+  if (task.source === 'machine') {
+    const machineTask = task as UnifiedTask;
+    const updated = toValidDate(machineTask.updatedAt);
+    if (updated) return updated.getTime();
+    return getTaskSortTimestamp(task);
+  }
+
+  const maintenanceTask = task as ApiMaintenanceTask;
+  const completed = toValidDate(maintenanceTask.completedAt);
+  if (completed) return completed.getTime();
+
+  const updated = toValidDate(maintenanceTask.updatedAt);
+  if (updated) return updated.getTime();
+
+  return getTaskSortTimestamp(task);
+}
+
+function getRelativeDateIso(offsetDays: number): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + offsetDays);
+  return formatDateISO(date);
+}
+
+function formatDayFilterLabel(selectedDayIso: string): string {
+  const parsed = toDateOnly(selectedDayIso);
+  if (!parsed) return selectedDayIso;
+
+  return parsed.toLocaleDateString('ar-SA', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 function extractTimeline(logs: Array<{ action: string; timestamp: string | Date }> | undefined): {
@@ -469,6 +546,7 @@ export default function TechnicianDashboard() {
   const [selectedCalendarTask, setSelectedCalendarTask] = useState<any | null>(null);
   const [reportTask, setReportTask] = useState<ReportTaskState | null>(null);
   const [receptionInfoTask, setReceptionInfoTask] = useState<UnifiedTask | null>(null);
+  const [selectedDayIso, setSelectedDayIso] = useState<string>(() => getRelativeDateIso(0));
 
   // Finish form state (for legacy and machine tasks)
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -812,11 +890,33 @@ export default function TechnicianDashboard() {
       .map((t) => ({ ...t, source: 'machine' as const }));
 
     return [...legacyCompleted, ...machineCompleted].sort((a, b) => {
-      const aTs = toValidDate((a as { updatedAt?: string }).updatedAt)?.getTime() ?? 0;
-      const bTs = toValidDate((b as { updatedAt?: string }).updatedAt)?.getTime() ?? 0;
-      return bTs - aTs;
+      const diff = getTaskCompletionSortTimestamp(a) - getTaskCompletionSortTimestamp(b);
+      if (diff !== 0) return diff;
+      return a._id.localeCompare(b._id);
     });
   }, [legacyTasks, machineTasks]);
+
+  const filteredActiveTasks = useMemo(
+    () => allActiveTasks.filter((task) => getTaskScheduleDateKey(task) === selectedDayIso),
+    [allActiveTasks, selectedDayIso],
+  );
+
+  const filteredCompletedTasks = useMemo(
+    () => completedTasks.filter((task) => getTaskCompletionDateKey(task) === selectedDayIso),
+    [completedTasks, selectedDayIso],
+  );
+
+  const dayFilterLabel = useMemo(() => formatDayFilterLabel(selectedDayIso), [selectedDayIso]);
+
+  const shouldShowCompletedSection = completedTasks.length > 0;
+
+  const todayIso = getRelativeDateIso(0);
+
+  const dayFilterOptions = [
+    { label: 'اليوم', value: todayIso },
+    { label: 'أمس', value: getRelativeDateIso(-1) },
+    { label: 'غداً', value: getRelativeDateIso(1) },
+  ];
 
   const loading = legacyLoading || machineLoading;
 
@@ -901,19 +1001,65 @@ export default function TechnicianDashboard() {
           />
         ) : (
         <>
+        <div className={styles.dayFilterCard}>
+          <div className={styles.dayFilterHeader}>
+            <span className={styles.dayFilterTitle}>فلترة المهام حسب اليوم</span>
+            <span className={styles.dayFilterCurrent}>{dayFilterLabel}</span>
+          </div>
+
+          <div className={styles.dayFilterActions}>
+            <div className={styles.dayFilterQuickGroup}>
+              {dayFilterOptions.map((option) => {
+                const isActive = selectedDayIso === option.value;
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    className={`${styles.dayFilterBtn} ${isActive ? styles.dayFilterBtnActive : ''}`}
+                    onClick={() => setSelectedDayIso(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={styles.dayFilterDateWrap}>
+              <label className={styles.dayFilterDateLabel}>اختيار تاريخ مخصص</label>
+              <div className={styles.dayFilterDateField}>
+                <CalendarDays size={15} className={styles.dayFilterDateIcon} />
+                <input
+                  type="date"
+                  className={styles.dayFilterDateInput}
+                  value={selectedDayIso}
+                  onChange={(e) => setSelectedDayIso(e.target.value || todayIso)}
+                />
+                <button
+                  type="button"
+                  className={styles.dayFilterTodayBtn}
+                  onClick={() => setSelectedDayIso(todayIso)}
+                >
+                  اليوم
+                </button>
+              </div>
+              <span className={styles.dayFilterHint}>استعرض أي يوم ماضي أو قادم بسرعة</span>
+            </div>
+          </div>
+        </div>
+
         {/* Active Tasks */}
         <h2 className={styles.sectionTitle}>
           <ClipboardList size={20} style={{ display: 'inline', verticalAlign: 'middle' }} />{' '}
-          المهام النشطة ({allActiveTasks.length})
+          المهام النشطة ({filteredActiveTasks.length})
         </h2>
 
-        {allActiveTasks.length === 0 ? (
+        {filteredActiveTasks.length === 0 ? (
           <div className={styles.emptyState}>
             <CheckCircle2 size={48} />
-            <p>لا توجد مهام نشطة حالياً</p>
+            <p>لا توجد مهام نشطة في اليوم المحدد</p>
           </div>
         ) : (
-          allActiveTasks.map((task) => {
+          filteredActiveTasks.map((task) => {
             const isLegacy = task.source === 'legacy';
             const isMachine = task.source === 'machine';
             const isSchedule = task.source === 'schedule';
@@ -1111,12 +1257,18 @@ export default function TechnicianDashboard() {
         )}
 
         {/* Completed Tasks */}
-        {completedTasks.length > 0 && (
+        {shouldShowCompletedSection && (
           <>
             <h2 className={styles.sectionTitle} style={{ marginTop: 32 }}>
-              المهام المنتهية ({completedTasks.length})
+              المهام المنتهية ({filteredCompletedTasks.length})
             </h2>
-            {completedTasks.map((task) => {
+            {filteredCompletedTasks.length === 0 && (
+              <div className={styles.emptyState}>
+                <CheckCircle2 size={42} />
+                <p>لا توجد مهام منتهية في اليوم المحدد</p>
+              </div>
+            )}
+            {filteredCompletedTasks.map((task) => {
               const isMachine = task.source === 'machine';
               const statusInfo = isMachine
                 ? MACHINE_TASK_STATUS_MAP[task.status] || STATUS_MAP[task.status as ApiTaskStatus]

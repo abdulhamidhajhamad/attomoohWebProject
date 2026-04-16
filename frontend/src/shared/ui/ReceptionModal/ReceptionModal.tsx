@@ -54,7 +54,18 @@ export function ReceptionModal({
 
   const getMachineName = (r: ApiMachineReception) => {
     if (r.machine && typeof r.machine === 'object' && 'name' in r.machine) return r.machine.name;
-    return r.machineDetails || 'آلة غير محددة';
+    return '';
+  };
+
+  const getMachineDisplay = (r: ApiMachineReception) => {
+    const name = getMachineName(r).trim();
+    const details = (r.machineDetails || '').trim();
+
+    if (name && details && details !== name) {
+      return `${name} - ${details}`;
+    }
+
+    return name || details || 'آلة غير محددة';
   };
 
   const getCustomerName = (r: ApiMachineReception) => {
@@ -104,7 +115,7 @@ export function ReceptionModal({
                   <div className={styles.cardHeader}>
                     <div className={styles.machineInfo}>
                       <Package size={18} className={styles.icon} />
-                      <span className={styles.machineName}>{getMachineName(reception)}</span>
+                      <span className={styles.machineName}>{getMachineDisplay(reception)}</span>
                     </div>
                     <span className={styles.receptionId}>{reception.customId}</span>
                   </div>

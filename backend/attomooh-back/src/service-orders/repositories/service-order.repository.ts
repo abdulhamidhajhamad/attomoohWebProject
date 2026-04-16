@@ -135,7 +135,6 @@ export class ServiceOrderRepository {
     { technicianId: string; technicianName: string; count: number; completed: number }[]
   > {
     return this.orderModel.aggregate([
-      { $match: { assignedTo: { $ne: null } } },
       {
         $group: {
           _id: '$assignedTo',
@@ -158,18 +157,18 @@ export class ServiceOrderRepository {
       },
       {
         $lookup: {
-          from: 'users',
+          from: 'employees',
           localField: '_id',
           foreignField: '_id',
-          as: 'user',
+          as: 'employee',
         },
       },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$employee', preserveNullAndEmptyArrays: true } },
       {
         $project: {
           _id: 0,
-          technicianId: '$_id',
-          technicianName: { $ifNull: ['$user.name', 'غير معيّن'] },
+          technicianId: { $ifNull: [{ $toString: '$_id' }, 'unassigned'] },
+          technicianName: { $ifNull: ['$employee.name', 'غير معيّن'] },
           count: 1,
           completed: 1,
         },
@@ -183,12 +182,19 @@ export class ServiceOrderRepository {
     { customerId: string; customerName: string; count: number }[]
   > {
     return this.orderModel.aggregate([
-      { $match: { customer: { $ne: null } } },
-      { $group: { _id: '$customer', count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: {
+            customerId: '$customer',
+            customerName: '$customerName',
+          },
+          count: { $sum: 1 },
+        },
+      },
       {
         $lookup: {
           from: 'customers',
-          localField: '_id',
+          localField: '_id.customerId',
           foreignField: '_id',
           as: 'cust',
         },
@@ -197,8 +203,20 @@ export class ServiceOrderRepository {
       {
         $project: {
           _id: 0,
-          customerId: '$_id',
-          customerName: { $ifNull: ['$cust.name', 'غير محدد'] },
+          customerId: {
+            $ifNull: [
+              { $toString: '$_id.customerId' },
+              {
+                $concat: [
+                  'name:',
+                  { $ifNull: ['$_id.customerName', 'unknown'] },
+                ],
+              },
+            ],
+          },
+          customerName: {
+            $ifNull: ['$cust.name', { $ifNull: ['$_id.customerName', 'غير محدد'] }],
+          },
           count: 1,
         },
       },

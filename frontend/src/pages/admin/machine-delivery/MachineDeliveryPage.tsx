@@ -160,6 +160,7 @@ export default function MachineDeliveryPage() {
   const customerName = selectedReception && selectedReception.customer && typeof selectedReception.customer === 'object' && 'name' in selectedReception.customer
     ? selectedReception.customer.name
     : selectedReception?.customerName || '';
+  const machineDetails = selectedReception?.machineDetails || '';
   const customerPhone = selectedReception?.customerPhone || '';
 
   return (
@@ -215,6 +216,15 @@ export default function MachineDeliveryPage() {
                   <input
                     className={styles.formInput}
                     value={machineName}
+                    disabled
+                    style={{ background: '#f9fafb', color: '#6b7280' }}
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>تفاصيل الآلة</label>
+                  <input
+                    className={styles.formInput}
+                    value={machineDetails}
                     disabled
                     style={{ background: '#f9fafb', color: '#6b7280' }}
                   />
@@ -298,6 +308,7 @@ export default function MachineDeliveryPage() {
             <tr>
               <th>رقم الاستلام</th>
               <th>الآلة</th>
+              <th>التفاصيل</th>
               <th>الزبون</th>
               <th>تاريخ التسليم</th>
               <th>المسلم</th>
@@ -309,6 +320,7 @@ export default function MachineDeliveryPage() {
               <tr key={d._id}>
                 <td><span className={styles.customId}>{getReceptionId(d)}</span></td>
                 <td style={{ fontWeight: 600 }}>{getMachineName(d)}</td>
+                <td>{d.machineDetails || '—'}</td>
                 <td>{getCustomerName(d)}</td>
                 <td>{d.deliveryDate ? new Date(d.deliveryDate).toLocaleDateString('ar') : '—'}</td>
                 <td>{getDeliveredByName(d)}</td>
@@ -329,7 +341,7 @@ export default function MachineDeliveryPage() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className={styles.emptyState}>
                     <FileText size={40} />
                     <p>لا يوجد بيانات</p>

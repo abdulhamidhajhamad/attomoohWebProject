@@ -59,6 +59,13 @@ export const serviceOrdersService = {
     );
   },
 
+  async getByTechnician(technicianId: string): Promise<ApiServiceOrder[]> {
+    return httpClient.get<ApiServiceOrder[]>(
+      ENDPOINTS.SERVICE_ORDERS.BY_TECHNICIAN(technicianId),
+      true,
+    );
+  },
+
   async update(
     id: string,
     data: UpdateServiceOrderRequest,

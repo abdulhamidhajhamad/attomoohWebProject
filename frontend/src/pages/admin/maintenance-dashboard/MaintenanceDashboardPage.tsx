@@ -13,6 +13,7 @@ import {
   Receipt,
   ShoppingCart,
   Cog,
+  BarChart3,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import styles from './MaintenanceDashboard.module.css';
@@ -45,8 +46,14 @@ export default function MaintenanceDashboardPage() {
   return (
     <div className={styles.dashboard}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>قسم الصيانة</h1>
-        <p className={styles.pageSubtitle}>إدارة مهام الصيانة والفنيين والمحاسبة</p>
+        <div>
+          <h1 className={styles.pageTitle}>قسم الصيانة</h1>
+          <p className={styles.pageSubtitle}>إدارة مهام الصيانة والفنيين والمحاسبة</p>
+        </div>
+        <Link to="/admin/maintenance/reports" className={styles.reportsCta}>
+          <BarChart3 size={18} />
+          التقارير
+        </Link>
       </div>
 
       {/* Quick Actions */}

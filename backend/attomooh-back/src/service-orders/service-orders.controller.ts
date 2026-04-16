@@ -100,6 +100,15 @@ export class ServiceOrdersController {
     return this.ordersService.findActiveByTechnician(req.user._id);
   }
 
+  /** GET /service-orders/technician/:technicianId — أوامر فني محدد (للإدارة) */
+  @Get('technician/:technicianId')
+  @Roles(UserRole.ADMIN)
+  async getByTechnician(
+    @Param('technicianId', ParseObjectIdPipe) technicianId: Types.ObjectId,
+  ) {
+    return this.ordersService.findByTechnician(technicianId);
+  }
+
   /** GET /service-orders/:id — تفاصيل أمر واحد */
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.TECHNICIAN)

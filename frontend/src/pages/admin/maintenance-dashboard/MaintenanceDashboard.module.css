@@ -5,6 +5,10 @@
 }
 
 .pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 32px;
 }
 
@@ -18,6 +22,28 @@
 .pageSubtitle {
   font-size: 0.925rem;
   color: #6b7280;
+}
+
+.reportsCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.reportsCta:hover {
+  border-color: var(--color-primary, #90297d);
+  color: var(--color-primary, #90297d);
+  box-shadow: 0 4px 12px rgba(144, 41, 125, 0.12);
 }
 
 /* Section */
@@ -114,6 +140,15 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reportsCta {
+    justify-content: center;
+  }
+
   .quickActions {
     grid-template-columns: 1fr;
   }

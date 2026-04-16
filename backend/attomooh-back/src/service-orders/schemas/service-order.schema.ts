@@ -141,11 +141,11 @@ export class ServiceOrder {
   status: ServiceOrderStatus;
 
   /** الفني المعيّن */
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
   assignedTo: Types.ObjectId | null;
 
   /** الأدمن الذي أنشأ الأمر */
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Employee', required: true })
   createdBy: Types.ObjectId;
 
   /* ── تتبع الوقت ── */

@@ -432,6 +432,11 @@ export interface ReportByTechnician {
   technicianName: string;
   count: number;
   completed: number;
+  customId?: string;
+  phone?: string;
+  email?: string | null;
+  technicianStatus?: ApiTechnicianStatus;
+  isActive?: boolean;
 }
 
 export interface ReportByCustomer {

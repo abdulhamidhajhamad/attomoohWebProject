@@ -264,6 +264,167 @@
   margin: 0 0 16px;
 }
 
+.dayFilterCard {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(420px 120px at 8% -60%, rgba(20, 184, 166, 0.18), transparent 70%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.dayFilterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dayFilterTitle {
+  color: #1f2937;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.dayFilterCurrent {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dayFilterActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.dayFilterQuickGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1 1 270px;
+}
+
+.dayFilterBtn {
+  background: rgba(248, 250, 252, 0.92);
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 9px 14px;
+  min-width: 88px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: inherit;
+}
+
+.dayFilterBtn:hover {
+  border-color: #94a3b8;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.dayFilterBtnActive {
+  color: #fff;
+  border-color: #0f766e;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  box-shadow: 0 10px 18px rgba(13, 148, 136, 0.24);
+}
+
+.dayFilterDateWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 290px;
+  min-width: 240px;
+}
+
+.dayFilterDateLabel {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dayFilterDateField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 6px 8px;
+  min-height: 42px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dayFilterDateField:focus-within {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.dayFilterDateIcon {
+  color: #0f766e;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.dayFilterDateInput {
+  border: none;
+  background: transparent;
+  padding: 0;
+  min-height: 28px;
+  flex: 1;
+  min-width: 120px;
+  font-family: inherit;
+  color: #1f2937;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.dayFilterDateInput:focus {
+  outline: none;
+}
+
+.dayFilterDateInput::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.dayFilterTodayBtn {
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+  border-radius: 9px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dayFilterTodayBtn:hover {
+  background: rgba(20, 184, 166, 0.2);
+  border-color: rgba(15, 118, 110, 0.42);
+}
+
+.dayFilterHint {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
 /* ── Task Cards (Technician view) ── */
 .taskCardTech {
   background: rgba(255, 255, 255, 0.96);
@@ -756,6 +917,31 @@
     border-radius: 14px;
   }
 
+  .dayFilterCard {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .dayFilterHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dayFilterActions {
+    gap: 8px;
+  }
+
+  .dayFilterQuickGroup {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .dayFilterDateWrap {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
   .taskCardHeader {
     flex-direction: column;
     align-items: flex-start;
@@ -855,6 +1041,40 @@
 
   .sectionTitle {
     font-size: 1rem;
+  }
+
+  .dayFilterActions {
+    gap: 6px;
+  }
+
+  .dayFilterQuickGroup {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .dayFilterBtn {
+    min-width: 0;
+    text-align: center;
+    padding: 8px 10px;
+  }
+
+  .dayFilterDateWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dayFilterDateInput {
+    width: 100%;
+  }
+
+  .dayFilterDateField {
+    flex-wrap: wrap;
+  }
+
+  .dayFilterTodayBtn {
+    width: 100%;
+    text-align: center;
   }
 
   .scheduleStrip {

@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '../features/admin/ProtectedRoute';
 import { TechnicianProtectedRoute } from '../features/admin/TechnicianProtectedRoute';
 
@@ -97,7 +98,7 @@ export const adminRoutes: RouteObject[] = [
       { path: 'categories/add', element: <AddCategoryPage /> },
       { path: 'slider', element: <AdminSliderPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
-      { path: 'reports', element: <ReportsPage /> },
+      { path: 'reports', element: <Navigate to="/admin/maintenance/reports" replace /> },
 
       // ── الملفات (Master Data) ──
       { path: 'areas', element: <AreasPage /> },
@@ -120,6 +121,7 @@ export const adminRoutes: RouteObject[] = [
       { path: 'maintenance/service-orders/receive', element: <ReceiveOrderPage /> },
       { path: 'maintenance/service-orders/:id', element: <ServiceOrderDetailPage /> },
       { path: 'maintenance/machine-types', element: <MachineTypesPage /> },
+      { path: 'maintenance/reports', element: <ReportsPage /> },
       { path: 'maintenance/machine-reception', element: <MachineReceptionPage /> },
       { path: 'maintenance/machine-delivery', element: <MachineDeliveryPage /> },
       { path: 'maintenance/machine-inspection', element: <MachineInspectionPage /> },

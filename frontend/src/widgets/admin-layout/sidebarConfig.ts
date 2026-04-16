@@ -78,7 +78,6 @@ export const mainSidebarGroups: SidebarGroup[] = [
     items: [
       { path: '/admin/products', label: 'المنتجات', icon: Package },
       { path: '/admin/categories', label: 'التصنيفات', icon: Grid3X3 },
-      { path: '/admin/reports', label: 'التقارير', icon: BarChart3 },
       { path: '/admin/slider', label: 'السلايدر', icon: Image },
       { path: '/admin/settings', label: 'الإعدادات', icon: Settings },
     ],
@@ -123,6 +122,7 @@ export const maintenanceSidebarGroups: SidebarGroup[] = [
     label: 'إدارة',
     defaultOpen: true,
     items: [
+      { path: '/admin/maintenance/reports', label: 'التقارير', icon: BarChart3 },
       { path: '/admin/maintenance/service-orders', label: 'أوامر الخدمة', icon: ClipboardList },
       { path: '/admin/maintenance/machine-types', label: 'أنواع الآلات', icon: Cog },
       { path: '/admin/maintenance/technicians', label: 'الفنيين', icon: Users },

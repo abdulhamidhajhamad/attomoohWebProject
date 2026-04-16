@@ -31,6 +31,70 @@
   margin: 4px 0 0;
 }
 
+.shortcutsSection {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.shortcutsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.shortcutCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.shortcutCard:hover {
+  border-color: var(--color-primary, #90297d);
+  box-shadow: 0 4px 12px rgba(144, 41, 125, 0.12);
+  transform: translateY(-1px);
+}
+
+.shortcutIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, #90297d);
+  background: #fdf4fb;
+  flex-shrink: 0;
+}
+
+.shortcutContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shortcutContent strong {
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.shortcutContent span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 /* ── Tabs ── */
 .tabs {
   display: flex;
@@ -106,6 +170,33 @@
   background: #f9fafb;
 }
 
+.techRow,
+.techRowActive {
+  transition: background-color 0.2s;
+}
+
+.techRowActive {
+  background: #eff6ff;
+}
+
+.detailsBtn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.detailsBtn:hover {
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
 .tableNumber {
   font-weight: 700;
   color: var(--color-primary, #90297d);
@@ -131,6 +222,88 @@
   min-width: 4px;
 }
 
+.techDetailsCard {
+  margin-top: 16px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.techDetailsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.techDetailsTitle {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.techDetailsMeta {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.techReloadBtn {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.techReloadBtn:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+
+.summaryRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.summaryBadge {
+  border: 1px solid #dbeafe;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.detailsLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.orderLink {
+  text-decoration: none;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.orderLink:hover {
+  text-decoration: underline;
+}
+
 /* ── Empty ── */
 .emptyState {
   text-align: center;
@@ -154,6 +327,10 @@
 }
 
 @media (max-width: 768px) {
+  .shortcutsGrid {
+    grid-template-columns: 1fr;
+  }
+
   .tabs {
     flex-wrap: wrap;
   }
@@ -161,6 +338,19 @@
     padding: 8px 14px;
     font-size: 0.82rem;
   }
+
+  .techDetailsHeader {
+    flex-direction: column;
+  }
+
+  .techReloadBtn {
+    width: 100%;
+  }
+
+  .summaryRow {
+    flex-direction: column;
+  }
+
   .table th,
   .table td {
     padding: 10px 8px;

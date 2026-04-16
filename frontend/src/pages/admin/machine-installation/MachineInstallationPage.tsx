@@ -349,12 +349,13 @@ export default function MachineInstallationPage() {
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
-          <thead><tr><th>رمز الآلة</th><th>اسم الآلة</th><th>الفني</th><th>التاريخ</th><th>الساعة</th><th>الوضع</th><th>المدة</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>رمز الآلة</th><th>اسم الآلة</th><th>التفاصيل</th><th>الفني</th><th>التاريخ</th><th>الساعة</th><th>الوضع</th><th>المدة</th><th>إجراءات</th></tr></thead>
           <tbody>
             {items.map(r => (
               <tr key={r._id}>
                 <td><span className={styles.customId}>{getMachineCode(r)}</span></td>
                 <td style={{ fontWeight: 600 }}>{r.machineName || '—'}</td>
+                <td>{r.machineDetails || '—'}</td>
                 <td>{getTechnicianName(r)}</td>
                 <td>{r.date ? new Date(r.date).toLocaleDateString('ar') : '—'}</td>
                 <td>{r.time || (r.date ? new Date(r.date).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) : '—')}</td>
@@ -373,7 +374,7 @@ export default function MachineInstallationPage() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={8}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
+            {items.length === 0 && <tr><td colSpan={9}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>
@@ -389,6 +390,10 @@ export default function MachineInstallationPage() {
               <div className={styles.reportSection}>
                 <label>اسم الآلة</label>
                 <p>{reportModal.machineName || '—'}</p>
+              </div>
+              <div className={styles.reportSection}>
+                <label>تفاصيل الآلة</label>
+                <p>{reportModal.machineDetails || '—'}</p>
               </div>
               <div className={styles.reportSection}>
                 <label>الفني</label>
