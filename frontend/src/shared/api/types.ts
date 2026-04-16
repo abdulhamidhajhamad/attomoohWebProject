@@ -424,6 +424,8 @@ export interface ReportByMachineType {
   machineTypeId: string;
   machineTypeName: string;
   count: number;
+  technicianTotalCost: number;
+  companyTotalCost: number;
 }
 
 export interface ReportByTechnician {
@@ -432,11 +434,34 @@ export interface ReportByTechnician {
   technicianName: string;
   count: number;
   completed: number;
+  technicianTotalCost: number;
+  companyTotalCost: number;
   customId?: string;
   phone?: string;
   email?: string | null;
   technicianStatus?: ApiTechnicianStatus;
   isActive?: boolean;
+}
+
+export type ApiTechnicianTaskType =
+  | 'inspection'
+  | 'maintenance'
+  | 'installation'
+  | 'production';
+
+export interface ApiTechnicianTaskDetails {
+  _id: string;
+  taskType: ApiTechnicianTaskType;
+  machineName: string;
+  machineDetails: string;
+  status: string;
+  technicianName: string;
+  technicianFee: number;
+  companyFee: number;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  machineReception: ApiMachineReception | string | null;
 }
 
 export interface ReportByCustomer {

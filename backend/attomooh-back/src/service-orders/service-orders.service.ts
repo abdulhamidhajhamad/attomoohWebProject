@@ -4,7 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection, Types } from 'mongoose';
 import { ServiceOrderRepository } from './repositories/service-order.repository.js';
 import { CounterRepository } from './repositories/counter.repository.js';
 import {
@@ -19,6 +20,24 @@ import { AssignServiceOrderDto } from './dto/assign-service-order.dto.js';
 import { ServiceOrderStatus } from '../common/enums/service-order-status.enum.js';
 import { UserRole } from '../common/enums/user-role.enum.js';
 import { TechnicianStatus } from '../common/enums/technician-status.enum.js';
+import { TechnicianTasksService } from '../technician-tasks/technician-tasks.service.js';
+
+type TaskCollectionNames = {
+  maintenance: string;
+  inspection: string;
+  installation: string;
+  production: string;
+  receptions: string;
+  machines: string;
+};
+
+type TaskTechnicianStats = {
+  technicianId: string;
+  count: number;
+  completed: number;
+  technicianTotalCost: number;
+  companyTotalCost: number;
+};
 
 @Injectable()
 export class ServiceOrdersService {
@@ -26,6 +45,8 @@ export class ServiceOrdersService {
     private readonly orderRepo: ServiceOrderRepository,
     private readonly counterRepo: CounterRepository,
     private readonly employeesService: EmployeesService,
+    private readonly technicianTasksService: TechnicianTasksService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   /* ═══════════════════════════════════
@@ -360,6 +381,12 @@ export class ServiceOrdersService {
     return this.orderRepo.findByAssignedTo(technicianId);
   }
 
+  async findByCustomer(
+    customerId: Types.ObjectId,
+  ): Promise<ServiceOrderDocument[]> {
+    return this.orderRepo.findByCustomer(customerId);
+  }
+
   async findActiveByTechnician(
     technicianId: Types.ObjectId,
   ): Promise<ServiceOrderDocument[]> {
@@ -377,18 +404,16 @@ export class ServiceOrdersService {
   }
 
   async reportByMachineType() {
-    return this.orderRepo.countByMachineType();
+    return this.aggregateTaskCostsByMachineType();
   }
 
   async reportByTechnician() {
-    const [reportRows, technicians] = await Promise.all([
-      this.orderRepo.countByTechnician(),
+    const [taskStats, technicians] = await Promise.all([
+      this.aggregateTaskStatsByTechnician(),
       this.employeesService.findTechnicians(),
     ]);
 
-    const statsByTechnicianId = new Map(
-      reportRows.map((row) => [String(row.technicianId), row]),
-    );
+    const statsByTechnicianId = new Map(taskStats.map((row) => [row.technicianId, row]));
 
     return technicians
       .map((tech) => {
@@ -400,6 +425,8 @@ export class ServiceOrdersService {
           technicianName: tech.name,
           count: stats?.count ?? 0,
           completed: stats?.completed ?? 0,
+          technicianTotalCost: stats?.technicianTotalCost ?? 0,
+          companyTotalCost: stats?.companyTotalCost ?? 0,
           customId: tech.customId,
           phone: tech.phone,
           email: tech.email,
@@ -409,8 +436,14 @@ export class ServiceOrdersService {
       })
       .sort(
         (a, b) =>
-          b.count - a.count || a.technicianName.localeCompare(b.technicianName, 'ar'),
+          b.count - a.count ||
+          b.technicianTotalCost - a.technicianTotalCost ||
+          a.technicianName.localeCompare(b.technicianName, 'ar'),
       );
+  }
+
+  async getTechnicianTasks(technicianId: Types.ObjectId) {
+    return this.technicianTasksService.getAllTasksForTechnician(technicianId);
   }
 
   async reportByCustomer() {
@@ -462,5 +495,248 @@ export class ServiceOrdersService {
       }
     }
     return totalMs;
+  }
+
+  private getTaskCollectionNames(): TaskCollectionNames {
+    const getCollection = (modelName: string, fallback: string) => {
+      try {
+        return this.connection.model(modelName).collection.name;
+      } catch {
+        return fallback;
+      }
+    };
+
+    return {
+      maintenance: getCollection('MachineMaint', 'machinemaints'),
+      inspection: getCollection('MachineInspection', 'machineinspections'),
+      installation: getCollection('MachineInstallation', 'machineinstallations'),
+      production: getCollection('MachineProduction', 'machineproductions'),
+      receptions: getCollection('MachineReception', 'machinereceptions'),
+      machines: getCollection('Machine', 'machines'),
+    };
+  }
+
+  private taskProjectionPipeline(): Record<string, unknown>[] {
+    return [
+      {
+        $project: {
+          _id: 1,
+          machineReception: 1,
+          machineName: { $ifNull: ['$machineName', ''] },
+          machineDetails: { $ifNull: ['$machineDetails', ''] },
+          technician: 1,
+          status: { $ifNull: ['$status', ''] },
+          technicianFee: { $ifNull: ['$technicianFee', 0] },
+          companyFee: { $ifNull: ['$companyFee', 0] },
+        },
+      },
+    ];
+  }
+
+  private async aggregateTaskCostsByMachineType(): Promise<
+    {
+      machineTypeId: string;
+      machineTypeName: string;
+      count: number;
+      technicianTotalCost: number;
+      companyTotalCost: number;
+    }[]
+  > {
+    const collections = this.getTaskCollectionNames();
+
+    const machineTypeNameExpr = {
+      $let: {
+        vars: {
+          machineRefName: {
+            $trim: { input: { $ifNull: ['$machine.name', ''] } },
+          },
+          taskMachineName: {
+            $trim: { input: { $ifNull: ['$machineName', ''] } },
+          },
+          receptionMachineDetails: {
+            $trim: {
+              input: { $ifNull: ['$reception.machineDetails', ''] },
+            },
+          },
+          taskMachineDetails: {
+            $trim: { input: { $ifNull: ['$machineDetails', ''] } },
+          },
+        },
+        in: {
+          $switch: {
+            branches: [
+              {
+                case: { $gt: [{ $strLenCP: '$$machineRefName' }, 0] },
+                then: '$$machineRefName',
+              },
+              {
+                case: { $gt: [{ $strLenCP: '$$taskMachineName' }, 0] },
+                then: '$$taskMachineName',
+              },
+              {
+                case: {
+                  $gt: [{ $strLenCP: '$$receptionMachineDetails' }, 0],
+                },
+                then: '$$receptionMachineDetails',
+              },
+              {
+                case: { $gt: [{ $strLenCP: '$$taskMachineDetails' }, 0] },
+                then: '$$taskMachineDetails',
+              },
+            ],
+            default: 'غير محدد',
+          },
+        },
+      },
+    };
+
+    const pipeline: Record<string, unknown>[] = [
+      ...this.taskProjectionPipeline(),
+      {
+        $unionWith: {
+          coll: collections.inspection,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      {
+        $unionWith: {
+          coll: collections.installation,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      {
+        $unionWith: {
+          coll: collections.production,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      {
+        $lookup: {
+          from: collections.receptions,
+          localField: 'machineReception',
+          foreignField: '_id',
+          as: 'reception',
+        },
+      },
+      { $unwind: { path: '$reception', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: collections.machines,
+          localField: 'reception.machine',
+          foreignField: '_id',
+          as: 'machine',
+        },
+      },
+      { $unwind: { path: '$machine', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          machineTypeName: machineTypeNameExpr,
+          machineKey: {
+            $ifNull: [
+              { $toString: '$machineReception' },
+              { $concat: ['task:', { $toString: '$_id' }] },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            machineTypeName: '$machineTypeName',
+            machineKey: '$machineKey',
+          },
+          technicianTotalCost: { $sum: '$technicianFee' },
+          companyTotalCost: { $sum: '$companyFee' },
+        },
+      },
+      {
+        $group: {
+          _id: '$_id.machineTypeName',
+          count: { $sum: 1 },
+          technicianTotalCost: { $sum: '$technicianTotalCost' },
+          companyTotalCost: { $sum: '$companyTotalCost' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          machineTypeId: '$_id',
+          machineTypeName: '$_id',
+          count: 1,
+          technicianTotalCost: { $round: ['$technicianTotalCost', 2] },
+          companyTotalCost: { $round: ['$companyTotalCost', 2] },
+        },
+      },
+      { $sort: { count: -1, machineTypeName: 1 } },
+    ];
+
+    return this.connection
+      .collection(collections.maintenance)
+      .aggregate(pipeline)
+      .toArray() as Promise<
+      {
+        machineTypeId: string;
+        machineTypeName: string;
+        count: number;
+        technicianTotalCost: number;
+        companyTotalCost: number;
+      }[]
+    >;
+  }
+
+  private async aggregateTaskStatsByTechnician(): Promise<TaskTechnicianStats[]> {
+    const collections = this.getTaskCollectionNames();
+    const completedStatuses = ['ready', 'delivered', 'completed', 'done'];
+
+    const pipeline: Record<string, unknown>[] = [
+      ...this.taskProjectionPipeline(),
+      {
+        $unionWith: {
+          coll: collections.inspection,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      {
+        $unionWith: {
+          coll: collections.installation,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      {
+        $unionWith: {
+          coll: collections.production,
+          pipeline: this.taskProjectionPipeline(),
+        },
+      },
+      { $match: { technician: { $ne: null } } },
+      {
+        $group: {
+          _id: '$technician',
+          count: { $sum: 1 },
+          completed: {
+            $sum: {
+              $cond: [{ $in: ['$status', completedStatuses] }, 1, 0],
+            },
+          },
+          technicianTotalCost: { $sum: '$technicianFee' },
+          companyTotalCost: { $sum: '$companyFee' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          technicianId: { $toString: '$_id' },
+          count: 1,
+          completed: 1,
+          technicianTotalCost: { $round: ['$technicianTotalCost', 2] },
+          companyTotalCost: { $round: ['$companyTotalCost', 2] },
+        },
+      },
+    ];
+
+    return this.connection
+      .collection(collections.maintenance)
+      .aggregate(pipeline)
+      .toArray() as Promise<TaskTechnicianStats[]>;
   }
 }

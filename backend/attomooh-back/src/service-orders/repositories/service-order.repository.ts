@@ -104,11 +104,28 @@ export class ServiceOrderRepository {
 
   /** Count orders by machine type (for reports) */
   async countByMachineType(): Promise<
-    { machineTypeId: string; machineTypeName: string; count: number }[]
+    {
+      machineTypeId: string;
+      machineTypeName: string;
+      count: number;
+      technicianTotalCost: number;
+      companyTotalCost: number;
+    }[]
   > {
     return this.orderModel.aggregate([
       { $match: { machineType: { $ne: null } } },
-      { $group: { _id: '$machineType', count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: '$machineType',
+          count: { $sum: 1 },
+          technicianTotalCost: {
+            $sum: { $ifNull: ['$completionReport.maintenanceFee', 0] },
+          },
+          companyTotalCost: {
+            $sum: { $ifNull: ['$completionReport.totalCost', 0] },
+          },
+        },
+      },
       {
         $lookup: {
           from: 'machinetypes',
@@ -124,6 +141,8 @@ export class ServiceOrderRepository {
           machineTypeId: '$_id',
           machineTypeName: { $ifNull: ['$mt.name', 'غير محدد'] },
           count: 1,
+          technicianTotalCost: 1,
+          companyTotalCost: 1,
         },
       },
       { $sort: { count: -1 } },

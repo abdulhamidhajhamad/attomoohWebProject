@@ -86,6 +86,15 @@ export class ServiceOrdersController {
     return this.ordersService.reportByCustomer();
   }
 
+  /** GET /service-orders/customer/:customerId — أوامر زبون محدد (للإدارة) */
+  @Get('customer/:customerId')
+  @Roles(UserRole.ADMIN)
+  async getByCustomer(
+    @Param('customerId', ParseObjectIdPipe) customerId: Types.ObjectId,
+  ) {
+    return this.ordersService.findByCustomer(customerId);
+  }
+
   /** GET /service-orders/my-orders — أوامر الفني */
   @Get('my-orders')
   @Roles(UserRole.TECHNICIAN)
@@ -107,6 +116,15 @@ export class ServiceOrdersController {
     @Param('technicianId', ParseObjectIdPipe) technicianId: Types.ObjectId,
   ) {
     return this.ordersService.findByTechnician(technicianId);
+  }
+
+  /** GET /service-orders/technician/:technicianId/tasks — مهام فني محدد (للإدارة) */
+  @Get('technician/:technicianId/tasks')
+  @Roles(UserRole.ADMIN)
+  async getTechnicianTasks(
+    @Param('technicianId', ParseObjectIdPipe) technicianId: Types.ObjectId,
+  ) {
+    return this.ordersService.getTechnicianTasks(technicianId);
   }
 
   /** GET /service-orders/:id — تفاصيل أمر واحد */

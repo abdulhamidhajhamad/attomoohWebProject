@@ -25,6 +25,7 @@ import { httpClient, TECH_TOKEN_KEY } from '../httpClient';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiServiceOrder,
+  ApiTechnicianTaskDetails,
   CreateServiceOrderRequest,
   UpdateServiceOrderRequest,
   CompleteServiceOrderRequest,
@@ -62,6 +63,22 @@ export const serviceOrdersService = {
   async getByTechnician(technicianId: string): Promise<ApiServiceOrder[]> {
     return httpClient.get<ApiServiceOrder[]>(
       ENDPOINTS.SERVICE_ORDERS.BY_TECHNICIAN(technicianId),
+      true,
+    );
+  },
+
+  async getTechnicianTasks(
+    technicianId: string,
+  ): Promise<ApiTechnicianTaskDetails[]> {
+    return httpClient.get<ApiTechnicianTaskDetails[]>(
+      ENDPOINTS.SERVICE_ORDERS.BY_TECHNICIAN_TASKS(technicianId),
+      true,
+    );
+  },
+
+  async getByCustomer(customerId: string): Promise<ApiServiceOrder[]> {
+    return httpClient.get<ApiServiceOrder[]>(
+      ENDPOINTS.SERVICE_ORDERS.BY_CUSTOMER(customerId),
       true,
     );
   },

@@ -10,6 +10,7 @@ import { CounterRepository } from './repositories/counter.repository.js';
 import { ServiceOrdersService } from './service-orders.service.js';
 import { ServiceOrdersController } from './service-orders.controller.js';
 import { EmployeesModule } from '../employees/employees.module.js';
+import { TechnicianTasksModule } from '../technician-tasks/technician-tasks.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EmployeesModule } from '../employees/employees.module.js';
       { name: Counter.name, schema: CounterSchema },
     ]),
     EmployeesModule,
+    TechnicianTasksModule,
   ],
   controllers: [ServiceOrdersController],
   providers: [ServiceOrdersService, ServiceOrderRepository, CounterRepository],

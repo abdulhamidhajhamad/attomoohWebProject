@@ -13,6 +13,8 @@ import logo5 from '../../img/logo5.png';
 import logo6 from '../../img/logo6.png';
 import logo7 from '../../img/logo7.png';
 import logo8 from '../../img/ozti.png';
+import logo9 from '../../img/Nuova_Simonelli_Logo_535x.webp';
+import logo10 from '../../img/santos-logo.jpg';
 
 const BRANDS = [
   { src: logo2, alt: 'Brand 2' },
@@ -22,6 +24,8 @@ const BRANDS = [
   { src: logo6, alt: 'Brand 6' },
   { src: logo7, alt: 'Brand 7' },
   { src: logo8, alt: 'Brand 8' },
+  { src: logo9, alt: 'Nuova' },
+  { src: logo10, alt: 'Santous' },
 ] as const;
 
 /**
