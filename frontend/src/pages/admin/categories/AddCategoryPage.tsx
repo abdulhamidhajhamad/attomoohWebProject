@@ -44,6 +44,8 @@ const LEVEL_META = [
   },
 ];
 
+const MAX_PARENT_SELECTION = 5;
+
 /* ═══════════════════════════════════
    Types
    ═══════════════════════════════════ */
@@ -97,7 +99,9 @@ export default function AddCategoryPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
-  const [parentId, setParentId] = useState<string>(preselectedParent);
+  const [parentIds, setParentIds] = useState<string[]>(
+    preselectedParent ? [preselectedParent] : [],
+  );
   const [isActive, setIsActive] = useState(true);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
   const parentDropdownRef = useRef<HTMLDivElement>(null);
@@ -123,35 +127,36 @@ export default function AddCategoryPage() {
     };
   }, [imagePreview]);
 
-  const selectedParent = useMemo(
-    () => (parentId ? (categoriesById.get(parentId) ?? null) : null),
-    [categoriesById, parentId],
+  const selectedParents = useMemo(
+    () =>
+      parentIds
+        .map((id) => categoriesById.get(id))
+        .filter((cat): cat is Category => Boolean(cat)),
+    [categoriesById, parentIds],
   );
 
+  const selectedParentLevel =
+    selectedParents.length > 0 ? selectedParents[0].level : null;
+
   useEffect(() => {
-    if (!parentId) return;
+    if (parentIds.length === 0) return;
     if (categories.length === 0) return;
-    if (!categoriesById.has(parentId)) {
-      setParentId('');
-    }
-  }, [parentId, categories.length, categoriesById]);
 
-  useEffect(() => {
-    if (!selectedParent) return;
-    if (selectedParent.level >= 2) {
-      setParentId('');
-      setSubmitResult({
-        ok: false,
-        msg: 'لا يمكن الإضافة تحت مستوى ثالث. اختر تصنيفاً من المستوى الأول أو الثاني.',
-      });
-    }
-  }, [selectedParent]);
+    const validIds = parentIds.filter((id) => {
+      const parent = categoriesById.get(id);
+      return Boolean(parent && parent.level < 2);
+    });
 
-  // Calculate level from selected parent
+    if (validIds.length !== parentIds.length) {
+      setParentIds(validIds);
+    }
+  }, [parentIds, categories.length, categoriesById]);
+
+  // Calculate level from selected parents
   const calculatedLevel = useMemo(() => {
-    if (!selectedParent) return 0;
-    return selectedParent.level + 1;
-  }, [selectedParent]);
+    if (selectedParentLevel === null) return 0;
+    return selectedParentLevel + 1;
+  }, [selectedParentLevel]);
 
   const isSubCategory = calculatedLevel > 0;
 
@@ -166,16 +171,19 @@ export default function AddCategoryPage() {
     }
   }, [isSubCategory, imageFile, imageUrl, imagePreview]);
 
-  const selectedParentChain = useMemo(() => {
-    if (!selectedParent) return [];
-    return buildParentChain(selectedParent, categoriesById);
-  }, [selectedParent, categoriesById]);
+  const selectedParentChains = useMemo(
+    () => selectedParents.map((parent) => buildParentChain(parent, categoriesById)),
+    [selectedParents, categoriesById],
+  );
 
   const hierarchyPreview = useMemo(() => {
     const draftName = name.trim() || 'التصنيف الجديد';
-    if (selectedParentChain.length === 0) return draftName;
-    return [...selectedParentChain.map((p) => p.name.ar), draftName].join(' / ');
-  }, [name, selectedParentChain]);
+    if (selectedParentChains.length === 0) return draftName;
+
+    return selectedParentChains
+      .map((chain) => [...chain.map((p) => p.name.ar), draftName].join(' / '))
+      .join('  |  ');
+  }, [name, selectedParentChains]);
 
   // Build parent options (only categories with level < 2)
   const parentOptions = useMemo(() => {
@@ -183,6 +191,42 @@ export default function AddCategoryPage() {
       .filter((c) => c.level < 2)
       .sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar));
   }, [categories]);
+
+  const handleToggleParent = (cat: Category) => {
+    const isSelected = parentIds.includes(cat.id);
+    if (isSelected) {
+      setParentIds(parentIds.filter((id) => id !== cat.id));
+      setSubmitResult(null);
+      return;
+    }
+
+    if (cat.level >= 2) {
+      setSubmitResult({
+        ok: false,
+        msg: 'لا يمكن الإضافة تحت مستوى ثالث. اختر تصنيفاً من المستوى الأول أو الثاني.',
+      });
+      return;
+    }
+
+    if (parentIds.length >= MAX_PARENT_SELECTION) {
+      setSubmitResult({
+        ok: false,
+        msg: `يمكن ربط التصنيف بحد أقصى ${MAX_PARENT_SELECTION} آباء.`,
+      });
+      return;
+    }
+
+    if (selectedParentLevel !== null && selectedParentLevel !== cat.level) {
+      setSubmitResult({
+        ok: false,
+        msg: 'يمكن اختيار أكثر من أب من نفس المستوى فقط.',
+      });
+      return;
+    }
+
+    setParentIds([...parentIds, cat.id]);
+    setSubmitResult(null);
+  };
 
   const handleImageFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -224,7 +268,7 @@ export default function AddCategoryPage() {
         description: description.trim() || undefined,
         image: imageUrl.trim() || undefined,
         imageFile: imageFile ?? undefined,
-        parentIds: parentId ? [parentId] : undefined,
+        parentIds: parentIds.length > 0 ? parentIds : undefined,
         isActive,
       });
 
@@ -389,8 +433,10 @@ export default function AddCategoryPage() {
                     className={styles.parentTrigger}
                     onClick={() => setParentDropdownOpen(!parentDropdownOpen)}
                   >
-                    <span className={!parentId ? styles.placeholder : styles.parentValue}>
-                      {!parentId ? 'بدون أب (تصنيف رئيسي)' : selectedParent?.name.ar}
+                    <span className={parentIds.length === 0 ? styles.placeholder : styles.parentValue}>
+                      {parentIds.length === 0
+                        ? 'بدون أب (تصنيف رئيسي)'
+                        : selectedParents.map((parent) => parent.name.ar).join(' + ')}
                     </span>
                     <ChevronDown
                       size={16}
@@ -402,10 +448,11 @@ export default function AddCategoryPage() {
                     <div className={styles.parentMenu}>
                       <button
                         type="button"
-                        className={`${styles.parentOption} ${!parentId ? styles.parentOptionSelected : ''}`}
+                        className={`${styles.parentOption} ${parentIds.length === 0 ? styles.parentOptionSelected : ''}`}
                         onClick={() => {
-                          setParentId('');
+                          setParentIds([]);
                           setParentDropdownOpen(false);
+                          setSubmitResult(null);
                         }}
                       >
                         <span className={styles.optionTitle}>بدون أب</span>
@@ -413,18 +460,18 @@ export default function AddCategoryPage() {
                       </button>
 
                       {parentOptions.map((cat) => {
-                        const isSelected = cat.id === parentId;
+                        const isSelected = parentIds.includes(cat.id);
                         return (
                           <button
                             type="button"
                             key={cat.id}
                             className={`${styles.parentOption} ${isSelected ? styles.parentOptionSelected : ''}`}
                             onClick={() => {
-                              setParentId(cat.id);
-                              setParentDropdownOpen(false);
+                              handleToggleParent(cat);
                             }}
                           >
                             <span className={styles.optionTitle}>
+                              {isSelected ? '✓ ' : ''}
                               {cat.level === 0 ? 'قطاع' : 'قسم'}: {cat.name.ar}
                             </span>
                             <span className={styles.optionMeta}>المستوى {cat.level + 1}</span>
@@ -442,7 +489,7 @@ export default function AddCategoryPage() {
                 </div>
 
                 <small className={styles.helperText}>
-                  اختر أباً واحداً فقط. النظام يدعم 3 مستويات: رئيسي ثم فرعي ثم فرعي دقيق.
+                  يمكنك اختيار أكثر من أب لعرض نفس التصنيف في أكثر من مكان، بشرط أن يكونوا من نفس المستوى.
                 </small>
               </div>
 
@@ -481,7 +528,9 @@ export default function AddCategoryPage() {
                 <div className={formStyles.summaryItem}>
                   <span>الأب</span>
                   <strong>
-                    {selectedParent ? selectedParent.name.ar : 'بدون (رئيسي)'}
+                    {selectedParents.length > 0
+                      ? selectedParents.map((parent) => parent.name.ar).join('، ')
+                      : 'بدون (رئيسي)'}
                   </strong>
                 </div>
                 <div className={formStyles.summaryItem}>

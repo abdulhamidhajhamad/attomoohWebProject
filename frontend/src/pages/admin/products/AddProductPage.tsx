@@ -44,6 +44,7 @@ export default function AddProductPage() {
 
   // ── Form State ──
   const [name, setName] = useState('');
+  const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -180,6 +181,7 @@ export default function AddProductPage() {
       // 3. Send to backend via API — backend handles Cloudinary upload
       await productsService.create({
         name: name.trim(),
+        brand: brand.trim(),
         model: model.trim(),
         price: price ? parseFloat(price) : 0,
         categories: categoryIds,
@@ -194,6 +196,7 @@ export default function AddProductPage() {
 
       // Reset form
       setName('');
+      setBrand('');
       setModel('');
       setPrice('');
       setCategoryIds([]);
@@ -248,7 +251,7 @@ export default function AddProductPage() {
                 />
               </div>
 
-              <div className={styles.row2}>
+              <div className={styles.row3}>
                 <div className={styles.inputGroup}>
                   <label className={styles.label} htmlFor="model">
                     الموديل <span className={styles.required}>*</span>
@@ -263,6 +266,22 @@ export default function AddProductPage() {
                     required
                   />
                 </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.label} htmlFor="brand">
+                    البراند <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    id="brand"
+                    type="text"
+                    className={styles.input}
+                    placeholder="مثال: Hobart"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    required
+                  />
+                </div>
+
                 <div className={styles.inputGroup}>
                   <label className={styles.label} htmlFor="price">
                     السعر
@@ -555,6 +574,10 @@ export default function AddProductPage() {
                 <div className={styles.summaryItem}>
                   <span>الموديل</span>
                   <strong>{model || '—'}</strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>البراند</span>
+                  <strong>{brand || '—'}</strong>
                 </div>
                 <div className={styles.summaryItem}>
                   <span>السعر</span>

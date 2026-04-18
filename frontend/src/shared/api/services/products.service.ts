@@ -48,6 +48,7 @@ export const productsService = {
   async create(payload: CreateProductPayload): Promise<Product> {
     const fd = new FormData();
     fd.append('name', payload.name);
+    fd.append('brand', payload.brand);
     fd.append('model', payload.model);
     fd.append('price', String(payload.price));
     fd.append('categories', payload.categories.join(','));
@@ -76,6 +77,7 @@ export const productsService = {
     const fd = new FormData();
 
     if (payload.name) fd.append('name', payload.name);
+    if (payload.brand !== undefined) fd.append('brand', payload.brand);
     if (payload.model) fd.append('model', payload.model);
     if (payload.price !== undefined) fd.append('price', String(payload.price));
     if (payload.categories && payload.categories.length > 0) {

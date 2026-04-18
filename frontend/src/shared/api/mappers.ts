@@ -23,6 +23,7 @@ export function mapApiProduct(p: ApiProduct): Product {
     id: p._id,
     slug: p._id,
     name: { ar: p.name.ar, en: p.name.en },
+    brand: p.brand ?? '',
     description: { ar: p.model, en: p.model },
     price: p.price ?? 0,
     currency: '₪',
@@ -73,7 +74,7 @@ export function mapApiCategoryForest(nodes: ApiCategoryTreeNode[]): Category[] {
   return nodes.map(mapApiCategoryTree);
 }
 
-/** Build tree from flat category list (strict single-parent hierarchy) */
+/** Build tree from flat category list (multi-parent hierarchy) */
 export function buildCategoryTree(categories: Category[]): Category[] {
   const map = new Map<string, Category>();
 
@@ -87,9 +88,14 @@ export function buildCategoryTree(categories: Category[]): Category[] {
     if (cat.parentIds.length === 0) {
       roots.push(cat);
     } else {
-      const parentId = cat.parentIds[0];
-      if (parentId && map.has(parentId)) {
-        map.get(parentId)!.children!.push(cat);
+      for (const parentId of cat.parentIds) {
+        const parent = parentId ? map.get(parentId) : undefined;
+        if (!parent) continue;
+
+        const alreadyLinked = parent.children!.some((child) => child.id === cat.id);
+        if (!alreadyLinked) {
+          parent.children!.push(cat);
+        }
       }
     }
   }

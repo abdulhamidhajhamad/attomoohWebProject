@@ -11,10 +11,14 @@ import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { CategoryDocument } from './schemas/category.schema.js';
 import { makeBilingual } from '../common/utils/translate.js';
-import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+import {
+  CloudinaryService,
+  type UploadedImageFile,
+} from '../cloudinary/cloudinary.service.js';
 
 /** Maximum nesting depth: root (0) → sub (1) → sub-sub (2) */
 const MAX_LEVEL = 2;
+const MAX_PARENT_LINKS = 5;
 
 @Injectable()
 export class CategoriesService {
@@ -32,7 +36,7 @@ export class CategoriesService {
 
   async create(
     dto: CreateCategoryDto,
-    imageFile?: Express.Multer.File,
+    imageFile?: UploadedImageFile,
   ): Promise<CategoryDocument> {
     // 1. Duplicate name check (Arabic)
     const exists = await this.categoryRepository.existsByName(dto.name);
@@ -40,37 +44,11 @@ export class CategoriesService {
       throw new ConflictException(`Category "${dto.name}" already exists`);
     }
 
-    if ((dto.parentIds?.length ?? 0) > 1) {
-      throw new BadRequestException('Only one parent category is allowed');
-    }
-
     // 2. Resolve parents + calculate level
-    const parentOids: Types.ObjectId[] = [];
-    let level = 0;
-
-    if (dto.parentIds && dto.parentIds.length > 0) {
-      let maxParentLevel = 0;
-
-      for (const pid of dto.parentIds) {
-        const parent = await this.categoryRepository.findById(
-          new Types.ObjectId(pid),
-        );
-        if (!parent) {
-          throw new NotFoundException(`Parent category "${pid}" not found`);
-        }
-        parentOids.push(parent._id as Types.ObjectId);
-        if (parent.level > maxParentLevel) {
-          maxParentLevel = parent.level;
-        }
-      }
-
-      level = maxParentLevel + 1;
-      if (level > MAX_LEVEL) {
-        throw new BadRequestException(
-          `Maximum nesting depth is ${MAX_LEVEL} levels. Cannot add a child to a level-${maxParentLevel} category.`,
-        );
-      }
-    }
+    const normalizedParentIds = this.normalizeParentIds(dto.parentIds);
+    const { parentOids, level } = await this.resolveParentsForAssignment(
+      normalizedParentIds,
+    );
 
     // 3. Auto-translate name and description
     const bilingualName = await makeBilingual(dto.name);
@@ -170,53 +148,9 @@ export class CategoriesService {
 
     // Parents change — recalculate levels
     if (dto.parentIds !== undefined) {
-      if (dto.parentIds.length > 1) {
-        throw new BadRequestException('Only one parent category is allowed');
-      }
-
-      const newParentOids: Types.ObjectId[] = [];
-      let newLevel = 0;
-
-      if (dto.parentIds.length > 0) {
-        let maxParentLevel = 0;
-
-        for (const pid of dto.parentIds) {
-          const newParentOid = new Types.ObjectId(pid);
-
-          // Prevent self-referencing
-          if (newParentOid.equals(id)) {
-            throw new BadRequestException('A category cannot be its own parent');
-          }
-
-          const newParent = await this.categoryRepository.findById(newParentOid);
-          if (!newParent) {
-            throw new NotFoundException(`Parent category "${pid}" not found`);
-          }
-
-          // Prevent circular reference (can't move under own descendant)
-          const descendants = await this.categoryRepository.findDescendants(id);
-          const isCircular = descendants.some((d) =>
-            (d._id as Types.ObjectId).equals(newParentOid),
-          );
-          if (isCircular) {
-            throw new BadRequestException(
-              'Cannot move category under its own descendant',
-            );
-          }
-
-          newParentOids.push(newParentOid);
-          if (newParent.level > maxParentLevel) {
-            maxParentLevel = newParent.level;
-          }
-        }
-
-        newLevel = maxParentLevel + 1;
-        if (newLevel > MAX_LEVEL) {
-          throw new BadRequestException(
-            `Maximum nesting depth is ${MAX_LEVEL} levels`,
-          );
-        }
-      }
+      const normalizedParentIds = this.normalizeParentIds(dto.parentIds);
+      const { parentOids: newParentOids, level: newLevel } =
+        await this.resolveParentsForAssignment(normalizedParentIds, id);
 
       // Update this category
       const updateData: Record<string, unknown> = {
@@ -233,10 +167,8 @@ export class CategoriesService {
       const updated = await this.categoryRepository.update(id, updateData as UpdateCategoryDto);
       if (!updated) throw new NotFoundException('Category not found');
 
-      // Cascade-update levels for all descendants
-      await this.cascadeUpdateLevels(id, newLevel);
-
-      return updated;
+      await this.recalculateAllLevels();
+      return this.findById(id);
     }
 
     // Simple update (no parent change)
@@ -258,26 +190,50 @@ export class CategoriesService {
      DELETE — cascade
      ════════════════════════════════════ */
 
-  /** Delete a category and ALL its descendants */
+  /** Delete a category and prune descendants that become orphaned */
   async delete(id: Types.ObjectId): Promise<void> {
     const category = await this.categoryRepository.findById(id);
     if (!category) {
       throw new NotFoundException('Category not found');
     }
 
-    // Collect all descendant IDs
+    // Snapshot descendants before unlinking the deleted node
     const descendants = await this.categoryRepository.findDescendants(id);
-    const descendantIds = descendants.map((d) => d._id as Types.ObjectId);
+    const candidateOrphanIds = new Set(
+      descendants.map((d) => (d._id as Types.ObjectId).toString()),
+    );
 
-    // Delete descendants first, then the category itself
-    if (descendantIds.length > 0) {
-      await this.categoryRepository.deleteManyByIds(descendantIds);
+    // Detach this category from children, then delete it.
+    await this.categoryRepository.removeParentFromAll(id);
+    await this.categoryRepository.delete(id);
+
+    // Delete only descendants that became orphaned (no remaining parents).
+    let removedAny = true;
+    while (removedAny) {
+      removedAny = false;
+
+      for (const orphanId of Array.from(candidateOrphanIds)) {
+        const orphanObjectId = new Types.ObjectId(orphanId);
+        const current = await this.categoryRepository.findById(orphanObjectId);
+
+        if (!current) {
+          candidateOrphanIds.delete(orphanId);
+          continue;
+        }
+
+        const hasRemainingParents = (current.parents ?? []).length > 0;
+        if (hasRemainingParents) {
+          continue;
+        }
+
+        await this.categoryRepository.removeParentFromAll(orphanObjectId);
+        await this.categoryRepository.delete(orphanObjectId);
+        candidateOrphanIds.delete(orphanId);
+        removedAny = true;
+      }
     }
 
-    // Remove this category from parents arrays of any categories that reference it
-    await this.categoryRepository.removeParentFromAll(id);
-
-    await this.categoryRepository.delete(id);
+    await this.recalculateAllLevels();
   }
 
   async deleteByName(name: string): Promise<void> {
@@ -292,15 +248,18 @@ export class CategoriesService {
      PRIVATE HELPERS
      ════════════════════════════════════ */
 
-  /** Build a strict tree structure from flat list (single-parent hierarchy) */
+  /** Build a tree from flat list (a category may appear under multiple parents). */
   private buildTree(categories: CategoryDocument[]): CategoryTreeNode[] {
-    const map = new Map<string, CategoryTreeNode>();
+    const nodeData = new Map<string, Omit<CategoryTreeNode, 'children'>>();
+    const childrenByParent = new Map<string, string[]>();
+    const rootIds: string[] = [];
 
-    // Initialize all nodes
+    // Initialize node data and parent-to-children lookup.
     for (const cat of categories) {
       const id = (cat._id as Types.ObjectId).toString();
       const parentStrings = (cat.parents ?? []).map((p) => p.toString());
-      map.set(id, {
+
+      nodeData.set(id, {
         _id: id,
         name: cat.name as unknown as string,
         description: cat.description as unknown as string,
@@ -309,45 +268,202 @@ export class CategoriesService {
         parents: parentStrings,
         level: cat.level,
         isActive: cat.isActive,
-        children: [],
         createdAt: cat.createdAt?.toISOString() ?? '',
         updatedAt: cat.updatedAt?.toISOString() ?? '',
       });
-    }
 
-    // Assemble tree — each category can have one parent at most
-    const roots: CategoryTreeNode[] = [];
-    for (const node of map.values()) {
-      if (node.parents.length === 0) {
-        roots.push(node);
-      } else {
-        const parentId = node.parents[0];
-        if (parentId && map.has(parentId)) {
-          map.get(parentId)!.children.push(node);
-        }
+      if (parentStrings.length === 0) {
+        rootIds.push(id);
+      }
+
+      for (const parentId of parentStrings) {
+        const current = childrenByParent.get(parentId) ?? [];
+        current.push(id);
+        childrenByParent.set(parentId, current);
       }
     }
 
-    return roots;
+    const buildNode = (id: string, lineage: Set<string>): CategoryTreeNode => {
+      const baseNode = nodeData.get(id);
+      if (!baseNode) {
+        throw new NotFoundException(`Category node "${id}" not found while building tree`);
+      }
+
+      if (lineage.has(id)) {
+        // Safety guard: avoid infinite recursion in case of malformed data.
+        return { ...baseNode, children: [] };
+      }
+
+      const nextLineage = new Set(lineage);
+      nextLineage.add(id);
+
+      const childIds = Array.from(new Set(childrenByParent.get(id) ?? []));
+      const children = childIds.map((childId) => buildNode(childId, nextLineage));
+
+      return {
+        ...baseNode,
+        children,
+      };
+    };
+
+    return rootIds.map((rootId) => buildNode(rootId, new Set()));
   }
 
-  /** After moving a category, recursively fix descendant levels */
-  private async cascadeUpdateLevels(
-    parentId: Types.ObjectId,
-    parentLevel: number,
-  ): Promise<void> {
-    const children = await this.categoryRepository.findChildren(parentId);
-    for (const child of children) {
-      const newLevel = parentLevel + 1;
-      await this.categoryRepository.updateLevel(
-        child._id as Types.ObjectId,
-        newLevel,
+  private normalizeParentIds(parentIds?: string[]): string[] {
+    if (!parentIds || parentIds.length === 0) return [];
+
+    return Array.from(
+      new Set(parentIds.map((id) => id.trim()).filter(Boolean)),
+    );
+  }
+
+  private async resolveParentsForAssignment(
+    parentIds: string[],
+    categoryId?: Types.ObjectId,
+  ): Promise<{ parentOids: Types.ObjectId[]; level: number }> {
+    if (parentIds.length === 0) {
+      return { parentOids: [], level: 0 };
+    }
+
+    if (parentIds.length > MAX_PARENT_LINKS) {
+      throw new BadRequestException(
+        `A category can be linked to up to ${MAX_PARENT_LINKS} parent categories`,
       );
-      await this.cascadeUpdateLevels(child._id as Types.ObjectId, newLevel);
+    }
+
+    const descendantIdSet = new Set<string>();
+    if (categoryId) {
+      const descendants = await this.categoryRepository.findDescendants(categoryId);
+      for (const descendant of descendants) {
+        descendantIdSet.add((descendant._id as Types.ObjectId).toString());
+      }
+    }
+
+    const parentOids: Types.ObjectId[] = [];
+    const parentLevels = new Set<number>();
+
+    for (const parentId of parentIds) {
+      const parentObjectId = new Types.ObjectId(parentId);
+
+      if (categoryId && parentObjectId.equals(categoryId)) {
+        throw new BadRequestException('A category cannot be its own parent');
+      }
+
+      const parent = await this.categoryRepository.findById(parentObjectId);
+      if (!parent) {
+        throw new NotFoundException(`Parent category "${parentId}" not found`);
+      }
+
+      if (categoryId && descendantIdSet.has(parentObjectId.toString())) {
+        throw new BadRequestException(
+          'Cannot move category under its own descendant',
+        );
+      }
+
+      parentOids.push(parent._id as Types.ObjectId);
+      parentLevels.add(parent.level);
+    }
+
+    if (parentLevels.size > 1) {
+      throw new BadRequestException(
+        'All selected parent categories must be on the same level',
+      );
+    }
+
+    const parentLevel = parentLevels.values().next().value as number;
+    const level = parentLevel + 1;
+    if (level > MAX_LEVEL) {
+      throw new BadRequestException(
+        `Maximum nesting depth is ${MAX_LEVEL} levels`,
+      );
+    }
+
+    return { parentOids, level };
+  }
+
+  private async recalculateAllLevels(): Promise<void> {
+    const categories = await this.categoryRepository.findAll();
+    if (categories.length === 0) return;
+
+    const byId = new Map<string, CategoryDocument>();
+    const parentsById = new Map<string, string[]>();
+
+    for (const category of categories) {
+      byId.set((category._id as Types.ObjectId).toString(), category);
+    }
+
+    const resolvedLevels = new Map<string, number>();
+    const unresolvedIds = new Set<string>();
+
+    for (const category of categories) {
+      const categoryId = (category._id as Types.ObjectId).toString();
+      const validParentIds = (category.parents ?? [])
+        .map((parent) => parent.toString())
+        .filter((parentId) => byId.has(parentId));
+
+      parentsById.set(categoryId, validParentIds);
+
+      if (validParentIds.length === 0) {
+        resolvedLevels.set(categoryId, 0);
+      } else {
+        unresolvedIds.add(categoryId);
+      }
+    }
+
+    let madeProgress = true;
+    while (unresolvedIds.size > 0 && madeProgress) {
+      madeProgress = false;
+
+      for (const categoryId of Array.from(unresolvedIds)) {
+        const parentIds = parentsById.get(categoryId) ?? [];
+        const allParentsResolved = parentIds.every((parentId) =>
+          resolvedLevels.has(parentId),
+        );
+
+        if (!allParentsResolved) continue;
+
+        const parentLevels = parentIds.map(
+          (parentId) => resolvedLevels.get(parentId) ?? 0,
+        );
+        const computedLevel = Math.max(...parentLevels) + 1;
+        const nextLevel = Math.min(computedLevel, MAX_LEVEL);
+
+        if (computedLevel > MAX_LEVEL) {
+          this.logger.warn(
+            `Category ${categoryId} exceeded max level ${MAX_LEVEL}; clamped during recalculation.`,
+          );
+        }
+
+        resolvedLevels.set(categoryId, nextLevel);
+        unresolvedIds.delete(categoryId);
+        madeProgress = true;
+      }
+    }
+
+    if (unresolvedIds.size > 0) {
+      this.logger.warn(
+        `Detected unresolved category hierarchy for ${unresolvedIds.size} categories; preserving current levels for those nodes.`,
+      );
+      for (const unresolvedId of unresolvedIds) {
+        const current = byId.get(unresolvedId);
+        const fallbackLevel = current ? Math.min(Math.max(current.level, 0), MAX_LEVEL) : MAX_LEVEL;
+        resolvedLevels.set(unresolvedId, fallbackLevel);
+      }
+    }
+
+    for (const category of categories) {
+      const categoryId = (category._id as Types.ObjectId).toString();
+      const nextLevel = resolvedLevels.get(categoryId) ?? 0;
+      if (category.level !== nextLevel) {
+        await this.categoryRepository.updateLevel(
+          category._id as Types.ObjectId,
+          nextLevel,
+        );
+      }
     }
   }
 
-  private toInlineDataUrl(file: Express.Multer.File): string {
+  private toInlineDataUrl(file: UploadedImageFile): string {
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException('Image upload failed and fallback image data is empty');
     }

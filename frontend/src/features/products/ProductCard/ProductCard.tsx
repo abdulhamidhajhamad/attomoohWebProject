@@ -30,6 +30,7 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
       ? category.name.ar
       : category.name.en
     : '';
+  const hasPrice = product.price > 0;
 
   const handleAddToCart = useCallback(
     (e: React.MouseEvent) => {
@@ -81,15 +82,17 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
         <div className={styles.content}>
           <span className={styles.category}>{categoryName}</span>
           <h3 className={styles.name}>{name}</h3>
-          <div className={styles.priceRow}>
-            <span className={styles.price}>{product.price.toLocaleString()}</span>
-            <span className={styles.currency}>{t('products.currency')}</span>
-            {product.originalPrice && (
-              <span className={styles.originalPrice}>
-                {product.originalPrice.toLocaleString()}
-              </span>
-            )}
-          </div>
+          {hasPrice && (
+            <div className={styles.priceRow}>
+              <span className={styles.price}>{product.price.toLocaleString()}</span>
+              <span className={styles.currency}>{t('products.currency')}</span>
+              {product.originalPrice && (
+                <span className={styles.originalPrice}>
+                  {product.originalPrice.toLocaleString()}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </Link>
 
@@ -105,7 +108,7 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
         </Button>
         <Button variant="primary" size="sm" onClick={handleInquire}>
           <MessageCircle size={16} />
-          {t('products.inquire')}
+          {t('products.inquireShort')}
         </Button>
       </div>
     </article>

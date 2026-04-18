@@ -25,9 +25,9 @@ export class UpdateCategoryDto {
   @IsOptional()
   image?: string;
 
-  /** Change parent — empty array to make root, one ObjectId to assign parent */
+  /** Change parents — empty array to make root, or one/more ObjectIds to assign parents */
   @IsArray()
-  @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
+  @ArrayMaxSize(5, { message: 'A category can be linked to up to 5 parent categories' })
   @IsMongoId({ each: true })
   @IsOptional()
   @Transform(({ value }) => {

@@ -15,6 +15,10 @@ export class UpdateProductDto {
 
   @IsString()
   @IsOptional()
+  brand?: string;
+
+  @IsString()
+  @IsOptional()
   model?: string;
 
   @Transform(({ value }) => parseFloat(value))

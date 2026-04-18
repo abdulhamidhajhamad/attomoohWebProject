@@ -22,7 +22,10 @@ export class CategoryRepository {
   /* ── Read — flat queries ── */
 
   async findAll(): Promise<CategoryDocument[]> {
-    return this.categoryModel.find().sort({ level: 1, 'name.ar': 1 }).exec();
+    return this.categoryModel
+      .find()
+      .sort({ level: 1, createdAt: 1, _id: 1 })
+      .exec();
   }
 
   async findById(id: Types.ObjectId): Promise<CategoryDocument | null> {
@@ -44,7 +47,7 @@ export class CategoryRepository {
   async findRoots(): Promise<CategoryDocument[]> {
     return this.categoryModel
       .find({ parents: { $size: 0 } })
-      .sort({ 'name.ar': 1 })
+      .sort({ createdAt: 1, _id: 1 })
       .exec();
   }
 
@@ -52,7 +55,7 @@ export class CategoryRepository {
   async findChildren(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
     return this.categoryModel
       .find({ parents: parentId })
-      .sort({ 'name.ar': 1 })
+      .sort({ createdAt: 1, _id: 1 })
       .exec();
   }
 
@@ -63,8 +66,9 @@ export class CategoryRepository {
 
   /** Get all descendants (children + grandchildren) recursively */
   async findDescendants(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
-    const descendants: CategoryDocument[] = [];
+    const descendants = new Map<string, CategoryDocument>();
     const queue: Types.ObjectId[] = [parentId];
+    const visited = new Set<string>([parentId.toString()]);
 
     while (queue.length > 0) {
       const currentId = queue.shift()!;
@@ -73,12 +77,19 @@ export class CategoryRepository {
         .exec();
 
       for (const child of children) {
-        descendants.push(child);
-        queue.push(child._id as Types.ObjectId);
+        const childId = (child._id as Types.ObjectId).toString();
+        if (!descendants.has(childId)) {
+          descendants.set(childId, child);
+        }
+
+        if (!visited.has(childId)) {
+          visited.add(childId);
+          queue.push(child._id as Types.ObjectId);
+        }
       }
     }
 
-    return descendants;
+    return Array.from(descendants.values());
   }
 
   /* ── Update ── */

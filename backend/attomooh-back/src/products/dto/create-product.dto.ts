@@ -16,6 +16,10 @@ export class CreateProductDto {
 
   @IsString()
   @IsNotEmpty()
+  brand: string;
+
+  @IsString()
+  @IsNotEmpty()
   model: string;
 
   @Transform(({ value }) => parseFloat(value))

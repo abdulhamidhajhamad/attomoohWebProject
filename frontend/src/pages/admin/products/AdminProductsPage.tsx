@@ -96,6 +96,7 @@ export default function AdminProductsPage() {
           <thead>
             <tr>
               <th>المنتج</th>
+              <th>البراند</th>
               <th>التصنيف</th>
               <th>السعر</th>
               <th>الحالة</th>
@@ -121,6 +122,9 @@ export default function AdminProductsPage() {
                         <div className={styles.productNameEn}>{product.name.en}</div>
                       </div>
                     </div>
+                  </td>
+                  <td>
+                    <span className={styles.categoryBadge}>{product.brand || '—'}</span>
                   </td>
                   <td>
                     <span className={styles.categoryBadge}>

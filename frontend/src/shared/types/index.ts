@@ -5,6 +5,7 @@ export interface Product {
     ar: string;
     en: string;
   };
+  brand: string;
   description: {
     ar: string;
     en: string;
@@ -33,7 +34,7 @@ export interface Category {
   };
   icon?: string;
   image?: string;
-  /** Hierarchy now uses at most one parent ID (empty = root). */
+  /** Hierarchy supports multiple parents (empty = root). */
   parentIds: string[];
   level: number;
   children?: Category[];

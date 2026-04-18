@@ -45,6 +45,7 @@ export default function ProductDetailPage() {
   const name = product ? product.name[lang] : '';
   const description = product ? product.description[lang] : '';
   const categoryName = category ? category.name[lang] : '';
+  const hasPrice = (product?.price ?? 0) > 0;
 
   useSEO({
     title: name,
@@ -123,15 +124,17 @@ export default function ProductDetailPage() {
             <span className={styles.category}>{categoryName}</span>
             <h1 className={styles.productName}>{name}</h1>
 
-            <div className={styles.priceRow}>
-              <span className={styles.price}>{product.price.toLocaleString()}</span>
-              <span className={styles.currency}>{t('products.currency')}</span>
-              {product.originalPrice && (
-                <span className={styles.originalPrice}>
-                  {product.originalPrice.toLocaleString()}
-                </span>
-              )}
-            </div>
+            {hasPrice && (
+              <div className={styles.priceRow}>
+                <span className={styles.price}>{product.price.toLocaleString()}</span>
+                <span className={styles.currency}>{t('products.currency')}</span>
+                {product.originalPrice && (
+                  <span className={styles.originalPrice}>
+                    {product.originalPrice.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            )}
 
             <p className={styles.description}>{description}</p>
 

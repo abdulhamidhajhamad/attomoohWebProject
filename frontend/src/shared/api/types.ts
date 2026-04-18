@@ -18,6 +18,7 @@ export interface ApiProductImage {
 export interface ApiProduct {
   _id: string;
   name: { ar: string; en: string };
+  brand: string;
   model: string;
   price: number;
   categories: (string | ApiCategory)[];
@@ -215,7 +216,7 @@ export interface CreateCategoryRequest {
   icon?: string;
   image?: string;
   imageFile?: File;
-  /** Send zero or one parent ID only. */
+  /** Send zero, one, or more parent IDs (same level). */
   parentIds?: string[];
   isActive?: boolean;
 }
@@ -225,7 +226,7 @@ export interface UpdateCategoryRequest {
   description?: string;
   icon?: string;
   image?: string;
-  /** Send empty array to make root, or one parent ID to assign parent. */
+  /** Send empty array to make root, or one/more parent IDs to assign parents. */
   parentIds?: string[];
   isActive?: boolean;
 }
@@ -233,6 +234,7 @@ export interface UpdateCategoryRequest {
 /** Form data for creating a product (sent as multipart/form-data) */
 export interface CreateProductPayload {
   name: string;
+  brand: string;
   model: string;
   price: number;
   categories: string[];
@@ -243,6 +245,7 @@ export interface CreateProductPayload {
 /** Form data for updating a product */
 export interface UpdateProductPayload {
   name?: string;
+  brand?: string;
   model?: string;
   price?: number;
   categories?: string[];

@@ -104,7 +104,7 @@ function TreeRow({
           )}
           <button
             className={styles.deleteRowBtn}
-            title={hasChildren ? 'حذف التصنيف وجميع الأبناء' : 'حذف التصنيف'}
+            title={hasChildren ? 'حذف التصنيف وفك/حذف الأبناء التابعة له حسب الارتباطات' : 'حذف التصنيف'}
             disabled={deleting === category.id}
             onClick={() => onDelete(category.id, category.name.ar, hasChildren)}
           >
@@ -171,7 +171,7 @@ export default function AdminCategoriesPage() {
   const handleDelete = useCallback(
     async (id: string, name: string, hasChildren: boolean) => {
       const msg = hasChildren
-        ? `هل أنت متأكد من حذف "${name}" وجميع التصنيفات الفرعية التابعة له؟`
+        ? `هل أنت متأكد من حذف "${name}"؟ سيتم الإبقاء على التصنيفات الفرعية المرتبطة بآباء آخرين.`
         : `هل أنت متأكد من حذف التصنيف "${name}"؟`;
 
       if (!confirm(msg)) return;
@@ -264,7 +264,7 @@ export default function AdminCategoriesPage() {
 
       {/* Note */}
       <div className={styles.note}>
-        <strong>ملاحظة:</strong> حذف تصنيف رئيسي سيحذف جميع التصنيفات الفرعية التابعة له تلقائياً.
+        <strong>ملاحظة:</strong> عند حذف تصنيف أب، تبقى التصنيفات الفرعية المرتبطة بآباء آخرين كما هي.
       </div>
     </div>
   );

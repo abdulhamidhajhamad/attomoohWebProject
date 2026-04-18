@@ -336,18 +336,18 @@
   }
 
   .circleGrid {
-    gap: 28px 24px;
+    gap: 24px 20px;
   }
 
   .circleCard {
-    width: 240px;
-    flex-basis: 240px;
-    max-width: 240px;
+    width: 220px;
+    flex-basis: 220px;
+    max-width: 220px;
   }
 
   .circleMedia {
-    width: 198px;
-    height: 198px;
+    width: 184px;
+    height: 184px;
   }
 
   .circleLabel {

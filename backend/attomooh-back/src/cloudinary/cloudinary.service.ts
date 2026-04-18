@@ -15,6 +15,12 @@ export interface CloudinaryUploadResult {
   height: number;
 }
 
+export interface UploadedImageFile {
+  buffer: Buffer;
+  size?: number;
+  mimetype?: string;
+}
+
 @Injectable()
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
@@ -29,10 +35,11 @@ export class CloudinaryService {
   }
 
   async uploadImage(
-    file: Express.Multer.File,
+    file: UploadedImageFile,
     folder: string,
   ): Promise<CloudinaryUploadResult> {
-    if (file.size > this.MAX_FILE_SIZE) {
+    const fileSize = file.size ?? file.buffer.length;
+    if (fileSize > this.MAX_FILE_SIZE) {
       throw new BadRequestException('File size exceeds 5MB limit');
     }
 
@@ -69,7 +76,7 @@ export class CloudinaryService {
   }
 
   async uploadMultipleImages(
-    files: Express.Multer.File[],
+    files: UploadedImageFile[],
     folder: string,
   ): Promise<CloudinaryUploadResult[]> {
     const uploadPromises = files.map((file) => this.uploadImage(file, folder));

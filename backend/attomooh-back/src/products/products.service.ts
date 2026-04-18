@@ -67,6 +67,7 @@ export class ProductsService {
 
     return this.productRepository.create({
       name: await makeBilingual(createProductDto.name),
+      brand: createProductDto.brand.trim(),
       model: createProductDto.model,
       price: createProductDto.price,
       categories: categoryIds,
@@ -109,6 +110,7 @@ export class ProductsService {
     const updateData: Record<string, unknown> = {};
 
     if (updateProductDto.name) updateData.name = await makeBilingual(updateProductDto.name);
+    if (updateProductDto.brand !== undefined) updateData.brand = updateProductDto.brand.trim();
     if (updateProductDto.model) updateData.model = updateProductDto.model;
     if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
 

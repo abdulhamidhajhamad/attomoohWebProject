@@ -33,6 +33,9 @@ export class Product {
   name: { ar: string; en: string };
 
   @Prop({ required: true, trim: true })
+  brand: string;
+
+  @Prop({ required: true, trim: true })
   model: string;
 
   @Prop({ required: false, min: 0 })

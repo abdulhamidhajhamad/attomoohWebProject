@@ -32,9 +32,9 @@ export function generateProductInquiry(
   lang: 'ar' | 'en',
 ): string {
   if (lang === 'ar') {
-    return `مرحباً، أرغب في الاستفسار عن المنتج: ${productName}`;
+    return `مرحباً، أرغب في طلب المنتج التالي عبر واتساب: ${productName}`;
   }
-  return `Hello, I would like to inquire about the product: ${productName}`;
+  return `Hello, I would like to order this product via WhatsApp: ${productName}`;
 }
 
 export function openWhatsApp(message: string): void {

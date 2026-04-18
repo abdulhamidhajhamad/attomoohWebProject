@@ -26,9 +26,9 @@ export class CreateCategoryDto {
   @IsOptional()
   image?: string;
 
-  /** Parent category ID — omit or send empty for root categories */
+  /** Parent category IDs — omit or send empty for root categories */
   @IsArray()
-  @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
+  @ArrayMaxSize(5, { message: 'A category can be linked to up to 5 parent categories' })
   @IsMongoId({ each: true })
   @IsOptional()
   @Transform(({ value }) => {
