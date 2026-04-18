@@ -29,6 +29,10 @@ export class CategoriesService {
       throw new ConflictException(`Category "${dto.name}" already exists`);
     }
 
+    if ((dto.parentIds?.length ?? 0) > 1) {
+      throw new BadRequestException('Only one parent category is allowed');
+    }
+
     // 2. Resolve parents + calculate level
     const parentOids: Types.ObjectId[] = [];
     let level = 0;
@@ -136,6 +140,10 @@ export class CategoriesService {
 
     // Parents change — recalculate levels
     if (dto.parentIds !== undefined) {
+      if (dto.parentIds.length > 1) {
+        throw new BadRequestException('Only one parent category is allowed');
+      }
+
       const newParentOids: Types.ObjectId[] = [];
       let newLevel = 0;
 
@@ -254,7 +262,7 @@ export class CategoriesService {
      PRIVATE HELPERS
      ════════════════════════════════════ */
 
-  /** Build a tree structure from flat list — multi-parent: a node appears under each parent */
+  /** Build a strict tree structure from flat list (single-parent hierarchy) */
   private buildTree(categories: CategoryDocument[]): CategoryTreeNode[] {
     const map = new Map<string, CategoryTreeNode>();
 
@@ -276,18 +284,15 @@ export class CategoriesService {
       });
     }
 
-    // Assemble tree — a category with multiple parents will appear under each
+    // Assemble tree — each category can have one parent at most
     const roots: CategoryTreeNode[] = [];
     for (const node of map.values()) {
       if (node.parents.length === 0) {
         roots.push(node);
       } else {
-        for (const pid of node.parents) {
-          if (map.has(pid)) {
-            // Create a shallow copy so each parent gets its own reference
-            // (children array should be shared since the real node is the same entity)
-            map.get(pid)!.children.push(node);
-          }
+        const parentId = node.parents[0];
+        if (parentId && map.has(parentId)) {
+          map.get(parentId)!.children.push(node);
         }
       }
     }

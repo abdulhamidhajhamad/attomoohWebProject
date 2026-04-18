@@ -33,6 +33,7 @@ export interface Category {
   };
   icon?: string;
   image?: string;
+  /** Hierarchy now uses at most one parent ID (empty = root). */
   parentIds: string[];
   level: number;
   children?: Category[];

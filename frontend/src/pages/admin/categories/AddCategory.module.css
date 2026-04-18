@@ -1,3 +1,203 @@
-/* ===== Add Category – Page-specific styles ===== */
+.hierarchyGuide {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+	margin-bottom: 16px;
+}
 
-/* No additional styles needed — all form styles come from AdminForm.module.css */
+.levelStep {
+	border: 1px solid #e5e7eb;
+	border-radius: 14px;
+	padding: 12px;
+	background: #f8fafc;
+	min-height: 106px;
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.stateActive {
+	border-color: #0f766e;
+	background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+	box-shadow: 0 10px 22px rgba(15, 118, 110, 0.16);
+	transform: translateY(-1px);
+}
+
+.stateDone {
+	border-color: #0284c7;
+	background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+}
+
+.stateIdle {
+	opacity: 0.88;
+}
+
+.stepTitle {
+	font-size: 0.74rem;
+	font-weight: 700;
+	color: #64748b;
+	margin-bottom: 5px;
+}
+
+.stepLabel {
+	font-size: 0.9rem;
+	font-weight: 800;
+	color: #0f172a;
+	margin-bottom: 5px;
+}
+
+.stepHint {
+	font-size: 0.74rem;
+	line-height: 1.55;
+	color: #475569;
+	margin: 0;
+}
+
+.parentSelector {
+	position: relative;
+}
+
+.parentTrigger {
+	width: 100%;
+	min-height: 46px;
+	border: 1px solid #d1d5db;
+	border-radius: 12px;
+	background: #fff;
+	padding: 10px 12px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	text-align: right;
+	cursor: pointer;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.parentTrigger:hover {
+	border-color: #0f766e;
+}
+
+.parentTrigger:focus-visible {
+	outline: none;
+	border-color: #0f766e;
+	box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.placeholder {
+	color: #94a3b8;
+	font-weight: 500;
+}
+
+.parentValue {
+	color: #0f172a;
+	font-weight: 700;
+}
+
+.parentChevron {
+	color: #64748b;
+	transition: transform 0.2s ease;
+}
+
+.parentChevronOpen {
+	transform: rotate(180deg);
+}
+
+.parentMenu {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	box-shadow: 0 14px 28px rgba(2, 6, 23, 0.14);
+	max-height: 300px;
+	overflow-y: auto;
+	z-index: 30;
+	padding: 6px;
+}
+
+.parentOption {
+	width: 100%;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: transparent;
+	padding: 9px 10px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	text-align: right;
+	cursor: pointer;
+	transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.parentOption:hover {
+	background: #f8fafc;
+}
+
+.parentOptionSelected {
+	border-color: #99f6e4;
+	background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 100%);
+}
+
+.optionTitle {
+	font-size: 0.86rem;
+	font-weight: 700;
+	color: #0f172a;
+}
+
+.optionMeta {
+	font-size: 0.72rem;
+	font-weight: 700;
+	color: #0f766e;
+	background: #ccfbf1;
+	border-radius: 999px;
+	padding: 3px 8px;
+	flex-shrink: 0;
+}
+
+.parentEmpty {
+	padding: 16px;
+	text-align: center;
+	color: #94a3b8;
+	font-size: 0.84rem;
+}
+
+.helperText {
+	display: block;
+	margin-top: 6px;
+	font-size: 0.78rem;
+	color: #64748b;
+}
+
+.levelIndicator {
+	margin-top: 10px;
+	border: 1px solid #bae6fd;
+	border-radius: 12px;
+	background: linear-gradient(135deg, #f0f9ff 0%, #ecfeff 100%);
+	color: #0c4a6e;
+	font-size: 0.83rem;
+	font-weight: 700;
+	padding: 10px 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.pathPreview {
+	margin-top: 8px;
+	border: 1px solid #fde68a;
+	border-radius: 12px;
+	background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%);
+	color: #92400e;
+	padding: 10px 12px;
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	font-size: 0.82rem;
+	font-weight: 700;
+}
+
+@media (max-width: 980px) {
+	.hierarchyGuide {
+		grid-template-columns: 1fr;
+	}
+}

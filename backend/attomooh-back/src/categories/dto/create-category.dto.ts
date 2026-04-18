@@ -5,6 +5,7 @@ import {
   IsMongoId,
   IsBoolean,
   IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -21,8 +22,9 @@ export class CreateCategoryDto {
   @IsOptional()
   icon?: string;
 
-  /** Parent category IDs — omit or send empty for root categories */
+  /** Parent category ID — omit or send empty for root categories */
   @IsArray()
+  @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
   @IsMongoId({ each: true })
   @IsOptional()
   @Transform(({ value }) => {

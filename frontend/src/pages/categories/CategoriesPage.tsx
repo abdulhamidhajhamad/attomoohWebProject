@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Layers3, FolderOpen } from 'lucide-react';
 import { useCategories } from '../../shared/hooks/useCategories';
 import { useLanguageDirection } from '../../shared/hooks/useLanguageDirection';
 import { useSEO } from '../../shared/hooks/useSEO';
@@ -10,138 +10,247 @@ import { getLucideIcon, DefaultCategoryIcon } from '../../shared/ui/IconResolver
 import type { Category } from '../../shared/types';
 import styles from './CategoriesPage.module.css';
 
-/* ── helpers ── */
 const catName = (c: Category, lang: 'ar' | 'en') =>
-  lang === 'ar' ? c.name.ar : c.name.en;
+  (lang === 'ar' ? c.name.ar : c.name.en) || c.name.ar;
 
-const childrenOf = (parentId: string, all: Category[]) =>
-  all.filter((c) => c.parentIds.includes(parentId));
+const byLevelAndSort = (items: Category[]) =>
+  [...items].sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar));
+
+const directChildrenOf = (parentId: string, all: Category[]) =>
+  byLevelAndSort(all.filter((c) => c.parentIds[0] === parentId));
+
+const descendantsCount = (id: string, all: Category[]) => {
+  const queue = [id];
+  let count = 0;
+
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    const children = all.filter((c) => c.parentIds[0] === current);
+    count += children.length;
+    queue.push(...children.map((c) => c.id));
+  }
+
+  return count;
+};
 
 export default function CategoriesPage() {
   const { t } = useTranslation();
   const { currentLang } = useLanguageDirection();
   const lang = currentLang as 'ar' | 'en';
   const isRtl = lang === 'ar';
-  const { categories, categoryTree, loading, error } = useCategories();
+  const { categories, loading, error } = useCategories();
 
-  const [breadcrumbIds, setBreadcrumbIds] = useState<string[]>([]);
-
-  const breadcrumbs = useMemo(
-    () =>
-      breadcrumbIds
-        .map((id) => categories.find((c) => c.id === id))
-        .filter(Boolean) as Category[],
-    [breadcrumbIds, categories],
-  );
-
-  const currentItems = useMemo(() => {
-    if (!breadcrumbIds.length) return categoryTree;
-    return childrenOf(breadcrumbIds[breadcrumbIds.length - 1], categories);
-  }, [breadcrumbIds, categoryTree, categories]);
-
-  const hasChildren = useCallback(
-    (id: string) => categories.some((c) => c.parentIds.includes(id)),
+  const roots = useMemo(
+    () => byLevelAndSort(categories.filter((c) => c.level === 0 && c.parentIds.length === 0)),
     [categories],
   );
 
-  const drillInto = useCallback(
-    (cat: Category) => hasChildren(cat.id) && setBreadcrumbIds((p) => [...p, cat.id]),
-    [hasChildren],
+  const [selectedRootId, setSelectedRootId] = useState<string>('');
+  const [selectedSubId, setSelectedSubId] = useState<string>('');
+
+  useEffect(() => {
+    if (roots.length === 0) {
+      setSelectedRootId('');
+      setSelectedSubId('');
+      return;
+    }
+
+    if (!selectedRootId || !roots.some((r) => r.id === selectedRootId)) {
+      setSelectedRootId(roots[0].id);
+      setSelectedSubId('');
+    }
+  }, [roots, selectedRootId]);
+
+  const selectedRoot = useMemo(
+    () => roots.find((r) => r.id === selectedRootId) ?? null,
+    [roots, selectedRootId],
   );
 
-  const goToLevel = useCallback(
-    (i: number) => setBreadcrumbIds((p) => p.slice(0, i + 1)),
-    [],
+  const levelTwoItems = useMemo(() => {
+    if (!selectedRootId) return [];
+    return directChildrenOf(selectedRootId, categories);
+  }, [selectedRootId, categories]);
+
+  useEffect(() => {
+    if (levelTwoItems.length === 0) {
+      setSelectedSubId('');
+      return;
+    }
+
+    if (!selectedSubId || !levelTwoItems.some((s) => s.id === selectedSubId)) {
+      setSelectedSubId(levelTwoItems[0].id);
+    }
+  }, [levelTwoItems, selectedSubId]);
+
+  const selectedSub = useMemo(
+    () => levelTwoItems.find((s) => s.id === selectedSubId) ?? null,
+    [levelTwoItems, selectedSubId],
   );
 
-  const goToRoot = useCallback(() => setBreadcrumbIds([]), []);
+  const levelThreeItems = useMemo(() => {
+    if (!selectedSubId) return [];
+    return directChildrenOf(selectedSubId, categories);
+  }, [selectedSubId, categories]);
+
+  const chooseRoot = useCallback((rootId: string) => {
+    setSelectedRootId(rootId);
+    setSelectedSubId('');
+  }, []);
 
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
-
-  const currentTitle =
-    breadcrumbs.length > 0
-      ? catName(breadcrumbs[breadcrumbs.length - 1], lang)
-      : t('categories.title');
+  const currentTitle = selectedRoot ? catName(selectedRoot, lang) : t('categories.title');
 
   useSEO({
-    title: currentTitle,
-    description:
-      'تصفح جميع تصنيفات معدات المطابخ الصناعية - أفران، قلايات، مفارم لحوم، تبريد والمزيد',
+    title: `${t('categories.title')} | ${currentTitle}`,
+    description: 'تصفح شجرة تصنيفات من 3 مستويات للوصول السريع إلى معدات المطاعم والملاحم.',
   });
-
-  /* ── Shared row renderer (DRY) ── */
-  const renderRow = (cat: Category) => {
-    const isLeaf = !hasChildren(cat.id);
-    const Icon = getLucideIcon(cat.icon) ?? DefaultCategoryIcon;
-    const name = catName(cat, lang);
-    const count = childrenOf(cat.id, categories).length;
-
-    const inner = (
-      <>
-        <span className={styles.rowIcon}>
-          <Icon size={24} />
-        </span>
-        <span className={styles.rowLabel}>{name}</span>
-        {!isLeaf && <span className={styles.badge}>{count}</span>}
-        <Chevron size={16} className={styles.rowChevron} />
-      </>
-    );
-
-    return isLeaf ? (
-      <Link key={cat.id} to={`/categories/${cat.id}`} className={styles.row}>
-        {inner}
-      </Link>
-    ) : (
-      <button key={cat.id} className={styles.row} onClick={() => drillInto(cat)}>
-        {inner}
-      </button>
-    );
-  };
 
   return (
     <div className="container">
       <div className={styles.page}>
-        {/* ── Breadcrumb ── */}
-        {breadcrumbs.length > 0 && (
-          <nav className={styles.breadcrumb} aria-label="navigation">
-            <button className={styles.crumb} onClick={goToRoot}>
-              <Home size={14} />
-              <span>{t('categories.title')}</span>
-            </button>
-            {breadcrumbs.map((crumb, i) => (
-              <span key={crumb.id} className={styles.crumbSep}>
-                <Chevron size={12} />
-                {i < breadcrumbs.length - 1 ? (
-                  <button className={styles.crumb} onClick={() => goToLevel(i)}>
-                    {catName(crumb, lang)}
-                  </button>
-                ) : (
-                  <span className={styles.crumbActive}>{catName(crumb, lang)}</span>
-                )}
-              </span>
-            ))}
-          </nav>
-        )}
+        <header className={styles.hero}>
+          <span className={styles.kicker}>
+            <Sparkles size={14} />
+            دليل التصنيفات
+          </span>
+          <h1 className={styles.title}>{t('categories.title')}</h1>
+          <p className={styles.subtitle}>
+            اختر القطاع ثم القسم ثم الفئة النهائية للوصول السريع للمنتجات المناسبة.
+          </p>
+        </header>
 
-        {/* ── Title bar ── */}
-        <div className={styles.titleBar}>
-          <h1 className={styles.title}>{currentTitle}</h1>
-          {currentItems.length > 0 && (
-            <span className={styles.count}>{currentItems.length}</span>
-          )}
+        <div className={styles.pathBar}>
+          <Layers3 size={16} />
+          <span>{selectedRoot ? catName(selectedRoot, lang) : 'المستوى الأول'}</span>
+          <Chevron size={13} />
+          <span>{selectedSub ? catName(selectedSub, lang) : 'المستوى الثاني'}</span>
+          <Chevron size={13} />
+          <span>{levelThreeItems.length > 0 ? 'المستوى الثالث' : 'اختر قسماً'}</span>
         </div>
 
-        {/* ── Content ── */}
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
           <p className={styles.error}>{error}</p>
-        ) : currentItems.length > 0 ? (
-          <ul className={styles.list}>{currentItems.map(renderRow)}</ul>
-        ) : (
+        ) : roots.length === 0 ? (
           <div className={styles.empty}>
             <DefaultCategoryIcon size={40} />
             <p>{t('categories.empty', 'لا توجد تصنيفات')}</p>
+          </div>
+        ) : (
+          <div className={styles.explorerGrid}>
+            <section className={styles.column}>
+              <div className={styles.columnHead}>
+                <span className={styles.columnStep}>1</span>
+                <div>
+                  <h2>القطاع الرئيسي</h2>
+                  <p>معدات مطاعم أو معدات ملاحم</p>
+                </div>
+              </div>
+
+              <div className={styles.items}>
+                {roots.map((root) => {
+                  const Icon = getLucideIcon(root.icon) ?? DefaultCategoryIcon;
+                  const selected = root.id === selectedRootId;
+                  return (
+                    <button
+                      key={root.id}
+                      type="button"
+                      className={`${styles.itemCard} ${selected ? styles.itemCardActive : ''}`}
+                      onClick={() => chooseRoot(root.id)}
+                    >
+                      <span className={styles.itemIcon}>
+                        <Icon size={20} />
+                      </span>
+                      <span className={styles.itemName}>{catName(root, lang)}</span>
+                      <span className={styles.itemMeta}>{directChildrenOf(root.id, categories).length} أقسام</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className={styles.column}>
+              <div className={styles.columnHead}>
+                <span className={styles.columnStep}>2</span>
+                <div>
+                  <h2>القسم الفرعي</h2>
+                  <p>اختيار النوع الداخلي ضمن القطاع</p>
+                </div>
+              </div>
+
+              <div className={styles.items}>
+                {selectedRoot && levelTwoItems.length > 0 ? (
+                  levelTwoItems.map((sub) => {
+                    const selected = sub.id === selectedSubId;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        className={`${styles.itemCard} ${selected ? styles.itemCardActive : ''}`}
+                        onClick={() => setSelectedSubId(sub.id)}
+                      >
+                        <span className={styles.itemName}>{catName(sub, lang)}</span>
+                        <span className={styles.itemMeta}>{directChildrenOf(sub.id, categories).length} فئات</span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className={styles.columnEmpty}>لا توجد أقسام فرعية لهذا القطاع</div>
+                )}
+              </div>
+            </section>
+
+            <section className={styles.column}>
+              <div className={styles.columnHead}>
+                <span className={styles.columnStep}>3</span>
+                <div>
+                  <h2>الفئة النهائية</h2>
+                  <p>الانتقال لصفحة المنتجات</p>
+                </div>
+              </div>
+
+              <div className={styles.items}>
+                {selectedSub && levelThreeItems.length > 0 ? (
+                  levelThreeItems.map((leaf) => (
+                    <Link key={leaf.id} to={`/categories/${leaf.id}`} className={styles.itemLinkCard}>
+                      <span className={styles.itemName}>{catName(leaf, lang)}</span>
+                      <span className={styles.itemMeta}>عرض المنتجات</span>
+                      <Chevron size={15} className={styles.linkChevron} />
+                    </Link>
+                  ))
+                ) : selectedSub ? (
+                  <Link to={`/categories/${selectedSub.id}`} className={styles.fallbackLink}>
+                    <FolderOpen size={18} />
+                    لا توجد فئات أعمق. افتح منتجات {catName(selectedSub, lang)}
+                  </Link>
+                ) : (
+                  <div className={styles.columnEmpty}>اختر قسماً من المستوى الثاني</div>
+                )}
+              </div>
+            </section>
+
+            <aside className={styles.summaryCard}>
+              <h3>ملخص سريع</h3>
+              <div className={styles.summaryLine}>
+                <span>إجمالي القطاعات</span>
+                <strong>{roots.length}</strong>
+              </div>
+              <div className={styles.summaryLine}>
+                <span>إجمالي الأقسام</span>
+                <strong>{categories.filter((c) => c.level === 1).length}</strong>
+              </div>
+              <div className={styles.summaryLine}>
+                <span>إجمالي الفئات النهائية</span>
+                <strong>{categories.filter((c) => c.level === 2).length}</strong>
+              </div>
+              {selectedRoot && (
+                <div className={styles.summaryContext}>
+                  <p>داخل {catName(selectedRoot, lang)}</p>
+                  <strong>{descendantsCount(selectedRoot.id, categories)} تصنيفات فرعية</strong>
+                </div>
+              )}
+            </aside>
           </div>
         )}
       </div>

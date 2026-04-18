@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Plus,
   Trash2,
@@ -143,12 +143,10 @@ export default function AdminCategoriesPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Expand all on first load
-  useState(() => {
-    const allIds = new Set(
-      categories.filter((c) => c.level < 2).map((c) => c.id),
-    );
-    setExpandedIds(allIds);
-  });
+  useEffect(() => {
+    if (categories.length === 0) return;
+    setExpandedIds(new Set(categories.filter((c) => c.level < 2).map((c) => c.id)));
+  }, [categories]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {

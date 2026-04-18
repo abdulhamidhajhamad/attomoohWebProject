@@ -212,6 +212,7 @@ export interface CreateCategoryRequest {
   name: string;
   description?: string;
   icon?: string;
+  /** Send zero or one parent ID only. */
   parentIds?: string[];
   isActive?: boolean;
 }
@@ -220,6 +221,7 @@ export interface UpdateCategoryRequest {
   name?: string;
   description?: string;
   icon?: string;
+  /** Send empty array to make root, or one parent ID to assign parent. */
   parentIds?: string[];
   isActive?: boolean;
 }

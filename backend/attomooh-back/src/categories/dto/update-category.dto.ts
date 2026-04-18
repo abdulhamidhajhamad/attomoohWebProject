@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsMongoId, IsBoolean, IsArray } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsMongoId,
+  IsBoolean,
+  IsArray,
+  ArrayMaxSize,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UpdateCategoryDto {
@@ -14,8 +21,9 @@ export class UpdateCategoryDto {
   @IsOptional()
   icon?: string;
 
-  /** Change parents — empty array to make root, array of ObjectIds to assign parents */
+  /** Change parent — empty array to make root, one ObjectId to assign parent */
   @IsArray()
+  @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
   @IsMongoId({ each: true })
   @IsOptional()
   @Transform(({ value }) => {

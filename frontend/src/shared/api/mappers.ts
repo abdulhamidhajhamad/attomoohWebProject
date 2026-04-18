@@ -73,7 +73,7 @@ export function mapApiCategoryForest(nodes: ApiCategoryTreeNode[]): Category[] {
   return nodes.map(mapApiCategoryTree);
 }
 
-/** Build tree from flat category list (client-side tree builder — multi-parent) */
+/** Build tree from flat category list (strict single-parent hierarchy) */
 export function buildCategoryTree(categories: Category[]): Category[] {
   const map = new Map<string, Category>();
 
@@ -87,10 +87,9 @@ export function buildCategoryTree(categories: Category[]): Category[] {
     if (cat.parentIds.length === 0) {
       roots.push(cat);
     } else {
-      for (const pid of cat.parentIds) {
-        if (map.has(pid)) {
-          map.get(pid)!.children!.push(cat);
-        }
+      const parentId = cat.parentIds[0];
+      if (parentId && map.has(parentId)) {
+        map.get(parentId)!.children!.push(cat);
       }
     }
   }

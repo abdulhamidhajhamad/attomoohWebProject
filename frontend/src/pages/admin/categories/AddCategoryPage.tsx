@@ -1,19 +1,41 @@
-import { useState, useMemo, useCallback, useRef, useEffect, type FormEvent } from 'react';
+import { useState, useMemo, useRef, useEffect, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Sparkles, Layers3 } from 'lucide-react';
 import { PageHeader } from '../../../shared/ui/PageHeader';
 import { FormCard } from '../../../shared/ui/FormCard';
 import { ToggleSwitch } from '../../../shared/ui/ToggleSwitch';
 import { ResultMessage } from '../../../shared/ui/ResultMessage';
 import { SubmitButton } from '../../../shared/ui/SubmitButton';
-import { useCategories } from '../../../shared/hooks/useCategories';
+import {
+  useCategories,
+  invalidateCategoriesCache,
+} from '../../../shared/hooks/useCategories';
+import { categoriesService } from '../../../shared/api/services';
+import type { Category } from '../../../shared/types';
 import formStyles from '../../../shared/ui/AdminForm/AdminForm.module.css';
+import styles from './AddCategory.module.css';
 
 /* ═══════════════════════════════════
    Constants
    ═══════════════════════════════════ */
 
-const LEVEL_LABELS = ['تصنيف رئيسي (مستوى 0)', 'تصنيف فرعي (مستوى 1)', 'تصنيف فرعي ثاني (مستوى 2)'];
+const LEVEL_META = [
+  {
+    title: 'المستوى الأول',
+    label: 'تصنيف رئيسي',
+    hint: 'قطاع عام مثل معدات مطاعم أو معدات ملاحم',
+  },
+  {
+    title: 'المستوى الثاني',
+    label: 'تصنيف فرعي',
+    hint: 'قسم متخصص داخل القطاع مثل معدات بار أو آلات فرم',
+  },
+  {
+    title: 'المستوى الثالث',
+    label: 'تصنيف فرعي دقيق',
+    hint: 'فئة نهائية للمنتجات مثل آلات اسبريسو',
+  },
+];
 
 /* ═══════════════════════════════════
    Types
@@ -22,6 +44,24 @@ const LEVEL_LABELS = ['تصنيف رئيسي (مستوى 0)', 'تصنيف فرع
 interface SubmitResult {
   ok: boolean;
   msg: string;
+}
+
+function buildParentChain(
+  category: Category,
+  byId: Map<string, Category>,
+): Category[] {
+  const chain: Category[] = [];
+  const visited = new Set<string>();
+
+  let current: Category | null = category;
+  while (current && !visited.has(current.id)) {
+    chain.unshift(current);
+    visited.add(current.id);
+    const parentId = current.parentIds[0];
+    current = parentId ? (byId.get(parentId) ?? null) : null;
+  }
+
+  return chain;
 }
 
 /* ═══════════════════════════════════
@@ -33,11 +73,15 @@ export default function AddCategoryPage() {
   const preselectedParent = searchParams.get('parent') || '';
 
   const { categories } = useCategories();
+  const categoriesById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c] as const)),
+    [categories],
+  );
 
   // ── Form State ──
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [parentIds, setParentIds] = useState<string[]>(preselectedParent ? [preselectedParent] : []);
+  const [parentId, setParentId] = useState<string>(preselectedParent);
   const [isActive, setIsActive] = useState(true);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
   const parentDropdownRef = useRef<HTMLDivElement>(null);
@@ -57,18 +101,46 @@ export default function AddCategoryPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Resolve selected parents for summary display
-  const selectedParents = useMemo(
-    () => categories.filter((c) => parentIds.includes(c.id)),
-    [categories, parentIds],
+  const selectedParent = useMemo(
+    () => (parentId ? (categoriesById.get(parentId) ?? null) : null),
+    [categoriesById, parentId],
   );
 
-  // Calculate level from max parent level
+  useEffect(() => {
+    if (!parentId) return;
+    if (categories.length === 0) return;
+    if (!categoriesById.has(parentId)) {
+      setParentId('');
+    }
+  }, [parentId, categories.length, categoriesById]);
+
+  useEffect(() => {
+    if (!selectedParent) return;
+    if (selectedParent.level >= 2) {
+      setParentId('');
+      setSubmitResult({
+        ok: false,
+        msg: 'لا يمكن الإضافة تحت مستوى ثالث. اختر تصنيفاً من المستوى الأول أو الثاني.',
+      });
+    }
+  }, [selectedParent]);
+
+  // Calculate level from selected parent
   const calculatedLevel = useMemo(() => {
-    if (selectedParents.length === 0) return 0;
-    const maxLevel = Math.max(...selectedParents.map((p) => p.level));
-    return maxLevel + 1;
-  }, [selectedParents]);
+    if (!selectedParent) return 0;
+    return selectedParent.level + 1;
+  }, [selectedParent]);
+
+  const selectedParentChain = useMemo(() => {
+    if (!selectedParent) return [];
+    return buildParentChain(selectedParent, categoriesById);
+  }, [selectedParent, categoriesById]);
+
+  const hierarchyPreview = useMemo(() => {
+    const draftName = name.trim() || 'التصنيف الجديد';
+    if (selectedParentChain.length === 0) return draftName;
+    return [...selectedParentChain.map((p) => p.name.ar), draftName].join(' / ');
+  }, [name, selectedParentChain]);
 
   // Build parent options (only categories with level < 2)
   const parentOptions = useMemo(() => {
@@ -76,16 +148,6 @@ export default function AddCategoryPage() {
       .filter((c) => c.level < 2)
       .sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar));
   }, [categories]);
-
-  const toggleParent = useCallback((id: string) => {
-    setParentIds((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id],
-    );
-  }, []);
-
-  const removeParent = useCallback((id: string) => {
-    setParentIds((prev) => prev.filter((pid) => pid !== id));
-  }, []);
 
   // ═════ FORM SUBMIT ═════
 
@@ -95,17 +157,13 @@ export default function AddCategoryPage() {
     setSubmitting(true);
 
     try {
-      const { categoriesService } = await import('../../../shared/api/services');
       await categoriesService.create({
         name: name.trim(),
         description: description.trim() || undefined,
-        parentIds: parentIds.length > 0 ? parentIds : undefined,
+        parentIds: parentId ? [parentId] : undefined,
         isActive,
       });
 
-      const { invalidateCategoriesCache } = await import(
-        '../../../shared/hooks/useCategories'
-      );
       invalidateCategoriesCache();
 
       setSubmitResult({ ok: true, msg: 'تم إنشاء التصنيف بنجاح!' });
@@ -113,7 +171,6 @@ export default function AddCategoryPage() {
       // Reset form
       setName('');
       setDescription('');
-      setParentIds([]);
       setIsActive(true);
     } catch (err) {
       const message =
@@ -174,133 +231,84 @@ export default function AddCategoryPage() {
 
             {/* Hierarchy Card */}
             <FormCard title="الموقع في الشجرة">
+              <div className={styles.hierarchyGuide}>
+                {LEVEL_META.map((step, index) => {
+                  const state =
+                    index < calculatedLevel
+                      ? 'done'
+                      : index === calculatedLevel
+                        ? 'active'
+                        : 'idle';
+
+                  return (
+                    <div
+                      key={step.title}
+                      className={`${styles.levelStep} ${styles[`state${state[0].toUpperCase()}${state.slice(1)}`]}`}
+                    >
+                      <div className={styles.stepTitle}>{step.title}</div>
+                      <div className={styles.stepLabel}>{step.label}</div>
+                      <p className={styles.stepHint}>{step.hint}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className={formStyles.inputGroup}>
                 <label className={formStyles.label}>
-                  التصنيفات الأب
+                  التصنيف الأب
                 </label>
 
-                {/* Selected parents chips */}
-                {parentIds.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                    {selectedParents.map((p) => (
-                      <span
-                        key={p.id}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '4px 10px',
-                          background: '#90297d15',
-                          color: '#90297d',
-                          borderRadius: 8,
-                          fontSize: '0.82rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {'─'.repeat(p.level + 1)} {p.name.ar}
-                        <button
-                          type="button"
-                          onClick={() => removeParent(p.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                            color: '#90297d',
-                            display: 'flex',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Dropdown toggle */}
-                <div ref={parentDropdownRef} style={{ position: 'relative' }}>
+                <div ref={parentDropdownRef} className={styles.parentSelector}>
                   <button
                     type="button"
-                    className={formStyles.input}
+                    className={styles.parentTrigger}
                     onClick={() => setParentDropdownOpen(!parentDropdownOpen)}
-                    style={{
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      textAlign: 'right',
-                      width: '100%',
-                    }}
                   >
-                    <span style={{ color: parentIds.length === 0 ? '#9ca3af' : undefined }}>
-                      {parentIds.length === 0
-                        ? '— تصنيف رئيسي (بدون أب) —'
-                        : `تم اختيار ${parentIds.length} تصنيف`}
+                    <span className={!parentId ? styles.placeholder : styles.parentValue}>
+                      {!parentId ? 'بدون أب (تصنيف رئيسي)' : selectedParent?.name.ar}
                     </span>
                     <ChevronDown
                       size={16}
-                      style={{
-                        transition: 'transform 0.2s',
-                        transform: parentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      }}
+                      className={`${styles.parentChevron} ${parentDropdownOpen ? styles.parentChevronOpen : ''}`}
                     />
                   </button>
 
-                  {/* Dropdown list */}
                   {parentDropdownOpen && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: '#fff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 10,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                        zIndex: 50,
-                        maxHeight: 250,
-                        overflowY: 'auto',
-                        marginTop: 4,
-                      }}
-                    >
+                    <div className={styles.parentMenu}>
+                      <button
+                        type="button"
+                        className={`${styles.parentOption} ${!parentId ? styles.parentOptionSelected : ''}`}
+                        onClick={() => {
+                          setParentId('');
+                          setParentDropdownOpen(false);
+                        }}
+                      >
+                        <span className={styles.optionTitle}>بدون أب</span>
+                        <span className={styles.optionMeta}>تصنيف رئيسي</span>
+                      </button>
+
                       {parentOptions.map((cat) => {
-                        const isChecked = parentIds.includes(cat.id);
+                        const isSelected = cat.id === parentId;
                         return (
-                          <label
+                          <button
+                            type="button"
                             key={cat.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 10,
-                              padding: '10px 16px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #f3f4f6',
-                              background: isChecked ? '#90297d08' : 'transparent',
-                              transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isChecked) e.currentTarget.style.background = '#f9fafb';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = isChecked ? '#90297d08' : 'transparent';
+                            className={`${styles.parentOption} ${isSelected ? styles.parentOptionSelected : ''}`}
+                            onClick={() => {
+                              setParentId(cat.id);
+                              setParentDropdownOpen(false);
                             }}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleParent(cat.id)}
-                              style={{ accentColor: '#90297d', width: 16, height: 16 }}
-                            />
-                            <span style={{ fontSize: '0.88rem', fontWeight: isChecked ? 600 : 400 }}>
-                              {'─'.repeat(cat.level + 1)} {cat.name.ar}
+                            <span className={styles.optionTitle}>
+                              {cat.level === 0 ? 'قطاع' : 'قسم'}: {cat.name.ar}
                             </span>
-                          </label>
+                            <span className={styles.optionMeta}>المستوى {cat.level + 1}</span>
+                          </button>
                         );
                       })}
+
                       {parentOptions.length === 0 && (
-                        <div style={{ padding: 16, textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
+                        <div className={styles.parentEmpty}>
                           لا توجد تصنيفات متاحة
                         </div>
                       )}
@@ -308,28 +316,23 @@ export default function AddCategoryPage() {
                   )}
                 </div>
 
-                <small style={{ color: '#6b7280', fontSize: '0.78rem', marginTop: 4, display: 'block' }}>
-                  اتركه فارغاً لإنشاء تصنيف رئيسي (جذر). أو اختر تصنيفاً أو أكثر ليكون هذا فرعياً منها.
+                <small className={styles.helperText}>
+                  اختر أباً واحداً فقط. النظام يدعم 3 مستويات: رئيسي ثم فرعي ثم فرعي دقيق.
                 </small>
               </div>
 
-              {/* Level indicator */}
-              <div
-                style={{
-                  padding: '10px 16px',
-                  background: '#f3f4f6',
-                  borderRadius: 10,
-                  fontSize: '0.85rem',
-                  color: '#374151',
-                  fontWeight: 600,
-                  marginTop: 8,
-                }}
-              >
-                المستوى: {LEVEL_LABELS[calculatedLevel] ?? `مستوى ${calculatedLevel}`}
+              <div className={styles.levelIndicator}>
+                <Layers3 size={16} />
+                <span>
+                  سيتم إنشاء هذا التصنيف على: <strong>{LEVEL_META[calculatedLevel]?.label ?? `المستوى ${calculatedLevel + 1}`}</strong>
+                </span>
+              </div>
+
+              <div className={styles.pathPreview}>
+                <Sparkles size={15} />
+                <span>{hierarchyPreview}</span>
               </div>
             </FormCard>
-
-
           </div>
 
           {/* ═════ Sidebar ═════ */}
@@ -353,14 +356,16 @@ export default function AddCategoryPage() {
                 <div className={formStyles.summaryItem}>
                   <span>الأب</span>
                   <strong>
-                    {selectedParents.length > 0
-                      ? selectedParents.map((p) => p.name.ar).join('، ')
-                      : 'بدون (رئيسي)'}
+                    {selectedParent ? selectedParent.name.ar : 'بدون (رئيسي)'}
                   </strong>
                 </div>
                 <div className={formStyles.summaryItem}>
                   <span>المستوى</span>
-                  <strong>{calculatedLevel}</strong>
+                  <strong>{calculatedLevel + 1}</strong>
+                </div>
+                <div className={formStyles.summaryItem}>
+                  <span>المسار</span>
+                  <strong>{hierarchyPreview}</strong>
                 </div>
                 <div className={formStyles.summaryItem}>
                   <span>الحالة</span>
