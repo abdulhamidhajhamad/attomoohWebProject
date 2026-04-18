@@ -37,6 +37,7 @@ export interface ApiCategory {
   name: { ar: string; en: string };
   description: { ar: string; en: string };
   icon: string;
+  image: string;
   parents: string[];
   level: number;
   isActive: boolean;
@@ -212,6 +213,8 @@ export interface CreateCategoryRequest {
   name: string;
   description?: string;
   icon?: string;
+  image?: string;
+  imageFile?: File;
   /** Send zero or one parent ID only. */
   parentIds?: string[];
   isActive?: boolean;
@@ -221,6 +224,7 @@ export interface UpdateCategoryRequest {
   name?: string;
   description?: string;
   icon?: string;
+  image?: string;
   /** Send empty array to make root, or one parent ID to assign parent. */
   parentIds?: string[];
   isActive?: boolean;

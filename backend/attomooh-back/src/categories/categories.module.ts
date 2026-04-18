@@ -4,9 +4,11 @@ import { Category, CategorySchema } from './schemas/category.schema.js';
 import { CategoryRepository } from './repositories/category.repository.js';
 import { CategoriesService } from './categories.service.js';
 import { CategoriesController } from './categories.controller.js';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
 
 @Module({
   imports: [
+    CloudinaryModule,
     MongooseModule.forFeature([
       { name: Category.name, schema: CategorySchema },
     ]),

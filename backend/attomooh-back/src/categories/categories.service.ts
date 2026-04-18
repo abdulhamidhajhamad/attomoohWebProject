@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CategoryRepository } from './repositories/category.repository.js';
@@ -10,19 +11,29 @@ import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { CategoryDocument } from './schemas/category.schema.js';
 import { makeBilingual } from '../common/utils/translate.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 
 /** Maximum nesting depth: root (0) → sub (1) → sub-sub (2) */
 const MAX_LEVEL = 2;
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  private readonly UPLOAD_FOLDER = 'attomooh/categories';
+  private readonly logger = new Logger(CategoriesService.name);
+
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   /* ════════════════════════════════════
      CREATE — auto-calculates level from parents
      ════════════════════════════════════ */
 
-  async create(dto: CreateCategoryDto): Promise<CategoryDocument> {
+  async create(
+    dto: CreateCategoryDto,
+    imageFile?: Express.Multer.File,
+  ): Promise<CategoryDocument> {
     // 1. Duplicate name check (Arabic)
     const exists = await this.categoryRepository.existsByName(dto.name);
     if (exists) {
@@ -67,11 +78,30 @@ export class CategoriesService {
       ? await makeBilingual(dto.description)
       : { ar: '', en: '' };
 
+    let imageUrl = dto.image?.trim() ?? '';
+    if (imageFile) {
+      try {
+        const uploadedImage = await this.cloudinaryService.uploadImage(
+          imageFile,
+          this.UPLOAD_FOLDER,
+        );
+        imageUrl = uploadedImage.secureUrl;
+      } catch {
+        // If Cloudinary is unavailable/misconfigured, keep creation working
+        // by storing the selected image as inline data URL.
+        imageUrl = this.toInlineDataUrl(imageFile);
+        this.logger.warn(
+          'Cloudinary upload failed for category image; using inline image fallback.',
+        );
+      }
+    }
+
     // 4. Persist
     return this.categoryRepository.create({
       name: bilingualName,
       description: bilingualDesc,
       icon: dto.icon ?? '',
+      image: imageUrl,
       parents: parentOids,
       level,
       isActive: dto.isActive ?? true,
@@ -275,6 +305,7 @@ export class CategoriesService {
         name: cat.name as unknown as string,
         description: cat.description as unknown as string,
         icon: cat.icon,
+        image: cat.image ?? '',
         parents: parentStrings,
         level: cat.level,
         isActive: cat.isActive,
@@ -315,6 +346,15 @@ export class CategoriesService {
       await this.cascadeUpdateLevels(child._id as Types.ObjectId, newLevel);
     }
   }
+
+  private toInlineDataUrl(file: Express.Multer.File): string {
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new BadRequestException('Image upload failed and fallback image data is empty');
+    }
+
+    const mimeType = file.mimetype || 'image/jpeg';
+    return `data:${mimeType};base64,${file.buffer.toString('base64')}`;
+  }
 }
 
 /* ════════════════════════════════════
@@ -326,6 +366,7 @@ export interface CategoryTreeNode {
   name: unknown;
   description: unknown;
   icon: string;
+  image: string;
   parents: string[];
   level: number;
   isActive: boolean;

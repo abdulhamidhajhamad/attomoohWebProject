@@ -22,6 +22,9 @@ export class Category {
   @Prop({ trim: true, default: '' })
   icon: string;
 
+  @Prop({ trim: true, default: '' })
+  image: string;
+
   /** Self-referencing parents — empty array means root category */
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Category' }], default: [] })
   parents: Types.ObjectId[];

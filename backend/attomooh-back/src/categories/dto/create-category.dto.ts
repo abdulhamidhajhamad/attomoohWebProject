@@ -22,6 +22,10 @@ export class CreateCategoryDto {
   @IsOptional()
   icon?: string;
 
+  @IsString()
+  @IsOptional()
+  image?: string;
+
   /** Parent category ID — omit or send empty for root categories */
   @IsArray()
   @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
@@ -36,5 +40,10 @@ export class CreateCategoryDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return value;
+  })
   isActive?: boolean;
 }

@@ -21,6 +21,10 @@ export class UpdateCategoryDto {
   @IsOptional()
   icon?: string;
 
+  @IsString()
+  @IsOptional()
+  image?: string;
+
   /** Change parent — empty array to make root, one ObjectId to assign parent */
   @IsArray()
   @ArrayMaxSize(1, { message: 'Only one parent category is allowed' })
@@ -35,5 +39,10 @@ export class UpdateCategoryDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return value;
+  })
   isActive?: boolean;
 }

@@ -53,7 +53,7 @@ export function mapApiCategory(c: ApiCategory): Category {
       en: typeof c.description === 'object' ? c.description.en : (c.description || ''),
     },
     icon: c.icon,
-    image: undefined,
+    image: c.image || undefined,
     parentIds: c.parents ?? [],
     level: c.level ?? 0,
     productCount: 0,

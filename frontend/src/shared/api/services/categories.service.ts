@@ -69,9 +69,24 @@ export const categoriesService = {
 
   /** POST /categories — Admin only */
   async create(category: CreateCategoryRequest): Promise<Category> {
+    const formData = new FormData();
+    formData.append('name', category.name);
+    if (category.description) formData.append('description', category.description);
+    if (category.icon) formData.append('icon', category.icon);
+    if (category.image) formData.append('image', category.image);
+    if (category.parentIds && category.parentIds.length > 0) {
+      formData.append('parentIds', category.parentIds.join(','));
+    }
+    if (category.isActive !== undefined) {
+      formData.append('isActive', String(category.isActive));
+    }
+    if (category.imageFile) {
+      formData.append('imageFile', category.imageFile);
+    }
+
     const data = await httpClient.post<ApiCategory>(
       ENDPOINTS.CATEGORIES.BASE,
-      category,
+      formData,
       true,
     );
     return mapApiCategory(data);

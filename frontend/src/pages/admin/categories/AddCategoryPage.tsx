@@ -1,4 +1,11 @@
-import { useState, useMemo, useRef, useEffect, type FormEvent } from 'react';
+import {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  type FormEvent,
+  type ChangeEvent,
+} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, Sparkles, Layers3 } from 'lucide-react';
 import { PageHeader } from '../../../shared/ui/PageHeader';
@@ -46,6 +53,12 @@ interface SubmitResult {
   msg: string;
 }
 
+function revokeObjectUrl(url: string): void {
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function buildParentChain(
   category: Category,
   byId: Map<string, Category>,
@@ -81,6 +94,9 @@ export default function AddCategoryPage() {
   // ── Form State ──
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [parentId, setParentId] = useState<string>(preselectedParent);
   const [isActive, setIsActive] = useState(true);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
@@ -100,6 +116,12 @@ export default function AddCategoryPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      revokeObjectUrl(imagePreview);
+    };
+  }, [imagePreview]);
 
   const selectedParent = useMemo(
     () => (parentId ? (categoriesById.get(parentId) ?? null) : null),
@@ -131,6 +153,19 @@ export default function AddCategoryPage() {
     return selectedParent.level + 1;
   }, [selectedParent]);
 
+  const isSubCategory = calculatedLevel > 0;
+
+  useEffect(() => {
+    if (isSubCategory) return;
+
+    if (imageFile) setImageFile(null);
+    if (imageUrl) setImageUrl('');
+    if (imagePreview) {
+      revokeObjectUrl(imagePreview);
+      setImagePreview('');
+    }
+  }, [isSubCategory, imageFile, imageUrl, imagePreview]);
+
   const selectedParentChain = useMemo(() => {
     if (!selectedParent) return [];
     return buildParentChain(selectedParent, categoriesById);
@@ -149,17 +184,46 @@ export default function AddCategoryPage() {
       .sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar));
   }, [categories]);
 
+  const handleImageFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+
+    if (imagePreview) {
+      revokeObjectUrl(imagePreview);
+      setImagePreview('');
+    }
+
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+
+    setImageFile(file);
+    setImageUrl('');
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   // ═════ FORM SUBMIT ═════
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitResult(null);
+
+    if (isSubCategory && !imageFile && !imageUrl.trim()) {
+      setSubmitResult({
+        ok: false,
+        msg: 'صورة التصنيف الفرعي مطلوبة لعرضها بشكل دائري في صفحة التصنيفات.',
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       await categoriesService.create({
         name: name.trim(),
         description: description.trim() || undefined,
+        image: imageUrl.trim() || undefined,
+        imageFile: imageFile ?? undefined,
         parentIds: parentId ? [parentId] : undefined,
         isActive,
       });
@@ -171,6 +235,12 @@ export default function AddCategoryPage() {
       // Reset form
       setName('');
       setDescription('');
+      setImageUrl('');
+      setImageFile(null);
+      if (imagePreview) {
+        revokeObjectUrl(imagePreview);
+        setImagePreview('');
+      }
       setIsActive(true);
     } catch (err) {
       const message =
@@ -227,6 +297,61 @@ export default function AddCategoryPage() {
                   rows={3}
                 />
               </div>
+
+              {isSubCategory && (
+                <div className={formStyles.inputGroup}>
+                  <label className={formStyles.label} htmlFor="cat-image-file">
+                    صورة التصنيف الفرعي <span className={formStyles.required}>*</span>
+                  </label>
+
+                  <input
+                    id="cat-image-file"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className={formStyles.input}
+                    onChange={handleImageFileChange}
+                  />
+
+                  <div className={styles.imageOrDivider}>أو</div>
+
+                  <input
+                    id="cat-image-url"
+                    type="url"
+                    className={formStyles.input}
+                    placeholder="رابط صورة مباشر (اختياري بدل الملف)"
+                    value={imageUrl}
+                    onChange={(e) => {
+                      setImageUrl(e.target.value);
+                      if (e.target.value.trim() && imageFile) {
+                        setImageFile(null);
+                        if (imagePreview) {
+                          revokeObjectUrl(imagePreview);
+                          setImagePreview('');
+                        }
+                      }
+                    }}
+                  />
+
+                  {(imagePreview || imageUrl.trim()) && (
+                    <div className={styles.imagePreviewWrap}>
+                      <div className={styles.imagePreviewCircle}>
+                        <img
+                          src={imagePreview || imageUrl.trim()}
+                          alt="معاينة صورة التصنيف"
+                          className={styles.imagePreview}
+                        />
+                      </div>
+                      <span className={styles.imagePreviewLabel}>
+                        معاينة شكل بطاقة التصنيف الفرعي
+                      </span>
+                    </div>
+                  )}
+
+                  <small className={styles.helperText}>
+                    تظهر هذه الصورة بشكل دائري في عرض التصنيفات الفرعية بالموقع.
+                  </small>
+                </div>
+              )}
             </FormCard>
 
             {/* Hierarchy Card */}
@@ -363,6 +488,12 @@ export default function AddCategoryPage() {
                   <span>المستوى</span>
                   <strong>{calculatedLevel + 1}</strong>
                 </div>
+                {isSubCategory && (
+                  <div className={formStyles.summaryItem}>
+                    <span>صورة الفرعي</span>
+                    <strong>{imageFile || imageUrl.trim() ? 'مضافة' : 'غير مضافة'}</strong>
+                  </div>
+                )}
                 <div className={formStyles.summaryItem}>
                   <span>المسار</span>
                   <strong>{hierarchyPreview}</strong>
