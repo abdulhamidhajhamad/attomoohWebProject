@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShoppingCart, MessageCircle, Minus, Plus, ChevronLeft } from 'lucide-react';
+import { ShoppingCart, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useProduct, useProducts } from '../../shared/hooks/useProducts';
 import { useCategories } from '../../shared/hooks/useCategories';
 import { filterProductsByCategory, getCategoryById } from '../../entities/data';
@@ -23,7 +23,6 @@ export default function ProductDetailPage() {
   const { currentLang, isRTL } = useLanguageDirection();
   const lang = currentLang as 'ar' | 'en';
   const addItem = useCartStore((s) => s.addItem);
-  const [quantity, setQuantity] = useState(1);
   const [imgError, setImgError] = useState(false);
 
   // Fetch product from API (productSlug is the _id from backend)
@@ -55,10 +54,8 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = useCallback(() => {
     if (!product) return;
-    for (let i = 0; i < quantity; i++) {
-      addItem(product);
-    }
-  }, [addItem, product, quantity]);
+    addItem(product);
+  }, [addItem, product]);
 
   const { requestWhatsApp } = useBranchSelector();
 
@@ -155,25 +152,6 @@ export default function ProductDetailPage() {
                 <div className={styles.divider} />
               </>
             )}
-
-            {/* Quantity & Actions */}
-            <div className={styles.quantityControl}>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-              >
-                <Minus size={18} />
-              </button>
-              <span className={styles.qtyValue}>{quantity}</span>
-              <button
-                className={styles.qtyBtn}
-                onClick={() => setQuantity((q) => q + 1)}
-                aria-label="Increase quantity"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
 
             <div className={styles.actions}>
               <Button
