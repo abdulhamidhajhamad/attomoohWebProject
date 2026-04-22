@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../shared/ui/Button/Button';
 import { useBranchSelector } from '../../shared/ui/BranchSelector';
 import { useLanguageDirection } from '../../shared/hooks/useLanguageDirection';
@@ -54,10 +53,6 @@ export const HeroSlider = memo(function HeroSlider() {
 
   const nextSlide = useCallback(() => {
     goToSlide((currentSlide + 1) % slides.length);
-  }, [currentSlide, slides.length, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide((currentSlide - 1 + slides.length) % slides.length);
   }, [currentSlide, slides.length, goToSlide]);
 
   // Auto-slide
@@ -115,26 +110,6 @@ export const HeroSlider = memo(function HeroSlider() {
           </div>
         ))}
       </div>
-
-      {/* Navigation Arrows (only when multiple slides) */}
-      {slides.length > 1 && (
-        <>
-          <button
-            className={`${styles.arrow} ${styles.arrowPrev}`}
-            onClick={prevSlide}
-            aria-label="Previous slide"
-          >
-            <ChevronLeft size={28} />
-          </button>
-          <button
-            className={`${styles.arrow} ${styles.arrowNext}`}
-            onClick={nextSlide}
-            aria-label="Next slide"
-          >
-            <ChevronRight size={28} />
-          </button>
-        </>
-      )}
 
       {/* Dots indicator (only when multiple slides) */}
       {slides.length > 1 && (

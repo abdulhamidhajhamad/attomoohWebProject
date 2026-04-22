@@ -53,9 +53,46 @@ export class MachineReceptionService {
 
   async findAll(
     status?: string,
-    options: { excludeAssigned?: boolean } = {},
+    options: { excludeAssigned?: boolean; includeExternalPending?: boolean } = {},
   ): Promise<MachineReceptionDocument[]> {
-    const rows = status ? await this.repo.findByStatus(status) : await this.repo.findAll();
+    let rows = status ? await this.repo.findByStatus(status) : await this.repo.findAll();
+
+    if (status === ReceptionStatus.READY) {
+      const readyTaskReceptionIds = await this.getReadyForDeliveryReceptionIds();
+      const candidateReceptionIds = new Set<string>(readyTaskReceptionIds);
+
+      if (options.includeExternalPending) {
+        const externalTaskReceptionIds = await this.getExternalTechnicianReceptionIds();
+        for (const externalId of externalTaskReceptionIds) {
+          candidateReceptionIds.add(externalId);
+        }
+      }
+
+      if (candidateReceptionIds.size > 0) {
+        const allRows = await this.repo.findAll();
+        const merged = new Map<string, MachineReceptionDocument>();
+
+        for (const row of rows) {
+          if (row.status !== ReceptionStatus.DELIVERED) {
+            merged.set(String(row._id), row);
+          }
+        }
+
+        for (const row of allRows) {
+          const receptionId = String(row._id);
+          if (row.status === ReceptionStatus.DELIVERED) continue;
+          if (candidateReceptionIds.has(receptionId)) {
+            merged.set(receptionId, row);
+          }
+        }
+
+        rows = Array.from(merged.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      } else {
+        rows = rows.filter((row) => row.status !== ReceptionStatus.DELIVERED);
+      }
+    }
 
     if (!options.excludeAssigned) return rows;
 
@@ -159,6 +196,49 @@ export class MachineReceptionService {
       this.productionModel.distinct('machineReception', {
         machineReception: { $exists: true, $ne: null },
       }),
+    ]);
+
+    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    return new Set(allIds);
+  }
+
+  private async getReadyForDeliveryReceptionIds(): Promise<Set<string>> {
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
+      this.inspectionModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+        $or: [{ readyForDelivery: true }, { status: 'ready' }],
+      }),
+      this.maintenanceModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+        $or: [{ readyForDelivery: true }, { status: 'ready' }],
+      }),
+      this.installationModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+        status: 'ready',
+      }),
+      this.productionModel.distinct('machineReception', {
+        machineReception: { $exists: true, $ne: null },
+        $or: [{ readyForDelivery: true }, { status: 'ready' }],
+      }),
+    ]);
+
+    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    return new Set(allIds);
+  }
+
+  private async getExternalTechnicianReceptionIds(): Promise<Set<string>> {
+    const externalTaskCriteria = {
+      machineReception: { $exists: true, $ne: null },
+      technicianName: { $exists: true, $nin: ['', null] },
+      $or: [{ technician: { $exists: false } }, { technician: null }],
+      status: { $ne: 'rejected' },
+    };
+
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
+      this.inspectionModel.distinct('machineReception', externalTaskCriteria),
+      this.maintenanceModel.distinct('machineReception', externalTaskCriteria),
+      this.installationModel.distinct('machineReception', externalTaskCriteria),
+      this.productionModel.distinct('machineReception', externalTaskCriteria),
     ]);
 
     const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));

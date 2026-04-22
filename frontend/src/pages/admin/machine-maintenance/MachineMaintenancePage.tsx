@@ -31,6 +31,24 @@ interface MaintenanceForm {
   scheduledEndTime: string;
 }
 
+const getTodayDateValue = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const toDateInputValue = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const nowParts = () => {
   const now = new Date();
   const date = now.toISOString().split('T')[0] ?? '';
@@ -155,6 +173,7 @@ const getTechnicianName = (item: ApiMachineMaint) => {
 export default function MachineMaintenancePage() {
   const { items, loading, error, fetchAll, createItem, updateItem, deleteItem, clearError } = useMachineMaintenanceStore();
   const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState(getTodayDateValue());
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState<MaintenanceForm>(createEmptyForm());
   const [editId, setEditId] = useState<string | null>(null);
@@ -219,6 +238,10 @@ export default function MachineMaintenancePage() {
   const activeForm = showAdd ? addForm : editId ? editForm : null;
   const setActiveForm = showAdd ? setAddForm : setEditForm;
   const isEditing = !!editId;
+  const filteredItems = items.filter((item) => {
+    if (!selectedDate) return true;
+    return toDateInputValue(item.date) === selectedDate;
+  });
 
   const handleReceptionChange = useCallback(
     (value: ReceptionValue) => {
@@ -243,6 +266,14 @@ export default function MachineMaintenancePage() {
         <div><h1 className={styles.pageTitle}><Wrench size={24} />إدارة صيانة الآلات</h1><p className={styles.pageSubtitle}>صيانة الآلات وتتبع حالتها</p></div>
         <div className={styles.headerActions}>
           <div className={styles.searchBox}><Search size={18} color="#9ca3af" /><input placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+          <div className={styles.searchBox}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              aria-label="فلتر حسب اليوم"
+            />
+          </div>
           <button className={styles.btnPrimary} onClick={() => { clearError(); setEditId(null); setAddForm(createEmptyForm()); setShowAdd(!showAdd); }}><Plus size={18} />جديد</button>
         </div>
       </div>
@@ -353,7 +384,7 @@ export default function MachineMaintenancePage() {
         <table className={styles.table}>
           <thead><tr><th>رمز الآلة</th><th>اسم الآلة</th><th>التفاصيل</th><th>الفني</th><th>التاريخ</th><th>الساعة</th><th>الوضع</th><th>جاهزة للتسليم</th><th>المدة</th><th>إجراءات</th></tr></thead>
           <tbody>
-            {items.map(r => (
+            {filteredItems.map(r => (
               <tr key={r._id}>
                 <td><span className={styles.customId}>{getMachineCode(r)}</span></td>
                 <td style={{ fontWeight: 600 }}>{r.machineName || '—'}</td>
@@ -377,7 +408,7 @@ export default function MachineMaintenancePage() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={10}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
+            {filteredItems.length === 0 && <tr><td colSpan={10}><div className={styles.emptyState}><FileText size={40} /><p>لا يوجد بيانات</p></div></td></tr>}
           </tbody>
         </table>
       </div>

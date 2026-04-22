@@ -35,6 +35,24 @@ interface ReceptionForm {
   receivedBy: EmployeeValue;
 }
 
+const getTodayDateValue = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const toDateInputValue = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const EMPTY_FORM: ReceptionForm = {
   machine: { ...EMPTY_MACHINE },
   machineDetails: '',
@@ -140,6 +158,7 @@ const getReceivedByName = (r: ApiMachineReception) => {
 export default function MachineReceptionPage() {
   const { items, loading, error, fetchAll, createItem, updateItem, deleteItem, clearError } = useMachineReceptionStore();
   const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState(getTodayDateValue());
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState<ReceptionForm>({ ...EMPTY_FORM });
   const [editId, setEditId] = useState<string | null>(null);
@@ -199,6 +218,10 @@ export default function MachineReceptionPage() {
   const activeForm = showAdd ? addForm : editId ? editForm : null;
   const setActiveForm = showAdd ? setAddForm : setEditForm;
   const isEditing = !!editId;
+  const filteredItems = items.filter((item) => {
+    if (!selectedDate) return true;
+    return toDateInputValue(item.receptionDate) === selectedDate;
+  });
 
   return (
     <div className={styles.page}>
@@ -211,6 +234,14 @@ export default function MachineReceptionPage() {
           <div className={styles.searchBox}>
             <Search size={18} color="#9ca3af" />
             <input placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className={styles.searchBox}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              aria-label="فلتر حسب اليوم"
+            />
           </div>
           <button className={styles.btnPrimary} onClick={() => { clearError(); setEditId(null); setAddForm({ ...EMPTY_FORM }); setShowAdd(!showAdd); }}>
             <Plus size={18} />استلام جديد
@@ -389,7 +420,7 @@ export default function MachineReceptionPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map(r => (
+            {filteredItems.map(r => (
               <tr key={r._id}>
                 <td><span className={styles.customId}>{r.customId}</span></td>
                 <td style={{ fontWeight: 600 }}>{getMachineDisplay(r)}</td>
@@ -417,7 +448,7 @@ export default function MachineReceptionPage() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && (
+            {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={8}>
                   <div className={styles.emptyState}>

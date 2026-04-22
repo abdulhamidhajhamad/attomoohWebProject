@@ -21,9 +21,14 @@ export class MachineReceptionController {
   async findAll(
     @Query('status') status?: string,
     @Query('excludeAssigned') excludeAssigned?: string,
+    @Query('includeExternalPending') includeExternalPending?: string,
   ) {
     const shouldExcludeAssigned = excludeAssigned === 'true' || excludeAssigned === '1';
-    return this.svc.findAll(status, { excludeAssigned: shouldExcludeAssigned });
+    const shouldIncludeExternalPending = includeExternalPending === 'true' || includeExternalPending === '1';
+    return this.svc.findAll(status, {
+      excludeAssigned: shouldExcludeAssigned,
+      includeExternalPending: shouldIncludeExternalPending,
+    });
   }
 
   @Get(':id')

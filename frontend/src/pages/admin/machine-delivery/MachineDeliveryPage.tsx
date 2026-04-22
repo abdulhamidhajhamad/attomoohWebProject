@@ -15,16 +15,51 @@ interface DeliveryForm {
   deliveryDate: string;
   notes: string;
   deliveredBy: EmployeeValue;
+  technicianReport: string;
+  technicianFee: string;
+  companyFee: string;
 }
+
+const getTodayDateValue = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const toDateInputValue = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const EMPTY_FORM: DeliveryForm = {
   reception: { ...EMPTY_RECEPTION },
   deliveryDate: new Date().toISOString().split('T')[0],
   notes: '',
   deliveredBy: { ...EMPTY_EMPLOYEE },
+  technicianReport: '',
+  technicianFee: '',
+  companyFee: '',
 };
 
-const formToPayload = (form: DeliveryForm) => {
+const parseNonNegativeNumber = (value: string): number | null => {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
+const formToPayload = (
+  form: DeliveryForm,
+  options: { includeReportFields?: boolean } = {},
+) => {
   if (!form.reception.reception) return null;
 
   const reception = form.reception.reception;
@@ -35,7 +70,7 @@ const formToPayload = (form: DeliveryForm) => {
     ? reception.customer.name
     : reception.customerName || '';
 
-  return {
+  const payload = {
     machineReception: form.reception.id,
     machineName,
     machineDetails: reception.machineDetails || '',
@@ -43,6 +78,25 @@ const formToPayload = (form: DeliveryForm) => {
     deliveryDate: form.deliveryDate || new Date().toISOString().split('T')[0],
     notes: form.notes,
     deliveredBy: form.deliveredBy.mode === 'select' && form.deliveredBy.id ? form.deliveredBy.id : undefined,
+  };
+
+  if (!options.includeReportFields) {
+    return payload;
+  }
+
+  const technicianReport = form.technicianReport.trim();
+  const technicianFee = parseNonNegativeNumber(form.technicianFee);
+  const companyFee = parseNonNegativeNumber(form.companyFee);
+
+  if (!technicianReport || technicianFee === null || companyFee === null) {
+    return null;
+  }
+
+  return {
+    ...payload,
+    technicianReport,
+    technicianFee,
+    companyFee,
   };
 };
 
@@ -62,6 +116,9 @@ const deliveryToForm = (d: ApiMachineDelivery): DeliveryForm => {
     deliveryDate: d.deliveryDate ? d.deliveryDate.split('T')[0] : new Date().toISOString().split('T')[0],
     notes: d.notes || '',
     deliveredBy: deliveredByValue,
+    technicianReport: '',
+    technicianFee: '',
+    companyFee: '',
   };
 };
 
@@ -88,6 +145,7 @@ const getReceptionId = (d: ApiMachineDelivery) => {
 export default function MachineDeliveryPage() {
   const { items, loading, error, fetchAll, createItem, updateItem, deleteItem, clearError } = useMachineDeliveryStore();
   const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState(getTodayDateValue());
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState<DeliveryForm>({ ...EMPTY_FORM });
   const [editId, setEditId] = useState<string | null>(null);
@@ -101,8 +159,11 @@ export default function MachineDeliveryPage() {
   }, [fetchAll, search]);
 
   const handleAdd = useCallback(async () => {
-    const payload = formToPayload(addForm);
-    if (!payload) return;
+    const payload = formToPayload(addForm, { includeReportFields: true });
+    if (!payload) {
+      alert('قبل التسليم يجب إدخال تقرير الفني وأجرة الفني وأجرة الشركة بشكل صحيح.');
+      return;
+    }
     setSaving(true);
     try {
       await createItem(payload as unknown as Record<string, unknown>);
@@ -151,6 +212,10 @@ export default function MachineDeliveryPage() {
   const activeForm = showAdd ? addForm : editId ? editForm : null;
   const setActiveForm = showAdd ? setAddForm : setEditForm;
   const isEditing = !!editId;
+  const filteredItems = items.filter((item) => {
+    if (!selectedDate) return true;
+    return toDateInputValue(item.deliveryDate) === selectedDate;
+  });
 
   // Get machine and customer info from selected reception
   const selectedReception = activeForm?.reception.reception;
@@ -174,6 +239,14 @@ export default function MachineDeliveryPage() {
           <div className={styles.searchBox}>
             <Search size={18} color="#9ca3af" />
             <input placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className={styles.searchBox}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              aria-label="فلتر حسب اليوم"
+            />
           </div>
           <button className={styles.btnPrimary} onClick={() => { clearError(); setEditId(null); setAddForm({ ...EMPTY_FORM }); setShowAdd(!showAdd); }}>
             <Plus size={18} />تسليم جديد
@@ -286,6 +359,44 @@ export default function MachineDeliveryPage() {
                 onChange={e => setActiveForm({ ...activeForm, notes: e.target.value })}
               />
             </div>
+
+            {!isEditing && (
+              <>
+                <div className={`${styles.formField} ${styles.fullWidth}`}>
+                  <label className={styles.formLabel}>تقرير الفني *</label>
+                  <textarea
+                    className={styles.formTextarea}
+                    placeholder="أدخل تقرير الفني قبل التسليم"
+                    value={activeForm.technicianReport}
+                    onChange={e => setActiveForm({ ...activeForm, technicianReport: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>أجرة الفني *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={styles.formInput}
+                    value={activeForm.technicianFee}
+                    onChange={e => setActiveForm({ ...activeForm, technicianFee: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.formLabel}>أجرة الشركة *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={styles.formInput}
+                    value={activeForm.companyFee}
+                    onChange={e => setActiveForm({ ...activeForm, companyFee: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className={styles.formCardActions}>
             <button
@@ -316,7 +427,7 @@ export default function MachineDeliveryPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map(d => (
+            {filteredItems.map(d => (
               <tr key={d._id}>
                 <td><span className={styles.customId}>{getReceptionId(d)}</span></td>
                 <td style={{ fontWeight: 600 }}>{getMachineName(d)}</td>
@@ -339,7 +450,7 @@ export default function MachineDeliveryPage() {
                 </td>
               </tr>
             ))}
-            {items.length === 0 && (
+            {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7}>
                   <div className={styles.emptyState}>

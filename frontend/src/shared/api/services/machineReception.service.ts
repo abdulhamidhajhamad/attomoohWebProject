@@ -4,7 +4,12 @@ import type { ApiMachineReception } from '../types';
 
 export const machineReceptionService = {
   async getAll(
-    searchOrParams?: string | { search?: string; status?: string; excludeAssigned?: boolean },
+    searchOrParams?: string | {
+      search?: string;
+      status?: string;
+      excludeAssigned?: boolean;
+      includeExternalPending?: boolean;
+    },
   ): Promise<ApiMachineReception[]> {
     const query = new URLSearchParams();
 
@@ -14,6 +19,7 @@ export const machineReceptionService = {
       if (searchOrParams.search?.trim()) query.set('search', searchOrParams.search.trim());
       if (searchOrParams.status?.trim()) query.set('status', searchOrParams.status.trim());
       if (searchOrParams.excludeAssigned) query.set('excludeAssigned', 'true');
+      if (searchOrParams.includeExternalPending) query.set('includeExternalPending', 'true');
     }
 
     const qs = query.toString();

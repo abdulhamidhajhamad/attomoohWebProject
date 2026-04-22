@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsMongoId, IsNotEmpty, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsMongoId, IsNotEmpty, IsDateString, IsNumber, Min } from 'class-validator';
 
 export class CreateMachineDeliveryDto {
   @IsMongoId() @IsNotEmpty() machineReception: string;
@@ -8,4 +8,7 @@ export class CreateMachineDeliveryDto {
   @IsDateString() @IsOptional() deliveryDate?: string;
   @IsString() @IsOptional() notes?: string;
   @IsMongoId() @IsOptional() deliveredBy?: string;
+  @IsString() @IsOptional() technicianReport?: string;
+  @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
+  @IsNumber() @Min(0) @IsOptional() companyFee?: number;
 }

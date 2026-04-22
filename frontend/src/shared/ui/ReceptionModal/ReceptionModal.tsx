@@ -37,10 +37,17 @@ export function ReceptionModal({
       (async () => {
         try {
           const canQuerySingleStatus = statusFilter.length === 1;
+          const shouldIncludeExternalPending = canQuerySingleStatus && statusFilter[0] === 'ready';
           const data = canQuerySingleStatus
-            ? await machineReceptionService.getAll({ status: statusFilter[0] })
+            ? await machineReceptionService.getAll({
+              status: statusFilter[0],
+              includeExternalPending: shouldIncludeExternalPending,
+            })
             : await machineReceptionService.getAll();
-          const filtered = data.filter(r => statusFilter.includes(r.status));
+          const shouldKeepBackendCandidates = canQuerySingleStatus && statusFilter[0] === 'ready' && shouldIncludeExternalPending;
+          const filtered = shouldKeepBackendCandidates
+            ? data
+            : data.filter(r => statusFilter.includes(r.status));
           setReceptions(filtered);
         } catch (e) {
           setReceptions([]);
