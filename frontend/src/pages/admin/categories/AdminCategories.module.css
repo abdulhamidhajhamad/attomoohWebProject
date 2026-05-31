@@ -196,6 +196,25 @@
   flex-shrink: 0;
 }
 
+.editBtn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f9ff;
+  color: #0ea5e9;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.editBtn:hover {
+  background: #e0f2fe;
+}
+
 .addSubBtn {
   width: 30px;
   height: 30px;

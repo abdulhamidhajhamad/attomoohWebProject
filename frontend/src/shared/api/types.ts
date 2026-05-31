@@ -226,6 +226,7 @@ export interface UpdateCategoryRequest {
   description?: string;
   icon?: string;
   image?: string;
+  imageFile?: File;
   /** Send empty array to make root, or one/more parent IDs to assign parents. */
   parentIds?: string[];
   isActive?: boolean;

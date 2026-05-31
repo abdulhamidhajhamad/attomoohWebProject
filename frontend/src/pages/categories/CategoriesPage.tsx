@@ -163,6 +163,36 @@ function CategoryCircleImage({ src, srcSet, sizes, alt }: CategoryCircleImagePro
 const catName = (c: Category, lang: 'ar' | 'en') =>
   lang === 'ar' ? c.name.ar : c.name.en;
 
+const getDefaultDescription = (cat: Category) => {
+  const key = `${cat.icon ?? ''} ${cat.slug}`.toLowerCase();
+
+  if (key.includes('utensilscrossed') || key.includes('cooking')) {
+    return 'أفران، قلايات، شوايات، طناجر ومعدات الطهي الاحترافية';
+  }
+
+  if (key.includes('beef') || key.includes('meat')) {
+    return 'مفارم، شرائح اللحم، تعبئة السجق، وحدات تعتيق اللحوم';
+  }
+
+  if (key.includes('croissant') || key.includes('bakery')) {
+    return 'أفران الخبز، عجانات، ممدات العجين ومعدات الحلويات';
+  }
+
+  if (key.includes('coffee') || key.includes('bar')) {
+    return 'ماكينات القهوة، خلاطات، معدات التحضير والتقديم';
+  }
+
+  if (key.includes('thermometer') || key.includes('cold')) {
+    return 'ثلاجات، فريزرات، عربات تبريد ووحدات التخزين البارد';
+  }
+
+  if (key.includes('grid') || key.includes('steel')) {
+    return 'طاولات، رفوف، أحواض غسيل ومعدات الستانلس ستيل';
+  }
+
+  return '';
+};
+
 const childrenOf = (parentId: string, all: Category[]) =>
   all.filter((c) => c.parentIds.includes(parentId));
 
@@ -222,6 +252,8 @@ export default function CategoriesPage() {
     const isLeaf = !hasChildren(cat.id);
     const Icon = getLucideIcon(cat.icon) ?? DefaultCategoryIcon;
     const name = catName(cat, lang);
+    const description =
+      cat.description?.[lang] ?? (lang === 'ar' ? getDefaultDescription(cat) : '');
     const count = childrenOf(cat.id, categories).length;
     const imageSources = cat.image ? getCategoryImageSources(cat.image) : null;
 
@@ -257,24 +289,46 @@ export default function CategoriesPage() {
       );
     }
 
-    const rowInner = (
+    const cardInner = (
       <>
-        <span className={styles.rowIcon}>
-          <Icon size={24} />
+        <span className={styles.cardImageWrap}>
+          {imageSources ? (
+            <img
+              src={imageSources.src}
+              srcSet={imageSources.srcSet}
+              sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 50vw"
+              alt={name}
+              className={styles.cardImage}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className={styles.cardImageFallback}>
+              <Icon size={48} />
+            </span>
+          )}
+          <span className={styles.cardImageOverlay} aria-hidden="true" />
         </span>
-        <span className={styles.rowLabel}>{name}</span>
-        {!isLeaf && <span className={styles.badge}>{count}</span>}
-        <Chevron size={16} className={styles.rowChevron} />
+        <span className={styles.cardBody}>
+          <span className={styles.cardName}>{name}</span>
+          {description && <span className={styles.cardDescription}>{description}</span>}
+        </span>
+        {!isLeaf && count > 0 && (
+          <span className={styles.cardFooter}>
+            <span className={styles.badge}>{count}</span>
+            <Chevron size={14} className={styles.cardChevron} />
+          </span>
+        )}
       </>
     );
 
     return isLeaf ? (
-      <Link key={cat.id} to={`/categories/${cat.id}`} className={styles.row}>
-        {rowInner}
+      <Link key={cat.id} to={`/categories/${cat.id}`} className={styles.card}>
+        {cardInner}
       </Link>
     ) : (
-      <button key={cat.id} className={styles.row} onClick={() => drillInto(cat)}>
-        {rowInner}
+      <button key={cat.id} className={styles.card} onClick={() => drillInto(cat)}>
+        {cardInner}
       </button>
     );
   };
@@ -315,7 +369,7 @@ export default function CategoriesPage() {
         ) : error ? (
           <p className={styles.error}>{error}</p>
         ) : currentItems.length > 0 ? (
-          <div className={isSubcategoryView ? styles.circleGrid : styles.list}>
+          <div className={isSubcategoryView ? styles.circleGrid : styles.cardGrid}>
             {currentItems.map(renderCategoryItem)}
           </div>
         ) : (

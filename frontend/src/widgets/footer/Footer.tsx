@@ -55,7 +55,7 @@ export const Footer = memo(function Footer() {
             <div className={styles.socialLinks}>
               {/* TODO: ضع رابط صفحة الفيسبوك هنا بدل # */}
               <a
-                href="#"
+                href="https://www.facebook.com/attomooh"
                 className={styles.socialIcon}
                 target="_blank"
                 rel="noopener noreferrer"

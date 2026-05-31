@@ -97,6 +97,30 @@ export const categoriesService = {
     id: string,
     category: UpdateCategoryRequest,
   ): Promise<Category> {
+    // If imageFile is provided, send as FormData
+    if (category.imageFile) {
+      const formData = new FormData();
+      if (category.name) formData.append('name', category.name);
+      if (category.description) formData.append('description', category.description);
+      if (category.icon) formData.append('icon', category.icon);
+      if (category.image) formData.append('image', category.image);
+      if (category.parentIds) {
+        formData.append('parentIds', category.parentIds.join(','));
+      }
+      if (category.isActive !== undefined) {
+        formData.append('isActive', String(category.isActive));
+      }
+      formData.append('imageFile', category.imageFile);
+
+      const data = await httpClient.put<ApiCategory>(
+        ENDPOINTS.CATEGORIES.BY_ID(id),
+        formData,
+        true,
+      );
+      return mapApiCategory(data);
+    }
+
+    // Otherwise, send as JSON
     const data = await httpClient.put<ApiCategory>(
       ENDPOINTS.CATEGORIES.BY_ID(id),
       category,

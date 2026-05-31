@@ -20,6 +20,7 @@ const AdminProductsPage = lazy(() => import('../pages/admin/products/AdminProduc
 const AddProductPage = lazy(() => import('../pages/admin/products/AddProductPage'));
 const AdminCategoriesPage = lazy(() => import('../pages/admin/categories/AdminCategoriesPage'));
 const AddCategoryPage = lazy(() => import('../pages/admin/categories/AddCategoryPage'));
+const EditCategoryPage = lazy(() => import('../pages/admin/categories/EditCategoryPage'));
 const AdminSliderPage = lazy(() => import('../pages/admin/slider/AdminSliderPage'));
 const AdminSettingsPage = lazy(() => import('../pages/admin/settings/AdminSettingsPage'));
 const ReportsPage = lazy(() => import('../pages/admin/reports/ReportsPage'));
@@ -96,6 +97,7 @@ export const adminRoutes: RouteObject[] = [
       { path: 'products/add', element: <AddProductPage /> },
       { path: 'categories', element: <AdminCategoriesPage /> },
       { path: 'categories/add', element: <AddCategoryPage /> },
+      { path: 'categories/:categoryId/edit', element: <EditCategoryPage /> },
       { path: 'slider', element: <AdminSliderPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
       { path: 'reports', element: <Navigate to="/admin/maintenance/reports" replace /> },

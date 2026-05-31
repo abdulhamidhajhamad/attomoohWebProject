@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   FolderTree,
+  Edit2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -92,6 +93,14 @@ function TreeRow({
 
         {/* Actions */}
         <div className={styles.rowActions}>
+          {/* Edit button */}
+          <Link
+            to={`/admin/categories/${category.id}/edit`}
+            className={styles.editBtn}
+            title="تعديل التصنيف"
+          >
+            <Edit2 size={14} />
+          </Link>
           {/* Only show "Add sub" if level < 2 */}
           {category.level < 2 && (
             <Link
