@@ -132,6 +132,7 @@ export class CategoriesService {
   async update(
     id: Types.ObjectId,
     dto: UpdateCategoryDto,
+    imageFile?: UploadedImageFile,
   ): Promise<CategoryDocument> {
     const existing = await this.categoryRepository.findById(id);
     if (!existing) {
@@ -143,6 +144,23 @@ export class CategoriesService {
       const nameExists = await this.categoryRepository.existsByName(dto.name);
       if (nameExists) {
         throw new ConflictException(`Category "${dto.name}" already exists`);
+      }
+    }
+
+    let imageUrl = dto.image?.trim();
+    if (imageFile) {
+      try {
+        const uploadedImage = await this.cloudinaryService.uploadImage(
+          imageFile,
+          this.UPLOAD_FOLDER,
+        );
+        imageUrl = uploadedImage.secureUrl;
+      } catch {
+        // Fallback to inline data URL
+        imageUrl = this.toInlineDataUrl(imageFile);
+        this.logger.warn(
+          'Cloudinary upload failed for category image update; using inline image fallback.',
+        );
       }
     }
 
@@ -159,6 +177,7 @@ export class CategoriesService {
         level: newLevel,
       };
       delete (updateData as Record<string, unknown>)['parentIds'];
+      if (imageUrl !== undefined) updateData.image = imageUrl;
 
       // Auto-translate if name/description changed
       if (dto.name) updateData.name = await makeBilingual(dto.name);
@@ -174,6 +193,7 @@ export class CategoriesService {
     // Simple update (no parent change)
     const updateData: Record<string, unknown> = { ...dto };
     delete (updateData as Record<string, unknown>)['parentIds'];
+    if (imageUrl !== undefined) updateData.image = imageUrl;
 
     // Auto-translate if name/description changed
     if (dto.name) updateData.name = await makeBilingual(dto.name);

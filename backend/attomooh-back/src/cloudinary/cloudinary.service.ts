@@ -25,6 +25,8 @@ export interface UploadedImageFile {
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  private readonly MAX_RETRIES = 3;
+  private readonly BASE_DELAY_MS = 1000;
 
   constructor(private readonly configService: ConfigService) {
     cloudinary.config({
@@ -32,6 +34,14 @@ export class CloudinaryService {
       api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
       api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
     });
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private calculateDelay(attempt: number): number {
+    return this.BASE_DELAY_MS * Math.pow(2, attempt);
   }
 
   async uploadImage(
@@ -43,6 +53,31 @@ export class CloudinaryService {
       throw new BadRequestException('File size exceeds 5MB limit');
     }
 
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        return await this.uploadOnce(file, folder);
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < this.MAX_RETRIES) {
+          const delay = this.calculateDelay(attempt);
+          this.logger.warn(
+            `Cloudinary upload failed (attempt ${attempt + 1}/${this.MAX_RETRIES + 1}), retrying in ${delay}ms: ${lastError.message}`,
+          );
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    this.logger.error('Cloudinary upload failed after all retries', lastError);
+    throw new BadRequestException('Image upload failed after retries');
+  }
+
+  private uploadOnce(
+    file: UploadedImageFile,
+    folder: string,
+  ): Promise<CloudinaryUploadResult> {
     return new Promise((resolve, reject) => {
       cloudinary.uploader
         .upload_stream(
@@ -56,8 +91,7 @@ export class CloudinaryService {
             result: UploadApiResponse | undefined,
           ) => {
             if (error || !result) {
-              this.logger.error('Cloudinary upload failed', error);
-              reject(new BadRequestException('Image upload failed'));
+              reject(new BadRequestException(error?.message ?? 'Image upload failed'));
               return;
             }
 

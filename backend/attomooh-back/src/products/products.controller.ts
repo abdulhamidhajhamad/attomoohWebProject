@@ -14,9 +14,12 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
+import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
@@ -45,7 +48,7 @@ export class ProductsController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
           new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp|jpg)$/ }),
         ],
         fileIsRequired: true,
@@ -53,7 +56,8 @@ export class ProductsController {
     )
     files: Express.Multer.File[],
   ) {
-    return this.productsService.create(createProductDto, files);
+    const result = await this.productsService.create(createProductDto, files);
+    return result;
   }
 
   /**
@@ -61,8 +65,11 @@ export class ProductsController {
    * Get all products — Public
    */
   @Get()
-  async findAll() {
-    return this.productsService.findAll();
+  @HttpCode(HttpStatus.OK)
+  async findAll(@Req() req: Request, @Res() res: Response) {
+    const result = await this.productsService.findAll();
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return result;
   }
 
   /**
@@ -70,8 +77,10 @@ export class ProductsController {
    * Get a single product by ID — Public
    */
   @Get(':id')
-  async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
-    return this.productsService.findById(id);
+  async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId, @Res() res: Response) {
+    const result = await this.productsService.findById(id);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return result;
   }
 
   /**
@@ -81,8 +90,11 @@ export class ProductsController {
   @Get('category/:categoryId')
   async findByCategory(
     @Param('categoryId', ParseObjectIdPipe) categoryId: Types.ObjectId,
+    @Res() res: Response,
   ) {
-    return this.productsService.findByCategory(categoryId);
+    const result = await this.productsService.findByCategory(categoryId);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return result;
   }
 
   /**

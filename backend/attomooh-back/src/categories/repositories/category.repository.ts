@@ -99,7 +99,7 @@ export class CategoryRepository {
     updateDto: UpdateCategoryDto,
   ): Promise<CategoryDocument | null> {
     return this.categoryModel
-      .findByIdAndUpdate(id, { $set: updateDto }, { new: true })
+      .findByIdAndUpdate(id, { $set: updateDto }, { returnDocument: 'after' })
       .exec();
   }
 

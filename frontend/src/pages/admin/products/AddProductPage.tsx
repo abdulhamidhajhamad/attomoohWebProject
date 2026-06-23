@@ -187,6 +187,7 @@ export default function AddProductPage() {
         categories: categoryIds,
         specifications: Object.keys(specificationsObj).length > 0 ? specificationsObj : undefined,
         images: validFiles,
+        isActive,
       });
 
       // 4. Invalidate cache

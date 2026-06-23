@@ -81,7 +81,7 @@ export class ServiceOrderRepository {
     data: Partial<ServiceOrder>,
   ): Promise<ServiceOrderDocument | null> {
     return this.orderModel
-      .findByIdAndUpdate(id, data, { new: true })
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate(POPULATE)
       .exec();
   }

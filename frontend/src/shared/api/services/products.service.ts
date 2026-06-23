@@ -20,23 +20,29 @@ import type { Product } from '../../types';
 
 export const productsService = {
   /** GET /products — Public */
-  async getAll(): Promise<Product[]> {
-    const data = await httpClient.get<ApiProduct[]>(ENDPOINTS.PRODUCTS.BASE);
+  async getAll(signal?: AbortSignal): Promise<Product[]> {
+    const data = await httpClient.get<ApiProduct[]>(ENDPOINTS.PRODUCTS.BASE, false, undefined, signal);
     return mapApiProducts(data);
   },
 
   /** GET /products/:id — Public */
-  async getById(id: string): Promise<Product> {
+  async getById(id: string, signal?: AbortSignal): Promise<Product> {
     const data = await httpClient.get<ApiProduct>(
       ENDPOINTS.PRODUCTS.BY_ID(id),
+      false,
+      undefined,
+      signal,
     );
     return mapApiProduct(data);
   },
 
   /** GET /products/category/:categoryId — Public */
-  async getByCategory(categoryId: string): Promise<Product[]> {
+  async getByCategory(categoryId: string, signal?: AbortSignal): Promise<Product[]> {
     const data = await httpClient.get<ApiProduct[]>(
       ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId),
+      false,
+      undefined,
+      signal,
     );
     return mapApiProducts(data);
   },
@@ -45,13 +51,16 @@ export const productsService = {
    * POST /products — Admin only
    * Sends files via FormData — backend uploads to Cloudinary
    */
-  async create(payload: CreateProductPayload): Promise<Product> {
+  async create(payload: CreateProductPayload, signal?: AbortSignal): Promise<Product> {
     const fd = new FormData();
     fd.append('name', payload.name);
     fd.append('brand', payload.brand);
     fd.append('model', payload.model);
     fd.append('price', String(payload.price));
     fd.append('categories', payload.categories.join(','));
+    if (payload.isActive !== undefined) {
+      fd.append('isActive', String(payload.isActive));
+    }
 
     if (payload.specifications) {
       fd.append('specifications', JSON.stringify(payload.specifications));
@@ -65,6 +74,8 @@ export const productsService = {
       ENDPOINTS.PRODUCTS.BASE,
       fd,
       true,
+      undefined,
+      signal,
     );
     return mapApiProduct(data);
   },
@@ -73,7 +84,7 @@ export const productsService = {
    * PATCH /products/:id — Admin only
    * Sends files via FormData — backend uploads to Cloudinary
    */
-  async update(id: string, payload: UpdateProductPayload): Promise<Product> {
+  async update(id: string, payload: UpdateProductPayload, signal?: AbortSignal): Promise<Product> {
     const fd = new FormData();
 
     if (payload.name) fd.append('name', payload.name);
@@ -96,15 +107,19 @@ export const productsService = {
       ENDPOINTS.PRODUCTS.BY_ID(id),
       fd,
       true,
+      undefined,
+      signal,
     );
     return mapApiProduct(data);
   },
 
   /** DELETE /products/:id — Admin only */
-  async delete(id: string): Promise<void> {
+  async delete(id: string, signal?: AbortSignal): Promise<void> {
     await httpClient.delete<{ message: string }>(
       ENDPOINTS.PRODUCTS.BY_ID(id),
       true,
+      undefined,
+      signal,
     );
   },
 } as const;

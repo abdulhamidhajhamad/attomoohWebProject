@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Package, Eye } from 'lucide-react';
 import { useProducts, invalidateProductsCache } from '../../../shared/hooks/useProducts';
 import { useCategories } from '../../../shared/hooks/useCategories';
 import { productsService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 import styles from './AdminProducts.module.css';
 
 export default function AdminProductsPage() {
@@ -15,13 +16,17 @@ export default function AdminProductsPage() {
   const { products, loading, error, refetch } = useProducts();
   const { categories } = useCategories();
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch =
-      p.name.ar.includes(searchQuery) ||
-      p.name.en.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || p.categoryIds.includes(selectedCategory);
-    return matchesSearch && matchesCategory;
-  });
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesSearch =
+        p.name.ar.includes(debouncedSearchQuery) ||
+        p.name.en.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || p.categoryIds.includes(selectedCategory);
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, debouncedSearchQuery, selectedCategory]);
 
   const handleDelete = useCallback(async (productId: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;

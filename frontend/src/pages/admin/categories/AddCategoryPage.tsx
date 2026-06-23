@@ -158,19 +158,6 @@ export default function AddCategoryPage() {
     return selectedParentLevel + 1;
   }, [selectedParentLevel]);
 
-  const isSubCategory = calculatedLevel > 0;
-
-  useEffect(() => {
-    if (isSubCategory) return;
-
-    if (imageFile) setImageFile(null);
-    if (imageUrl) setImageUrl('');
-    if (imagePreview) {
-      revokeObjectUrl(imagePreview);
-      setImagePreview('');
-    }
-  }, [isSubCategory, imageFile, imageUrl, imagePreview]);
-
   const selectedParentChains = useMemo(
     () => selectedParents.map((parent) => buildParentChain(parent, categoriesById)),
     [selectedParents, categoriesById],
@@ -252,10 +239,10 @@ export default function AddCategoryPage() {
     e.preventDefault();
     setSubmitResult(null);
 
-    if (isSubCategory && !imageFile && !imageUrl.trim()) {
+    if (!imageFile && !imageUrl.trim()) {
       setSubmitResult({
         ok: false,
-        msg: 'صورة التصنيف الفرعي مطلوبة لعرضها بشكل دائري في صفحة التصنيفات.',
+        msg: 'صورة التصنيف مطلوبة.',
       });
       return;
     }
@@ -342,60 +329,58 @@ export default function AddCategoryPage() {
                 />
               </div>
 
-              {isSubCategory && (
-                <div className={formStyles.inputGroup}>
-                  <label className={formStyles.label} htmlFor="cat-image-file">
-                    صورة التصنيف الفرعي <span className={formStyles.required}>*</span>
-                  </label>
+              <div className={formStyles.inputGroup}>
+                <label className={formStyles.label} htmlFor="cat-image-file">
+                  صورة التصنيف <span className={formStyles.required}>*</span>
+                </label>
 
-                  <input
-                    id="cat-image-file"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className={formStyles.input}
-                    onChange={handleImageFileChange}
-                  />
+                <input
+                  id="cat-image-file"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className={formStyles.input}
+                  onChange={handleImageFileChange}
+                />
 
-                  <div className={styles.imageOrDivider}>أو</div>
+                <div className={styles.imageOrDivider}>أو</div>
 
-                  <input
-                    id="cat-image-url"
-                    type="url"
-                    className={formStyles.input}
-                    placeholder="رابط صورة مباشر (اختياري بدل الملف)"
-                    value={imageUrl}
-                    onChange={(e) => {
-                      setImageUrl(e.target.value);
-                      if (e.target.value.trim() && imageFile) {
-                        setImageFile(null);
-                        if (imagePreview) {
-                          revokeObjectUrl(imagePreview);
-                          setImagePreview('');
-                        }
+                <input
+                  id="cat-image-url"
+                  type="url"
+                  className={formStyles.input}
+                  placeholder="رابط صورة مباشر (اختياري بدل الملف)"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    if (e.target.value.trim() && imageFile) {
+                      setImageFile(null);
+                      if (imagePreview) {
+                        revokeObjectUrl(imagePreview);
+                        setImagePreview('');
                       }
-                    }}
-                  />
+                    }
+                  }}
+                />
 
-                  {(imagePreview || imageUrl.trim()) && (
-                    <div className={styles.imagePreviewWrap}>
-                      <div className={styles.imagePreviewCircle}>
-                        <img
-                          src={imagePreview || imageUrl.trim()}
-                          alt="معاينة صورة التصنيف"
-                          className={styles.imagePreview}
-                        />
-                      </div>
-                      <span className={styles.imagePreviewLabel}>
-                        معاينة شكل بطاقة التصنيف الفرعي
-                      </span>
+                {(imagePreview || imageUrl.trim()) && (
+                  <div className={styles.imagePreviewWrap}>
+                    <div className={styles.imagePreviewCircle}>
+                      <img
+                        src={imagePreview || imageUrl.trim()}
+                        alt="معاينة صورة التصنيف"
+                        className={styles.imagePreview}
+                      />
                     </div>
-                  )}
+                    <span className={styles.imagePreviewLabel}>
+                      معاينة شكل بطاقة التصنيف
+                    </span>
+                  </div>
+                )}
 
-                  <small className={styles.helperText}>
-                    تظهر هذه الصورة بشكل دائري في عرض التصنيفات الفرعية بالموقع.
-                  </small>
-                </div>
-              )}
+                <small className={styles.helperText}>
+                  تظهر هذه الصورة في عرض التصنيفات بالموقع.
+                </small>
+              </div>
             </FormCard>
 
             {/* Hierarchy Card */}
@@ -537,12 +522,10 @@ export default function AddCategoryPage() {
                   <span>المستوى</span>
                   <strong>{calculatedLevel + 1}</strong>
                 </div>
-                {isSubCategory && (
-                  <div className={formStyles.summaryItem}>
-                    <span>صورة الفرعي</span>
-                    <strong>{imageFile || imageUrl.trim() ? 'مضافة' : 'غير مضافة'}</strong>
-                  </div>
-                )}
+                <div className={formStyles.summaryItem}>
+                  <span>الصورة</span>
+                  <strong>{imageFile || imageUrl.trim() ? 'مضافة' : 'غير مضافة'}</strong>
+                </div>
                 <div className={formStyles.summaryItem}>
                   <span>المسار</span>
                   <strong>{hierarchyPreview}</strong>

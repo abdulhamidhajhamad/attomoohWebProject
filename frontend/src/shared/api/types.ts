@@ -241,6 +241,7 @@ export interface CreateProductPayload {
   categories: string[];
   specifications?: Record<string, string>;
   images: File[];
+  isActive?: boolean;
 }
 
 /** Form data for updating a product */

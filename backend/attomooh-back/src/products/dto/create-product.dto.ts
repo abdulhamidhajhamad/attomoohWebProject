@@ -54,4 +54,8 @@ export class CreateProductDto {
     return value;
   })
   specifications?: Record<string, unknown>;
+
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsOptional()
+  isActive?: boolean;
 }

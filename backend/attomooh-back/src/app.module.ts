@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
 
 // ── Global Modules ──
 import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
@@ -53,6 +54,17 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    // ── Cache (in-memory, TTL 60s) ──
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: () => ({
+        ttl: 60_000, // 60 seconds
+        max: 100, // max 100 items
+      }),
     }),
 
     // ── MongoDB Connection ──

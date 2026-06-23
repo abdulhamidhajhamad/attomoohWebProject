@@ -65,7 +65,7 @@ export class ProductsService {
       }),
     );
 
-    return this.productRepository.create({
+    const result = await this.productRepository.create({
       name: await makeBilingual(createProductDto.name),
       brand: createProductDto.brand.trim(),
       model: createProductDto.model,
@@ -73,11 +73,16 @@ export class ProductsService {
       categories: categoryIds,
       specifications: createProductDto.specifications || {},
       images,
+      isActive: createProductDto.isActive ?? true,
     });
+
+    return result;
   }
 
+  private readonly LIST_PROJECTION = 'name brand model price categories images isActive createdAt updatedAt';
+
   async findAll(): Promise<ProductDocument[]> {
-    return this.productRepository.findAll();
+    return this.productRepository.findAll(this.LIST_PROJECTION, { isActive: true });
   }
 
   async findById(id: Types.ObjectId): Promise<ProductDocument> {
@@ -93,7 +98,7 @@ export class ProductsService {
   async findByCategory(categoryId: Types.ObjectId): Promise<ProductDocument[]> {
     // ── Validate category exists ──
     await this.categoriesService.findById(categoryId);
-    return this.productRepository.findByCategory(categoryId);
+    return this.productRepository.findByCategory(categoryId, this.LIST_PROJECTION, { isActive: true });
   }
 
   async update(
@@ -113,6 +118,7 @@ export class ProductsService {
     if (updateProductDto.brand !== undefined) updateData.brand = updateProductDto.brand.trim();
     if (updateProductDto.model) updateData.model = updateProductDto.model;
     if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
+    if (updateProductDto.isActive !== undefined) updateData.isActive = updateProductDto.isActive;
 
     // ── Merge specifications (add new keys + update existing, keep untouched) ──
     if (updateProductDto.specifications) {

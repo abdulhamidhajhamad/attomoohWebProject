@@ -6,9 +6,38 @@
  * - يتعامل مع الأخطاء بشكل موحد
  * - يدعم timeout للطلبات
  * - يدعم FormData (multipart) و JSON
+ * - يدعم request deduplication للطلبات GET المتزامنة
  */
 
 import { API_CONFIG } from './config';
+
+/* ═══════════════════════════════════
+   Request Deduplication (for GET requests)
+   ═══════════════════════════════════ */
+
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+function getDedupeKey(endpoint: string, options: RequestInit, requiresAuth: boolean): string {
+  return `${options.method || 'GET'}:${endpoint}:${requiresAuth ? 'auth' : 'public'}`;
+}
+
+function withDeduplication<T>(
+  key: string,
+  factory: () => Promise<T>,
+  method: string,
+): Promise<T> {
+  if (method === 'GET') {
+    const existing = inFlightRequests.get(key) as Promise<T> | undefined;
+    if (existing) {
+      return existing;
+    }
+    const promise = factory();
+    inFlightRequests.set(key, promise);
+    promise.finally(() => inFlightRequests.delete(key));
+    return promise;
+  }
+  return factory();
+}
 
 /* ═══════════════════════════════════
    Custom Error Class
@@ -98,72 +127,94 @@ async function request<T>(
   options: RequestInit = {},
   requiresAuth = false,
   tokenKey?: string,
+  externalSignal?: AbortSignal,
 ): Promise<T> {
-  const url = `${API_CONFIG.baseUrl}${endpoint}`;
+  const method = options.method || 'GET';
+  const dedupeKey = getDedupeKey(endpoint, options, requiresAuth);
 
-  // ── Build headers ──
-  const headers: Record<string, string> = {};
+  return withDeduplication<T>(dedupeKey, async () => {
+    const url = `${API_CONFIG.baseUrl}${endpoint}`;
 
-  // Don't set Content-Type for FormData — browser sets it with boundary
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
+    // ── Build headers ──
+    const headers: Record<string, string> = {};
 
-  // Add JWT token for protected routes
-  if (requiresAuth) {
-    const token = tokenKey
-      ? localStorage.getItem(tokenKey)
-      : getStoredToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
-  // ── Timeout via AbortController ──
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: { ...headers, ...(options.headers as Record<string, string>) },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    // ── Handle HTTP errors ──
-    if (!response.ok) {
-      const errorBody = (await response
-        .json()
-        .catch(() => null)) as ApiErrorResponse | null;
-
-      const message = errorBody?.message
-        ? Array.isArray(errorBody.message)
-          ? errorBody.message.join(', ')
-          : errorBody.message
-        : `HTTP Error ${response.status}`;
-
-      throw new ApiError(response.status, message, errorBody?.path);
+    // Don't set Content-Type for FormData — browser sets it with boundary
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
     }
 
-    // ── Unwrap TransformInterceptor response → return data directly ──
-    const body = (await response.json()) as ApiSuccessResponse<T>;
-    return body.data;
-  } catch (error) {
-    clearTimeout(timeoutId);
-
-    if (error instanceof ApiError) throw error;
-
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new ApiError(408, 'انتهت مهلة الطلب — حاول مرة أخرى');
+    // Add JWT token for protected routes
+    if (requiresAuth) {
+      const token = tokenKey
+        ? localStorage.getItem(tokenKey)
+        : getStoredToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
-    throw new ApiError(
-      0,
-      error instanceof Error ? error.message : 'خطأ في الشبكة',
-    );
-  }
+    // ── Timeout via AbortController ──
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
+    // ── Handle external abort signal ──
+    const abortHandler = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener('abort', abortHandler);
+      }
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: { ...headers, ...(options.headers as Record<string, string>) },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      if (externalSignal) {
+        externalSignal.removeEventListener('abort', abortHandler);
+      }
+
+      // ── Handle HTTP errors ──
+      if (!response.ok) {
+        const errorBody = (await response
+          .json()
+          .catch(() => null)) as ApiErrorResponse | null;
+
+        const message = errorBody?.message
+          ? Array.isArray(errorBody.message)
+            ? errorBody.message.join(', ')
+            : errorBody.message
+          : `HTTP Error ${response.status}`;
+
+        throw new ApiError(response.status, message, errorBody?.path);
+      }
+
+      // ── Unwrap TransformInterceptor response → return data directly ──
+      const body = (await response.json()) as ApiSuccessResponse<T>;
+      return body.data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (externalSignal) {
+        externalSignal.removeEventListener('abort', abortHandler);
+      }
+
+      if (error instanceof ApiError) throw error;
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new ApiError(408, 'انتهت مهلة الطلب — حاول مرة أخرى');
+      }
+
+      throw new ApiError(
+        0,
+        error instanceof Error ? error.message : 'خطأ في الشبكة',
+      );
+    }
+  }, method);
 }
 
 /* ═══════════════════════════════════
@@ -172,11 +223,11 @@ async function request<T>(
 
 export const httpClient = {
   /** GET request */
-  get: <T>(endpoint: string, requiresAuth = false, tokenKey?: string) =>
-    request<T>(endpoint, { method: 'GET' }, requiresAuth, tokenKey),
+  get: <T>(endpoint: string, requiresAuth = false, tokenKey?: string, signal?: AbortSignal) =>
+    request<T>(endpoint, { method: 'GET' }, requiresAuth, tokenKey, signal),
 
   /** POST request — supports JSON body and FormData */
-  post: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string) =>
+  post: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string, signal?: AbortSignal) =>
     request<T>(
       endpoint,
       {
@@ -185,10 +236,11 @@ export const httpClient = {
       },
       requiresAuth,
       tokenKey,
+      signal,
     ),
 
   /** PATCH request — supports JSON body and FormData */
-  patch: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string) =>
+  patch: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string, signal?: AbortSignal) =>
     request<T>(
       endpoint,
       {
@@ -197,10 +249,11 @@ export const httpClient = {
       },
       requiresAuth,
       tokenKey,
+      signal,
     ),
 
   /** PUT request — supports JSON body and FormData */
-  put: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string) =>
+  put: <T>(endpoint: string, body?: unknown, requiresAuth = false, tokenKey?: string, signal?: AbortSignal) =>
     request<T>(
       endpoint,
       {
@@ -209,9 +262,10 @@ export const httpClient = {
       },
       requiresAuth,
       tokenKey,
+      signal,
     ),
 
   /** DELETE request */
-  delete: <T>(endpoint: string, requiresAuth = false, tokenKey?: string) =>
-    request<T>(endpoint, { method: 'DELETE' }, requiresAuth, tokenKey),
+  delete: <T>(endpoint: string, requiresAuth = false, tokenKey?: string, signal?: AbortSignal) =>
+    request<T>(endpoint, { method: 'DELETE' }, requiresAuth, tokenKey, signal),
 } as const;
