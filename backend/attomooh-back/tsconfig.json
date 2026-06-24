@@ -17,9 +17,10 @@
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
+"forceConsistentCasingInFileNames": true,
+  "useDefineForClassFields": false,
+  "noImplicitAny": false,
+  "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "types": ["express", "multer", "node", "jest"]
   }

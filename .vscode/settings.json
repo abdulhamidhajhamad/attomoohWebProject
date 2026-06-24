@@ -1,0 +1,4 @@
+{
+  "typescript.tsdk": "backend/attomooh-back/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}
