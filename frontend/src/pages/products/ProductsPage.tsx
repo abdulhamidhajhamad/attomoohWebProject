@@ -21,7 +21,7 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch data from API
-  const { products, loading: productsLoading } = useProducts();
+  const { products, loading: productsLoading, error: productsError } = useProducts();
   const { categories } = useCategories();
 
   const category = categorySlug
@@ -84,6 +84,18 @@ export default function ProductsPage() {
             </p>
           </div>
         </header>
+
+        {/* ═════ Error ═════ */}
+        {productsError && (
+          <div className={styles.errorBox}>
+            <h3>⚠️ خطأ في تحميل المنتجات</h3>
+            <p>{productsError}</p>
+            <p className={styles.errorHint}>
+              تحقق من الاتصال بالخادم (الـ API) وتأكد من أنه يعمل على{' '}
+              <code>http://localhost:3000</code>
+            </p>
+          </div>
+        )}
 
         {/* ═════ Products ═════ */}
         {productsLoading ? (

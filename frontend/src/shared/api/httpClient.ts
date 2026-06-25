@@ -31,7 +31,10 @@ function withDeduplication<T>(
     if (existing) {
       return existing;
     }
-    const promise = factory();
+    const promise = factory().catch((err) => {
+      inFlightRequests.delete(key);
+      throw err;
+    });
     inFlightRequests.set(key, promise);
     promise.finally(() => inFlightRequests.delete(key));
     return promise;
@@ -155,16 +158,23 @@ async function request<T>(
 
     // ── Timeout via AbortController ──
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+    let isTimeout = false;
+    const timeoutId = setTimeout(() => {
+      isTimeout = true;
+      controller.abort();
+    }, API_CONFIG.timeout);
 
-    // ── Handle external abort signal ──
-    const abortHandler = () => controller.abort();
+    // ── Handle external abort signal (component unmount, HMR, etc.) ──
+    const abortHandler = () => {
+      inFlightRequests.delete(dedupeKey);
+      controller.abort();
+    };
     if (externalSignal) {
       if (externalSignal.aborted) {
-        controller.abort();
-      } else {
-        externalSignal.addEventListener('abort', abortHandler);
+        inFlightRequests.delete(dedupeKey);
+        throw new DOMException('signal is aborted without reason', 'AbortError');
       }
+      externalSignal.addEventListener('abort', abortHandler);
     }
 
     try {
@@ -206,7 +216,12 @@ async function request<T>(
       if (error instanceof ApiError) throw error;
 
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new ApiError(408, 'انتهت مهلة الطلب — حاول مرة أخرى');
+        // timeout (15s без ответа) → 408 error → يظهر للمستخدم
+        if (isTimeout) {
+          throw new ApiError(408, 'انتهت مهلة الطلب — حاول مرة أخرى');
+        }
+        // external abort (unmount/HMR/رفresh) → re-throw as-is → hooks تتعامل معه
+        throw error;
       }
 
       throw new ApiError(

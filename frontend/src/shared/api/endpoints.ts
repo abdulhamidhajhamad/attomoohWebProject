@@ -26,6 +26,7 @@ export const ENDPOINTS = {
     BASE: '/products',
     BY_ID: (id: string) => `/products/${id}`,
     BY_CATEGORY: (categoryId: string) => `/products/category/${categoryId}`,
+    ADMIN_ALL: '/products/admin/all',
   },
 
   // ── Users ──

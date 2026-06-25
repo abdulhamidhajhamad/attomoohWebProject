@@ -14,11 +14,10 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
-  Res,
+  Header,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-import type { Response } from 'express';
 import { Types } from 'mongoose';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
@@ -61,14 +60,40 @@ export class ProductsController {
 
   /**
    * GET /api/products
-   * Get all products — Public
+   * Get all active products — Public
    */
   @Get()
   @HttpCode(HttpStatus.OK)
-  async findAll(@Res({ passthrough: true }) res: Response) {
+  @Header('Cache-Control', 'public, max-age=60')
+  async findAll() {
     const result = await this.productsService.findAll();
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    console.log('[findAll] result:', JSON.stringify(result, null, 2));
     return result;
+  }
+
+  /**
+   * GET /api/products/category/:categoryId
+   * Get all products by category — Public
+   * ⚠️ Defined BEFORE :id to avoid capture by catch-all :id param
+   */
+  @Get('category/:categoryId')
+  @Header('Cache-Control', 'public, max-age=60')
+  async findByCategory(
+    @Param('categoryId', ParseObjectIdPipe) categoryId: Types.ObjectId,
+  ) {
+    const result = await this.productsService.findByCategory(categoryId);
+    return result;
+  }
+
+  /**
+   * GET /api/products/admin/all
+   * Get ALL products (including inactive) — Admin only
+   */
+  @Get('admin/all')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async findAllAdmin() {
+    return this.productsService.findAllAdmin();
   }
 
   /**
@@ -76,23 +101,9 @@ export class ProductsController {
    * Get a single product by ID — Public
    */
   @Get(':id')
-  async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId, @Res({ passthrough: true }) res: Response) {
+  @Header('Cache-Control', 'public, max-age=60')
+  async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     const result = await this.productsService.findById(id);
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    return result;
-  }
-
-  /**
-   * GET /api/products/category/:categoryId
-   * Get all products by category — Public
-   */
-  @Get('category/:categoryId')
-  async findByCategory(
-    @Param('categoryId', ParseObjectIdPipe) categoryId: Types.ObjectId,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.productsService.findByCategory(categoryId);
-    res.setHeader('Cache-Control', 'public, max-age=60');
     return result;
   }
 

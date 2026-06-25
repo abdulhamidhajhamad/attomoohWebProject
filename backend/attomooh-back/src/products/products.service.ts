@@ -85,6 +85,10 @@ export class ProductsService {
     return this.productRepository.findAll(this.LIST_PROJECTION, { isActive: true });
   }
 
+  async findAllAdmin(): Promise<ProductDocument[]> {
+    return this.productRepository.findAll(this.LIST_PROJECTION);
+  }
+
   async findById(id: Types.ObjectId): Promise<ProductDocument> {
     const product = await this.productRepository.findById(id);
 

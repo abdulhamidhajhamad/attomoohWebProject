@@ -113,6 +113,12 @@ export const productsService = {
     return mapApiProduct(data);
   },
 
+  /** GET /products/admin/all — Admin only (includes inactive) */
+  async getAllAdmin(signal?: AbortSignal): Promise<Product[]> {
+    const data = await httpClient.get<ApiProduct[]>(ENDPOINTS.PRODUCTS.ADMIN_ALL, true, undefined, signal);
+    return mapApiProducts(data);
+  },
+
   /** DELETE /products/:id — Admin only */
   async delete(id: string, signal?: AbortSignal): Promise<void> {
     await httpClient.delete<{ message: string }>(
