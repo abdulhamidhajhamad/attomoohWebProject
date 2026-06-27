@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Package, Eye } from 'lucide-react';
-import { useProducts, invalidateProductsCache } from '../../../shared/hooks/useProducts';
+import { useProducts, invalidateProductsCache, removeProductFromCache } from '../../../shared/hooks/useProducts';
 import { useCategories } from '../../../shared/hooks/useCategories';
 import { productsService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
@@ -13,7 +13,7 @@ export default function AdminProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const { products, loading, error, refetch } = useProducts();
+  const { products, loading, error } = useProducts(true);
   const { categories } = useCategories();
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -33,14 +33,14 @@ export default function AdminProductsPage() {
     setDeleting(productId);
     try {
       await productsService.delete(productId);
+      removeProductFromCache(productId);
       invalidateProductsCache();
-      refetch();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'فشل في حذف المنتج');
     } finally {
       setDeleting(null);
     }
-  }, [refetch]);
+  }, []);
 
   if (loading) {
     return (

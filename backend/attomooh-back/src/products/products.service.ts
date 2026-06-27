@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { makeBilingual } from '../common/utils/translate.js';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
   private readonly MAX_IMAGES = 10;
   private readonly UPLOAD_FOLDER = 'attomooh/products';
 
@@ -184,18 +186,36 @@ export class ProductsService {
   }
 
   async delete(id: Types.ObjectId): Promise<void> {
+    // ── Validate product exists ──
     const product = await this.productRepository.findById(id);
 
     if (!product) {
+      this.logger.warn(`Delete attempted on non-existent product ${id}`);
       throw new NotFoundException('Product not found');
     }
 
-    // ── Delete images from Cloudinary ──
-    if (product.images && product.images.length > 0) {
-      const publicIds = product.images.map((img) => img.publicId);
-      await this.cloudinaryService.deleteMultipleImages(publicIds);
+    // ── Delete from MongoDB FIRST — respond instantly ──
+    const deleted = await this.productRepository.delete(id);
+    if (!deleted) {
+      this.logger.warn(`Product ${id} not found during delete (race condition?)`);
+      throw new NotFoundException('Product not found');
     }
 
-    await this.productRepository.delete(id);
+    this.logger.log(`Product ${id} deleted from MongoDB`);
+
+    // ── Background: Cloudinary cleanup — does NOT block the response ──
+    if (product.images && product.images.length > 0) {
+      const publicIds = product.images.map((img) => img.publicId);
+      setImmediate(() => {
+        this.cloudinaryService
+          .deleteMultipleImages(publicIds)
+          .catch((err) =>
+            this.logger.error(
+              `Background Cloudinary cleanup failed for product ${id}`,
+              err,
+            ),
+          );
+      });
+    }
   }
 }

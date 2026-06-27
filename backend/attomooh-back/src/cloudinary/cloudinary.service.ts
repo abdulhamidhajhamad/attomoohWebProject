@@ -118,16 +118,20 @@ export class CloudinaryService {
   }
 
   async deleteImage(publicId: string): Promise<void> {
-    try {
-      await cloudinary.uploader.destroy(publicId);
-      this.logger.log(`Deleted image: ${publicId}`);
-    } catch (error) {
-      this.logger.error(`Failed to delete image: ${publicId}`, error);
-    }
+    await cloudinary.uploader.destroy(publicId);
+    this.logger.log(`Deleted image: ${publicId}`);
   }
 
   async deleteMultipleImages(publicIds: string[]): Promise<void> {
-    const deletePromises = publicIds.map((id) => this.deleteImage(id));
-    await Promise.all(deletePromises);
+    if (publicIds.length === 0) return;
+    const results = await Promise.allSettled(
+      publicIds.map((id) => this.deleteImage(id)),
+    );
+    const failures = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected',
+    );
+    for (const f of failures) {
+      this.logger.error(`Cloudinary delete failed: ${f.reason}`);
+    }
   }
 }

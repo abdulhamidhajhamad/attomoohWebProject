@@ -5,8 +5,14 @@
  * كل hook يدير state خاص فيه (loading, error, data)
  * يدعم stale-while-revalidate و AbortController
  *
+ * Performance:
+ *  - Optimistic cache mutation on delete (no full refetch needed)
+ *  - CustomEvent broadcast syncs all mounted components instantly
+ *  - Focus refetch keeps stale tabs fresh without polling
+ *
  * Usage:
  *   const { products, loading, error, refetch } = useProducts();
+ *   const { products, loading } = useProducts(true); // admin (getAllAdmin)
  *   const { product, loading } = useProduct(productId);
  *   const { products, loading } = useProductsByCategory(categoryId);
  */
@@ -16,11 +22,16 @@ import { productsService } from '../api/services';
 import type { Product } from '../types';
 
 /* ═══════════════════════════════════
-   In-memory Cache (module-level) with stale-while-revalidate
+   Constants
    ═══════════════════════════════════ */
 
 const CACHE_TTL = 3 * 60 * 1000; // 3 minutes fresh
 const STALE_TTL = 10 * 60 * 1000; // 10 minutes stale (show while refetching)
+const PRODUCTS_INVALIDATED_EVENT = 'products:invalidated';
+
+/* ═══════════════════════════════════
+   In-memory Cache (module-level) with stale-while-revalidate
+   ═══════════════════════════════════ */
 
 interface CacheEntry<T> {
   data: T;
@@ -49,9 +60,54 @@ function setCache(key: string, data: unknown): void {
   productsCache.set(key, { data, timestamp: Date.now() });
 }
 
-/** Invalidate all product caches */
+/* ═══════════════════════════════════
+   Optimistic Cache Mutation (zero-latency)
+   ═══════════════════════════════════ */
+
+/** Remove a single product from ALL cache entries instantly (no network) */
+export function removeProductFromCache(productId: string): void {
+  for (const [key, entry] of productsCache) {
+    if (Array.isArray(entry.data)) {
+      const filtered = (entry.data as Product[]).filter(
+        (p) => p.id !== productId,
+      );
+      if (filtered.length !== (entry.data as Product[]).length) {
+        productsCache.set(key, { data: filtered, timestamp: entry.timestamp });
+      }
+    } else if (
+      entry.data &&
+      typeof entry.data === 'object' &&
+      'id' in (entry.data as Record<string, unknown>)
+    ) {
+      if ((entry.data as Product).id === productId) {
+        productsCache.delete(key);
+      }
+    }
+  }
+}
+
+/** Invalidate all product caches and broadcast to all mounted hooks */
 export function invalidateProductsCache(): void {
   productsCache.clear();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(PRODUCTS_INVALIDATED_EVENT));
+  }
+}
+
+/* ═══════════════════════════════════
+   Hook lifecycle helper — listens for invalidation events + focus
+   ═══════════════════════════════════ */
+
+function useInvalidationListener(refetch: () => void): void {
+  useEffect(() => {
+    const handler = () => refetch();
+    window.addEventListener(PRODUCTS_INVALIDATED_EVENT, handler);
+    window.addEventListener('focus', handler);
+    return () => {
+      window.removeEventListener(PRODUCTS_INVALIDATED_EVENT, handler);
+      window.removeEventListener('focus', handler);
+    };
+  }, [refetch]);
 }
 
 /* ═══════════════════════════════════
@@ -65,7 +121,10 @@ interface UseProductsResult {
   refetch: () => void;
 }
 
-export function useProducts(): UseProductsResult {
+/**
+ * @param admin  — if true, calls GET /products/admin/all (includes inactive)
+ */
+export function useProducts(admin = false): UseProductsResult {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,15 +140,13 @@ export function useProducts(): UseProductsResult {
       if (cached) {
         setProducts(cached);
         setLoading(false);
-        // If stale, trigger background refetch
         if (!isFresh(cacheKey)) {
-          fetchProducts(true); // background refetch
+          fetchProducts(true);
         }
         return;
       }
     }
 
-    // Cancel any in-flight request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -98,15 +155,17 @@ export function useProducts(): UseProductsResult {
     setError(null);
 
     try {
-      const controller = abortRef.current;
-      const data = await productsService.getAll(controller?.signal);
+      const sig = abortRef.current?.signal;
+      const data = admin
+        ? await productsService.getAllAdmin(sig)
+        : await productsService.getAll(sig);
       if (mounted.current) {
         setProducts(data);
         setCache(cacheKey, data);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return; // Ignore aborted requests
+        return;
       }
       if (mounted.current) {
         setError(err instanceof Error ? err.message : 'فشل في تحميل المنتجات');
@@ -116,7 +175,8 @@ export function useProducts(): UseProductsResult {
         setLoading(false);
       }
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin]);
 
   useEffect(() => {
     mounted.current = true;
@@ -128,6 +188,8 @@ export function useProducts(): UseProductsResult {
   }, [fetchProducts]);
 
   const refetch = useCallback(() => fetchProducts(true), [fetchProducts]);
+
+  useInvalidationListener(refetch);
 
   return { products, loading, error, refetch };
 }
@@ -160,21 +222,18 @@ export function useProduct(id: string | undefined): UseProductResult {
 
       const cacheKey = `product-${id}`;
 
-      // ── Stale-while-revalidate: show cached data immediately ──
       if (!skipCache) {
         const cached = getCached<Product>(cacheKey);
         if (cached) {
           setProduct(cached);
           setLoading(false);
-          // If stale, trigger background refetch
           if (!isFresh(cacheKey)) {
-            fetchProduct(true); // background refetch
+            fetchProduct(true);
           }
           return;
         }
       }
 
-      // Cancel any in-flight request
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -183,15 +242,15 @@ export function useProduct(id: string | undefined): UseProductResult {
       setError(null);
 
       try {
-        const controller = abortRef.current;
-        const data = await productsService.getById(id, controller?.signal);
+        const sig = abortRef.current?.signal;
+        const data = await productsService.getById(id, sig);
         if (mounted.current) {
           setProduct(data);
           setCache(cacheKey, data);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          return; // Ignore aborted requests
+          return;
         }
         if (mounted.current) {
           setError(err instanceof Error ? err.message : 'المنتج غير موجود');
@@ -215,6 +274,8 @@ export function useProduct(id: string | undefined): UseProductResult {
   }, [fetchProduct]);
 
   const refetch = useCallback(() => fetchProduct(true), [fetchProduct]);
+
+  useInvalidationListener(refetch);
 
   return { product, loading, error, refetch };
 }
@@ -242,21 +303,18 @@ export function useProductsByCategory(
 
       const cacheKey = `products-by-cat-${categoryId}`;
 
-      // ── Stale-while-revalidate: show cached data immediately ──
       if (!skipCache) {
         const cached = getCached<Product[]>(cacheKey);
         if (cached) {
           setProducts(cached);
           setLoading(false);
-          // If stale, trigger background refetch
           if (!isFresh(cacheKey)) {
-            fetchProducts(true); // background refetch
+            fetchProducts(true);
           }
           return;
         }
       }
 
-      // Cancel any in-flight request
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -265,15 +323,15 @@ export function useProductsByCategory(
       setError(null);
 
       try {
-        const controller = abortRef.current;
-        const data = await productsService.getByCategory(categoryId, controller?.signal);
+        const sig = abortRef.current?.signal;
+        const data = await productsService.getByCategory(categoryId, sig);
         if (mounted.current) {
           setProducts(data);
           setCache(cacheKey, data);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          return; // Ignore aborted requests
+          return;
         }
         if (mounted.current) {
           setError(
@@ -299,6 +357,8 @@ export function useProductsByCategory(
   }, [fetchProducts]);
 
   const refetch = useCallback(() => fetchProducts(true), [fetchProducts]);
+
+  useInvalidationListener(refetch);
 
   return { products, loading, error, refetch };
 }
