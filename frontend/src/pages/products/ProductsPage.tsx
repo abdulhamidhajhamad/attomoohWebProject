@@ -18,6 +18,7 @@ export default function ProductsPage() {
   const { currentLang } = useLanguageDirection();
   const lang = currentLang as 'ar' | 'en';
   const searchQuery = searchParams.get('search') || '';
+  const brandQuery = searchParams.get('brand') || '';
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch data from API
@@ -29,29 +30,54 @@ export default function ProductsPage() {
     : undefined;
 
   /** Get all descendant IDs of a category (for inclusive filtering) */
-  const getDescendantIds = useCallback(
-    (parentId: string): string[] => {
-      const ids: string[] = [parentId];
-      const children = categories.filter((c) => c.parentIds.includes(parentId));
-      for (const child of children) {
-        ids.push(...getDescendantIds(child.id));
+  const descendantIds = useMemo(() => {
+    if (!categorySlug) return new Set<string>();
+    const ids: string[] = [categorySlug];
+    const collect = (parentId: string): void => {
+      for (const c of categories) {
+        if (c.parentIds.includes(parentId)) {
+          ids.push(c.id);
+          collect(c.id);
+        }
       }
-      return ids;
-    },
-    [categories],
-  );
+    };
+    collect(categorySlug);
+    return new Set(ids);
+  }, [categorySlug, categories]);
 
   const filteredProducts = useMemo(() => {
-    if (searchQuery) {
-      return searchProducts(products, searchQuery, lang);
+    // ── Early exit: no filters → return raw array instantly ──
+    if (!searchQuery && !categorySlug && !brandQuery) {
+      return products;
     }
-    if (categorySlug) {
-      // Include products from this category AND all its descendants
-      const validIds = new Set(getDescendantIds(categorySlug));
-      return products.filter((p) => p.categoryIds.some((id) => validIds.has(id)));
-    }
-    return products;
-  }, [searchQuery, categorySlug, lang, products, getDescendantIds]);
+
+    // ── Cache lowercase values outside the filter loop ──
+    const lowerSearch = searchQuery.toLowerCase();
+    const lowerBrand = brandQuery.toLowerCase();
+
+    // ── Single-pass filter ──
+    return products.filter((p) => {
+      // Category match (with descendants)
+      if (categorySlug) {
+        if (!p.categoryIds.some((id) => descendantIds.has(id))) return false;
+      }
+
+      // Search match
+      if (searchQuery) {
+        const matchesSearch =
+          p.name[lang].toLowerCase().includes(lowerSearch) ||
+          p.description[lang].toLowerCase().includes(lowerSearch);
+        if (!matchesSearch) return false;
+      }
+
+      // Brand match
+      if (brandQuery) {
+        if (!p.brand || p.brand.toLowerCase() !== lowerBrand) return false;
+      }
+
+      return true;
+    });
+  }, [searchQuery, categorySlug, brandQuery, lang, products, descendantIds]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredProducts.slice(
@@ -59,13 +85,15 @@ export default function ProductsPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  const pageTitle = category
-    ? lang === 'ar'
-      ? category.name.ar
-      : category.name.en
-    : searchQuery
-      ? `${t('nav.search')}: ${searchQuery}`
-      : t('products.title');
+  const pageTitle = brandQuery
+    ? `${brandQuery} - ${t('products.title')}`
+    : category
+      ? lang === 'ar'
+        ? category.name.ar
+        : category.name.en
+      : searchQuery
+        ? `${t('nav.search')}: ${searchQuery}`
+        : t('products.title');
 
   useSEO({
     title: pageTitle,

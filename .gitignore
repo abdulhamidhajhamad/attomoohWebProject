@@ -35,5 +35,9 @@ build/
 *.seed
 *.pid.lock
 
+# Static asset directories
+productphoto/
+categoryPhoto/
+
 # Local overrides
 *.local

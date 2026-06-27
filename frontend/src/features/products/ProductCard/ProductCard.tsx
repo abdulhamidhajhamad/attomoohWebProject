@@ -81,6 +81,9 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
 
         <div className={styles.content}>
           <span className={styles.category}>{categoryName}</span>
+          {product.brand && (
+            <span className={styles.brand}>{product.brand}</span>
+          )}
           <h3 className={styles.name}>{name}</h3>
           {hasPrice && (
             <div className={styles.priceRow}>
