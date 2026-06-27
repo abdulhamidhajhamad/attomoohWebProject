@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -48,7 +48,6 @@ export default function AddProductPage() {
   const [model, setModel] = useState('');
   const [price, setPrice] = useState('');
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [specs, setSpecs] = useState<SpecRow[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -60,25 +59,29 @@ export default function AddProductPage() {
   // ══════════════════════════════════
   //  CATEGORY MULTI-SELECT
   // ══════════════════════════════════
-  const categoryDropdownRef = useRef<HTMLDivElement>(null);
-
   const toggleCategory = (id: string) => {
     setCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   };
 
-  // Close dropdown on outside click
-  const handleOutsideClick = useCallback((e: MouseEvent) => {
-    if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
-      setCategoryDropdownOpen(false);
-    }
-  }, []);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [catSearchQuery, setCatSearchQuery] = useState('');
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [handleOutsideClick]);
+  const subcategories = useMemo(
+    () => categories.filter((c) => c.level > 0),
+    [categories],
+  );
+
+  const filteredSubcategories = useMemo(() => {
+    if (!catSearchQuery) return subcategories;
+    const q = catSearchQuery.toLowerCase();
+    return subcategories.filter(
+      (c) =>
+        c.name.ar.includes(q) ||
+        c.name.en.toLowerCase().includes(q),
+    );
+  }, [subcategories, catSearchQuery]);
 
   // ══════════════════════════════════
   //  SPECIFICATIONS (Key-Value)
@@ -304,56 +307,35 @@ export default function AddProductPage() {
                 <label className={styles.label}>
                   التصنيفات <span className={styles.required}>*</span>
                 </label>
-                <div className={styles.multiSelect} ref={categoryDropdownRef}>
-                  <button
-                    type="button"
-                    className={styles.multiSelectTrigger}
-                    onClick={() => setCategoryDropdownOpen((o) => !o)}
-                  >
-                    {categoryIds.length > 0 ? (
-                      <span className={styles.selectedTags}>
-                        {categoryIds.map((id) => {
-                          const cat = categories.find((c) => c.id === id);
-                          return (
-                            <span key={id} className={styles.selectedTag}>
-                              {cat?.name.ar || id}
-                              <span
-                                className={styles.tagRemove}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCategory(id);
-                                }}
-                              >
-                                <X size={12} />
-                              </span>
+                <button
+                  type="button"
+                  className={styles.multiSelectTrigger}
+                  onClick={() => setCategoryModalOpen(true)}
+                >
+                  {categoryIds.length > 0 ? (
+                    <span className={styles.selectedTags}>
+                      {categoryIds.map((id) => {
+                        const cat = categories.find((c) => c.id === id);
+                        return (
+                          <span key={id} className={styles.selectedTag}>
+                            {cat?.name.ar || id}
+                            <span
+                              className={styles.tagRemove}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCategory(id);
+                              }}
+                            >
+                              <X size={12} />
                             </span>
-                          );
-                        })}
-                      </span>
-                    ) : (
-                      <span className={styles.multiSelectPlaceholder}>اختر التصنيفات...</span>
-                    )}
-                  </button>
-
-                  {categoryDropdownOpen && (
-                    <div className={styles.multiSelectDropdown}>
-                      {categories
-                        .sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar))
-                        .map((cat) => (
-                          <label key={cat.id} className={styles.multiSelectOption}>
-                            <input
-                              type="checkbox"
-                              checked={categoryIds.includes(cat.id)}
-                              onChange={() => toggleCategory(cat.id)}
-                            />
-                            <span className={styles.optionLabel}>
-                              {'─'.repeat(cat.level)} {cat.name.ar}
-                            </span>
-                          </label>
-                        ))}
-                    </div>
+                          </span>
+                        );
+                      })}
+                    </span>
+                  ) : (
+                    <span className={styles.multiSelectPlaceholder}>اختر التصنيفات...</span>
                   )}
-                </div>
+                </button>
                 {/* Hidden required input for native form validation */}
                 <input
                   type="text"
@@ -643,6 +625,47 @@ export default function AddProductPage() {
           </div>
         </div>
       </form>
+
+      {/* ══════════════════════════════════
+          CATEGORY SELECTION MODAL
+          ══════════════════════════════════ */}
+      {categoryModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => { setCategoryModalOpen(false); setCatSearchQuery(''); }}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>اختر التصنيفات الفرعية</h3>
+              <button type="button" onClick={() => { setCategoryModalOpen(false); setCatSearchQuery(''); }}>
+                <X size={20} />
+              </button>
+            </div>
+            <input
+              className={styles.modalSearch}
+              placeholder="ابحث عن تصنيف فرعي..."
+              value={catSearchQuery}
+              onChange={(e) => setCatSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <div className={styles.modalList}>
+              {subcategories.length === 0 && (
+                <p className={styles.modalEmpty}>لا توجد تصنيفات فرعية متاحة</p>
+              )}
+              {subcategories.length > 0 && filteredSubcategories.length === 0 && (
+                <p className={styles.modalEmpty}>لا توجد تصنيفات تطابق البحث</p>
+              )}
+              {filteredSubcategories.map((cat) => (
+                <label key={cat.id} className={styles.modalOption}>
+                  <input
+                    type="checkbox"
+                    checked={categoryIds.includes(cat.id)}
+                    onChange={() => toggleCategory(cat.id)}
+                  />
+                  <span>{cat.name.ar}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
