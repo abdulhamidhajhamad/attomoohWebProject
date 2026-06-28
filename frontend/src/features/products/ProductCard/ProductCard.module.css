@@ -17,17 +17,19 @@
 .imageWrapper {
   position: relative;
   aspect-ratio: 1;
-  background: var(--color-gray-50);
+  background: var(--color-white);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  isolation: isolate;
 }
 
 .image {
   width: 70%;
   height: 70%;
   object-fit: contain;
+  mix-blend-mode: multiply;
   transition: transform var(--transition-slow);
 }
 

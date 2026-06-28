@@ -12,6 +12,7 @@ import { generateProductInquiry } from '../../shared/services/whatsapp';
 import { useBranchSelector } from '../../shared/ui/BranchSelector';
 import { Button } from '../../shared/ui/Button/Button';
 import { Badge } from '../../shared/ui/Badge/Badge';
+import { transformCloudinaryUrl } from '../../shared/utils/cloudinary';
 import { Section } from '../../shared/ui/Section/Section';
 import { ProductGrid } from '../../features/products/ProductGrid/ProductGrid';
 import { LoadingSpinner } from '../../shared/ui/LoadingSpinner/LoadingSpinner';
@@ -54,6 +55,11 @@ export default function ProductDetailPage() {
   const sortedImages = useMemo(
     () => (product ? product.images : []),
     [product],
+  );
+
+  const processedImages = useMemo(
+    () => sortedImages.map(transformCloudinaryUrl),
+    [sortedImages],
   );
 
   // ── Auto-play: 5s interval, paused on hover, cleaned on unmount ──
@@ -158,7 +164,7 @@ export default function ProductDetailPage() {
               {sortedImages.length > 0 && !imgError ? (
                 <img
                   key={activeIndex}
-                  src={sortedImages[activeIndex]}
+                  src={processedImages[activeIndex]}
                   alt={`${name} - ${activeIndex + 1}`}
                   onError={() => setImgError(true)}
                 />

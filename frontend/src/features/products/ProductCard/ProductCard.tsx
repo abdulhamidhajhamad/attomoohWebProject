@@ -10,6 +10,7 @@ import { generateProductInquiry } from '../../../shared/services/whatsapp';
 import { useBranchSelector } from '../../../shared/ui/BranchSelector';
 import { Button } from '../../../shared/ui/Button/Button';
 import { Badge } from '../../../shared/ui/Badge/Badge';
+import { transformCloudinaryUrl } from '../../../shared/utils/cloudinary';
 import styles from './ProductCard.module.css';
 
 interface ProductCardProps {
@@ -59,7 +60,7 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
         <div className={styles.imageWrapper}>
           {product.images[0] && !imgError ? (
             <img
-              src={product.images[0]}
+              src={transformCloudinaryUrl(product.images[0])}
               alt={name}
               className={styles.image}
               loading="lazy"
