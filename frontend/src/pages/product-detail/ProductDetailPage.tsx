@@ -128,7 +128,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (error || !product) {
+  if (error && !product) {
     return (
       <div className="container" style={{ padding: '64px 0', textAlign: 'center' }}>
         <h1>{t('general.error')}</h1>
