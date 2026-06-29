@@ -97,6 +97,12 @@ export const productsService = {
     if (payload.specifications) {
       fd.append('specifications', JSON.stringify(payload.specifications));
     }
+    if (payload.isActive !== undefined) {
+      fd.append('isActive', String(payload.isActive));
+    }
+    if (payload.existingImages) {
+      fd.append('existingImages', JSON.stringify(payload.existingImages));
+    }
     if (payload.images) {
       for (const file of payload.images) {
         fd.append('images', file);

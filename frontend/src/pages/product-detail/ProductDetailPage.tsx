@@ -253,6 +253,14 @@ export default function ProductDetailPage() {
                       </Link>
                     </div>
                   )}
+                  {product.model && (
+                    <div className={styles.specRow}>
+                      <span className={styles.specLabel}>
+                        {lang === 'ar' ? 'الموديل' : 'Model'}
+                      </span>
+                      <span className={styles.specValue}>{product.model}</span>
+                    </div>
+                  )}
                   {product.specifications && Object.entries(product.specifications).map(([key, value]) => (
                     <div key={key} className={styles.specRow}>
                       <span className={styles.specLabel}>{key}</span>

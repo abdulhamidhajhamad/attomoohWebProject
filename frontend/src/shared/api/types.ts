@@ -253,6 +253,9 @@ export interface UpdateProductPayload {
   categories?: string[];
   specifications?: Record<string, string>;
   images?: File[];
+  isActive?: boolean;
+  /** URLs of existing images to keep (all others are deleted from Cloudinary) */
+  existingImages?: string[];
 }
 
 /* ═══════════════════════════════════

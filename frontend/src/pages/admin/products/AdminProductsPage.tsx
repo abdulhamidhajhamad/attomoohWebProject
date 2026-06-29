@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Package, Eye } from 'lucide-react';
 import { useProducts, invalidateProductsCache, removeProductFromCache } from '../../../shared/hooks/useProducts';
 import { useCategories } from '../../../shared/hooks/useCategories';
@@ -9,6 +9,7 @@ import { useDebounce } from '../../../shared/hooks/useDebounce';
 import styles from './AdminProducts.module.css';
 
 export default function AdminProductsPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -171,6 +172,7 @@ export default function AdminProductsPage() {
                       <button
                         className={`${styles.actionBtn} ${styles.editBtn}`}
                         title="تعديل"
+                        onClick={() => navigate(`/admin/products/edit/${product.id}`, { state: { product } })}
                       >
                         <Edit2 size={16} />
                       </button>

@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useMemo, type FormEvent, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useCallback, useEffect, useMemo, type FormEvent, type ChangeEvent } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   Plus,
@@ -15,6 +15,7 @@ import { useCategories } from '../../../shared/hooks/useCategories';
 import { productsService } from '../../../shared/api/services';
 import { invalidateProductsCache } from '../../../shared/hooks/useProducts';
 import { validateImageFile } from '../../../shared/services/cloudinary';
+import type { Product } from '../../../shared/types';
 import styles from './AddProduct.module.css';
 
 /* ===== Types ===== */
@@ -51,10 +52,76 @@ export default function AddProductPage() {
   const [isActive, setIsActive] = useState(true);
   const [specs, setSpecs] = useState<SpecRow[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
 
   // ── UI State ──
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // ══════════════════════════════════
+  //  EDIT MODE
+  // ══════════════════════════════════
+  const { productId } = useParams<{ productId: string }>();
+  const location = useLocation();
+  const existingProduct = location.state?.product as Product | undefined;
+  const isEditMode = !!productId;
+
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const initialDataLoaded = useRef(false);
+
+  const fillFormWithProduct = useCallback((product: Product) => {
+    if (initialDataLoaded.current) return;
+    initialDataLoaded.current = true;
+    setName(product.name.ar);
+    setBrand(product.brand);
+    setModel(product.model || '');
+    setPrice(product.price && product.price > 0 ? String(product.price) : '');
+    setCategoryIds(product.categoryIds);
+    setIsActive(product.inStock);
+    setExistingImageUrls(product.images || []);
+
+    if (product.specifications) {
+      const rows: SpecRow[] = Object.entries(product.specifications)
+        .filter(([key]) => key)
+        .map(([key, val]) => ({
+          id: uid(),
+          key,
+          value: val && typeof val === 'object' ? String((val as { ar: string }).ar ?? '') : String(val ?? ''),
+        }));
+      setSpecs(rows);
+    }
+  }, []);
+
+  // Pre-fill from route state (instant, no API call)
+  useEffect(() => {
+    if (existingProduct) {
+      fillFormWithProduct(existingProduct);
+    }
+  }, [existingProduct, fillFormWithProduct]);
+
+  // Fallback: fetch product by ID when route state is missing (page refresh)
+  useEffect(() => {
+    if (!isEditMode || existingProduct) return;
+    let cancelled = false;
+    setLoadingProduct(true);
+    (async () => {
+      try {
+        const product = await productsService.getById(productId);
+        if (!cancelled) {
+          fillFormWithProduct(product);
+        }
+      } catch {
+        if (!cancelled) {
+          setSubmitResult({ ok: false, msg: 'فشل في تحميل بيانات المنتج' });
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProduct(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isEditMode, productId, existingProduct, fillFormWithProduct]);
 
   // ══════════════════════════════════
   //  CATEGORY MULTI-SELECT
@@ -101,12 +168,14 @@ export default function AddProductPage() {
   // ══════════════════════════════════
   //  IMAGE HANDLING
   // ══════════════════════════════════
+  const totalImageCount = images.length + existingImageUrls.length;
+
   const handleFilesSelected = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files) return;
 
-      const remaining = MAX_IMAGES - images.length;
+      const remaining = MAX_IMAGES - totalImageCount;
       if (remaining <= 0) return;
 
       const newFiles = Array.from(files).slice(0, remaining);
@@ -119,7 +188,7 @@ export default function AddProductPage() {
           file,
           preview: URL.createObjectURL(file),
           error,
-          isCover: images.length === 0 && newItems.length === 0, // First image is cover
+          isCover: images.length === 0 && newItems.length === 0 && existingImageUrls.length === 0,
         });
       }
 
@@ -130,7 +199,7 @@ export default function AddProductPage() {
         fileInputRef.current.value = '';
       }
     },
-    [images.length],
+    [totalImageCount, images.length, existingImageUrls.length],
   );
 
   const removeImage = (id: string) => {
@@ -150,6 +219,10 @@ export default function AddProductPage() {
     );
   };
 
+  const removeExistingImage = useCallback((url: string) => {
+    setExistingImageUrls((prev) => prev.filter((u) => u !== url));
+  }, []);
+
   /** Upload a single image — NOT NEEDED: backend handles Cloudinary */
   // Images are sent as raw files via FormData to POST /products
 
@@ -162,12 +235,12 @@ export default function AddProductPage() {
     setSubmitting(true);
 
     try {
-      // 1. Collect valid image files
+      // 1. Collect valid image files (new uploads only)
       const validFiles = images
         .filter((img) => img.file && !img.error)
         .map((img) => img.file);
 
-      if (validFiles.length === 0) {
+      if (!isEditMode && validFiles.length === 0) {
         setSubmitResult({ ok: false, msg: 'يجب إضافة صورة واحدة على الأقل' });
         setSubmitting(false);
         return;
@@ -181,8 +254,7 @@ export default function AddProductPage() {
         }
       }
 
-      // 3. Send to backend via API — backend handles Cloudinary upload
-      await productsService.create({
+      const payload = {
         name: name.trim(),
         brand: brand.trim(),
         model: model.trim(),
@@ -191,21 +263,40 @@ export default function AddProductPage() {
         specifications: Object.keys(specificationsObj).length > 0 ? specificationsObj : undefined,
         images: validFiles,
         isActive,
-      });
+      };
+
+      // 3. Send to backend
+      if (isEditMode) {
+        await productsService.update(productId!, {
+          ...payload,
+          existingImages: existingImageUrls,
+          images: validFiles.length > 0 ? validFiles : undefined,
+        });
+      } else {
+        await productsService.create({
+          ...payload,
+          images: validFiles,
+          isActive,
+        });
+      }
 
       // 4. Invalidate cache
       invalidateProductsCache();
 
-      setSubmitResult({ ok: true, msg: 'تم إنشاء المنتج بنجاح!' });
+      setSubmitResult({
+        ok: true,
+        msg: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تم إنشاء المنتج بنجاح!',
+      });
 
-      // Reset form
-      setName('');
-      setBrand('');
-      setModel('');
-      setPrice('');
-      setCategoryIds([]);
-      setSpecs([]);
-      setImages([]);
+      if (!isEditMode) {
+        setName('');
+        setBrand('');
+        setModel('');
+        setPrice('');
+        setCategoryIds([]);
+        setSpecs([]);
+        setImages([]);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'حدث خطأ أثناء حفظ المنتج';
       setSubmitResult({ ok: false, msg: message });
@@ -228,10 +319,18 @@ export default function AddProductPage() {
           <ArrowRight size={18} />
           العودة للمنتجات
         </button>
-        <h1 className={styles.pageTitle}>إضافة منتج جديد</h1>
-        <p className={styles.pageSubtitle}>أدخل بيانات المنتج والمواصفات والصور</p>
+        <h1 className={styles.pageTitle}>{isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}</h1>
+        <p className={styles.pageSubtitle}>{isEditMode ? 'عدّل بيانات المنتج والمواصفات والصور' : 'أدخل بيانات المنتج والمواصفات والصور'}</p>
       </div>
 
+      {loadingProduct && (
+        <div style={{ textAlign: 'center', padding: '64px 0' }}>
+          <Loader2 size={32} className={styles.spinner} />
+          <p style={{ marginTop: 16, color: '#6b7280' }}>جاري تحميل بيانات المنتج...</p>
+        </div>
+      )}
+
+      {!loadingProduct && (
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.formLayout}>
           {/* ═════ Left Column: Main Info ═════ */}
@@ -414,9 +513,37 @@ export default function AddProductPage() {
                   </p>
                 </div>
                 <span className={styles.imageCount}>
-                  {images.length}/{MAX_IMAGES}
+                  {totalImageCount}/{MAX_IMAGES}
                 </span>
               </div>
+
+              {/* Existing Images Grid (edit mode only) */}
+              {existingImageUrls.length > 0 && (
+                <>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>
+                    الصور الحالية
+                  </p>
+                  <div className={styles.imagesGrid}>
+                    {existingImageUrls.map((url) => (
+                      <div key={url} className={styles.imageCard}>
+                        <div className={styles.imagePreview}>
+                          <img src={url} alt="" />
+                        </div>
+                        <div className={styles.imageActions}>
+                          <button
+                            type="button"
+                            className={styles.removeImgBtn}
+                            onClick={() => removeExistingImage(url)}
+                            title="حذف"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               {/* Upload Area */}
               <div
@@ -451,16 +578,16 @@ export default function AddProductPage() {
                   multiple
                   className={styles.fileInput}
                   onChange={handleFilesSelected}
-                  disabled={images.length >= MAX_IMAGES}
+                  disabled={totalImageCount >= MAX_IMAGES}
                 />
                 <ImagePlus size={36} className={styles.uploadIcon} />
                 <p className={styles.uploadText}>
                   اسحب الصور هنا أو <span>اضغط للاختيار</span>
                 </p>
                 <p className={styles.uploadHint}>
-                  {images.length >= MAX_IMAGES
+                  {totalImageCount >= MAX_IMAGES
                     ? 'تم الوصول للحد الأقصى من الصور'
-                    : `يمكنك إضافة ${MAX_IMAGES - images.length} صور أخرى`}
+                    : `يمكنك إضافة ${MAX_IMAGES - totalImageCount} صور أخرى`}
                 </p>
               </div>
 
@@ -583,7 +710,7 @@ export default function AddProductPage() {
                 </div>
                 <div className={styles.summaryItem}>
                   <span>الصور</span>
-                  <strong>{images.length} صورة ({validCount} جاهزة)</strong>
+                  <strong>{totalImageCount} صورة ({images.length} جديدة)</strong>
                 </div>
                 <div className={styles.summaryItem}>
                   <span>الحالة</span>
@@ -603,12 +730,12 @@ export default function AddProductPage() {
               {submitting ? (
                 <>
                   <Loader2 size={18} className={styles.spinner} />
-                  جاري الحفظ...
+                  {isEditMode ? 'جاري التحديث...' : 'جاري الحفظ...'}
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={18} />
-                  حفظ المنتج
+                  {isEditMode ? 'تحديث المنتج' : 'حفظ المنتج'}
                 </>
               )}
             </button>
@@ -625,6 +752,7 @@ export default function AddProductPage() {
           </div>
         </div>
       </form>
+      )}
 
       {/* ══════════════════════════════════
           CATEGORY SELECTION MODAL

@@ -95,6 +95,7 @@ export const adminRoutes: RouteObject[] = [
       // ── المنتجات والتصنيفات ──
       { path: 'products', element: <AdminProductsPage /> },
       { path: 'products/add', element: <AddProductPage /> },
+      { path: 'products/edit/:productId', element: <AddProductPage /> },
       { path: 'categories', element: <AdminCategoriesPage /> },
       { path: 'categories/add', element: <AddCategoryPage /> },
       { path: 'categories/:categoryId/edit', element: <EditCategoryPage /> },

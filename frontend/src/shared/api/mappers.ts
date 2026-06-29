@@ -24,6 +24,7 @@ export function mapApiProduct(p: ApiProduct): Product {
     slug: p._id,
     name: { ar: p.name.ar, en: p.name.en },
     brand: p.brand ?? '',
+    model: p.model ?? '',
     description: { ar: '', en: '' },
     price: p.price ?? 0,
     currency: '₪',

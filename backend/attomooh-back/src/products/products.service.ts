@@ -81,7 +81,7 @@ export class ProductsService {
     return result;
   }
 
-  private readonly LIST_PROJECTION = 'name brand model price categories images isActive createdAt updatedAt';
+  private readonly LIST_PROJECTION = 'name brand model price categories images specifications isActive createdAt updatedAt';
 
   async findAll(): Promise<ProductDocument[]> {
     return this.productRepository.findAll(this.LIST_PROJECTION, { isActive: true });
@@ -147,33 +147,74 @@ export class ProductsService {
       updateData.categories = categoryIds;
     }
 
+    // ── Determine which old images to keep vs delete ──
+    let imagesToKeep: { publicId: string; secureUrl: string; isCover: boolean }[] = [];
+    let imagesToDelete: string[] = [];
+
+    if (updateProductDto.existingImages !== undefined) {
+      // explicit keep-list: delete any old image whose URL is NOT in existingImages
+      const keepSet = new Set(updateProductDto.existingImages);
+      for (const img of product.images ?? []) {
+        if (keepSet.has(img.secureUrl)) {
+          imagesToKeep.push({
+            publicId: img.publicId,
+            secureUrl: img.secureUrl,
+            isCover: false, // will be reassigned below
+          });
+        } else {
+          imagesToDelete.push(img.publicId);
+        }
+      }
+    } else {
+      // keep everything; nothing to delete
+      imagesToKeep = (product.images ?? []).map((img) => ({
+        publicId: img.publicId,
+        secureUrl: img.secureUrl,
+        isCover: img.isCover,
+      }));
+    }
+
     // ── Upload new images if provided ──
     if (files && files.length > 0) {
-      if (files.length > this.MAX_IMAGES) {
+      if (files.length + imagesToKeep.length > this.MAX_IMAGES) {
         throw new BadRequestException(
           `Maximum ${this.MAX_IMAGES} images allowed`,
         );
       }
 
-      // Delete old images from Cloudinary
-      if (product.images && product.images.length > 0) {
-        const publicIds = product.images.map((img) => img.publicId);
-        await this.cloudinaryService.deleteMultipleImages(publicIds);
-      }
-
-      // Upload new images
       const uploadedImages = await this.cloudinaryService.uploadMultipleImages(
         files,
         this.UPLOAD_FOLDER,
       );
 
-      updateData.images = uploadedImages.map(
+      const newImageObjects = uploadedImages.map(
         (img: CloudinaryUploadResult, index: number) => ({
           publicId: img.publicId,
           secureUrl: img.secureUrl,
-          isCover: index === 0,
+          isCover: false,
         }),
       );
+
+      imagesToKeep = [...imagesToKeep, ...newImageObjects];
+    }
+
+    // ── Delete removed images from Cloudinary (fire-and-forget) ──
+    if (imagesToDelete.length > 0) {
+      this.cloudinaryService
+        .deleteMultipleImages(imagesToDelete)
+        .catch((err) =>
+          this.logger.error(
+            `Background Cloudinary cleanup failed for product ${id}: ${err.message}`,
+          ),
+        );
+    }
+
+    // ── Assign isCover: first image is the cover ──
+    if (imagesToKeep.length > 0) {
+      imagesToKeep[0].isCover = true;
+      updateData.images = imagesToKeep;
+    } else {
+      updateData.images = [];
     }
 
     const updated = await this.productRepository.update(id, updateData);

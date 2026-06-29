@@ -6,6 +6,7 @@ export interface Product {
     en: string;
   };
   brand: string;
+  model: string;
   description: {
     ar: string;
     en: string;
