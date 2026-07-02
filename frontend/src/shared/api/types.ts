@@ -852,3 +852,55 @@ export interface ApiMaintenanceSchedule {
   createdAt: string;
   updatedAt: string;
 }
+
+/* ═══════════════════════════════════
+   Inventory (المخزون)
+   ═══════════════════════════════════ */
+
+export interface ApiInventoryItem {
+  _id: string;
+  customId: string;
+  name: string;
+  purchasePrice: number;
+  sellingPrice: number;
+  quantity: number;
+  location: string;
+  notes: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Financial Document (المستندات المالية)
+   ═══════════════════════════════════ */
+
+export interface ApiFinancialDocument {
+  _id: string;
+  documentNumber: string;
+  type: string;
+  date: string;
+  description: string;
+  amount: number;
+  total: number;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ═══════════════════════════════════
+   Purchase Order (طلبات المشتريات)
+   ═══════════════════════════════════ */
+
+export interface ApiPurchaseOrder {
+  _id: string;
+  customId: string;
+  date: string;
+  requestedByName: string;
+  materialType: string;
+  supplierName: string;
+  approved: boolean;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}

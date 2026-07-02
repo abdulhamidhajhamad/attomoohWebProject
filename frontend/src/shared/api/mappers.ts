@@ -56,6 +56,7 @@ export function mapApiCategory(c: ApiCategory): Category {
     },
     icon: c.icon,
     image: c.image || undefined,
+    isActive: c.isActive,
     parentIds: c.parents ?? [],
     level: c.level ?? 0,
     productCount: 0,

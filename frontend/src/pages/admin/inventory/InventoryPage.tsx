@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Boxes, Plus, Search, Trash2, Pencil, X, Check, FileText, StickyNote } from 'lucide-react';
+import { Boxes, Plus, Search, Trash2, Pencil, X, Check, FileText } from 'lucide-react';
 import { useInventoryStore } from '../../../shared/store/inventoryStore';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import type { ApiInventoryItem } from '../../../shared/api/types';

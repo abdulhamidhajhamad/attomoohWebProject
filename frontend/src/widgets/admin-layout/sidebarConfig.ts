@@ -24,7 +24,6 @@ import {
   Settings,
   ClipboardList,
   ArrowRight,
-  UserPlus,
 } from 'lucide-react';
 
 export interface SidebarItem {
