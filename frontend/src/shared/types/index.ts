@@ -38,6 +38,7 @@ export interface Category {
   /** Hierarchy supports multiple parents (empty = root). */
   parentIds: string[];
   level: number;
+  isActive: boolean;
   children?: Category[];
   productCount: number;
 }

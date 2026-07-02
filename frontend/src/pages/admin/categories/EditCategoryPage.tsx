@@ -73,7 +73,7 @@ function buildParentChain(
   while (current && !visited.has(current.id)) {
     chain.unshift(current);
     visited.add(current.id);
-    const parentId = current.parentIds[0];
+    const parentId: string | undefined = current.parentIds[0];
     current = parentId ? (byId.get(parentId) ?? null) : null;
   }
 

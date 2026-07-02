@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '../../shared/hooks/useProducts';
 import { useCategories } from '../../shared/hooks/useCategories';
-import { searchProducts, getCategoryById } from '../../entities/data';
+import { getCategoryById } from '../../entities/data';
 import { ProductGrid } from '../../features/products/ProductGrid/ProductGrid';
 import { useSEO } from '../../shared/hooks/useSEO';
 import { useLanguageDirection } from '../../shared/hooks/useLanguageDirection';
@@ -119,8 +119,7 @@ export default function ProductsPage() {
             <h3>⚠️ خطأ في تحميل المنتجات</h3>
             <p>{productsError}</p>
             <p className={styles.errorHint}>
-              تحقق من الاتصال بالخادم (الـ API) وتأكد من أنه يعمل على{' '}
-              <code>http://localhost:3000</code>
+              تحقق من الاتصال بالخادم (الـ API) وتأكد من أنه يعمل
             </p>
           </div>
         )}

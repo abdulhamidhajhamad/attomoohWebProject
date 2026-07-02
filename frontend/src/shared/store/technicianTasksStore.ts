@@ -50,7 +50,6 @@ export const useTechnicianTasksStore = create<TechnicianTasksStore>()((set, get)
       );
       set({ tasks, loading: false, activeTaskId: activeTask?._id || null });
     } catch (e: unknown) {
-      console.error('[TechnicianTasksStore] fetchMyTasks error:', e);
       set({ error: getErrorMessage(e), loading: false });
     }
   },

@@ -38,7 +38,7 @@ export const COLORS = {
 export const CONTACT = {
   phone: import.meta.env.VITE_CONTACT_PHONE || '+970599000000',
   whatsapp: import.meta.env.VITE_CONTACT_WHATSAPP || '+970599000000',
-  email: import.meta.env.VITE_CONTACT_EMAIL || 'info@attomooh.com',
+  email: import.meta.env.VITE_CONTACT_EMAIL || 'Attomooh.sales1@gmail.com',
   address: {
     ar: 'فلسطين',
     en: 'Palestine',

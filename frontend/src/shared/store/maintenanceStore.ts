@@ -92,7 +92,6 @@ export const useMaintenanceStore = create<MaintenanceStore>()((set) => ({
       const tasks = await maintenanceService.getAllTasks(status);
       set({ tasks, loading: false });
     } catch (e: unknown) {
-      console.error('[MaintenanceStore] fetchAllTasks error:', e);
       set({ error: getErrorMessage(e), loading: false });
     }
   },
@@ -103,7 +102,6 @@ export const useMaintenanceStore = create<MaintenanceStore>()((set) => ({
       const calendarTasks = await maintenanceService.getCalendarTasks(from, to, technicianId, tokenKey);
       set({ calendarTasks, loading: false });
     } catch (e: unknown) {
-      console.error('[MaintenanceStore] fetchCalendarTasks error:', e);
       set({ error: getErrorMessage(e), loading: false });
     }
   },

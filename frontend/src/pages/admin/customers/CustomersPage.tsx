@@ -54,7 +54,7 @@ const pickTechName = (tech: TechnicianValue) => {
 
 const pickTechId = (tech: TechnicianValue) => {
   if (tech.mode === 'select' && tech.id) return tech.id;
-  if (tech.mode === 'manual' && tech.name.trim()) return null;
+  if (tech.mode === 'manual' && tech.name.trim()) return undefined;
   return undefined;
 };
 

@@ -6,7 +6,7 @@ import { ReceptionModal, EMPTY_RECEPTION } from '../../../shared/ui/ReceptionMod
 import { EmployeeSelect, EMPTY_EMPLOYEE } from '../../../shared/ui/EmployeeSelect';
 import type { ReceptionValue } from '../../../shared/ui/ReceptionModal';
 import type { EmployeeValue } from '../../../shared/ui/EmployeeSelect';
-import type { ApiMachineDelivery, ApiMachineReception } from '../../../shared/api/types';
+import type { ApiMachineDelivery } from '../../../shared/api/types';
 import { generateDeliveryPdf } from './generateDeliveryPdf';
 import styles from '../shared/CrudPage.module.css';
 
@@ -469,7 +469,7 @@ export default function MachineDeliveryPage() {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSelect={(reception) => {
-          setActiveForm({ ...activeForm, reception });
+          setActiveForm({ ...activeForm, reception } as DeliveryForm);
         }}
       />
     </div>

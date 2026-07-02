@@ -139,6 +139,8 @@ export default function ProductDetailPage() {
     );
   }
 
+  if (!product) return null;
+
   return (
     <div className="container">
       <div className={styles.page}>
