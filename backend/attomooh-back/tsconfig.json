@@ -19,8 +19,8 @@
     "strictNullChecks": true,
 "forceConsistentCasingInFileNames": true,
   "useDefineForClassFields": false,
-  "noImplicitAny": false,
-  "strictBindCallApply": false,
+  "noImplicitAny": true,
+  "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": false,
     "types": ["express", "multer", "node", "jest"]
   }

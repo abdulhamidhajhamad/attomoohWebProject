@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { EmployeesService } from '../employees/employees.service.js';
+import { CreateEmployeeDto } from '../employees/dto/create-employee.dto.js';
+import { UserRole } from '../common/enums/user-role.enum.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SignupDto } from './dto/signup.dto.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
@@ -14,7 +16,14 @@ export class AuthService {
   ) {}
 
   async signup(signupDto: SignupDto): Promise<{ accessToken: string }> {
-    const employee = await this.employeesService.create(signupDto as any);
+    const createDto: CreateEmployeeDto = {
+      name: signupDto.name,
+      email: signupDto.email,
+      password: signupDto.password,
+      phone: signupDto.phone,
+      role: UserRole.USER,
+    };
+    const employee = await this.employeesService.create(createDto);
 
     const payload: JwtPayload = {
       sub: employee._id.toString(),
