@@ -2,6 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+
+// ── Health ──
+import { HealthModule } from './health/health.module.js';
 
 // ── Global Modules ──
 import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
@@ -50,6 +55,12 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
 
 @Module({
   imports: [
+    // ── Rate Limiting ──
+    ThrottlerModule.forRoot([{
+      ttl: 60_000,
+      limit: 60,
+    }]),
+
     // ── Global Config ──
     ConfigModule.forRoot({
       isGlobal: true,
@@ -75,6 +86,9 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
         uri: configService.get<string>('MONGODB_URI'),
       }),
     }),
+
+    // ── Health ──
+    HealthModule,
 
     // ── Global Modules ──
     CloudinaryModule,
@@ -122,6 +136,11 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
     PurchaseOrdersModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

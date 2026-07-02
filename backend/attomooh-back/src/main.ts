@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import dns from 'node:dns';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
@@ -30,8 +31,15 @@ async function bootstrap() {
   // ── Global Interceptors ──
   app.useGlobalInterceptors(new TransformInterceptor());
 
+  // ── Security Headers ──
+  app.use(helmet());
+
   // ── CORS ──
-  app.enableCors();
+  app.enableCors({
+    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
+  });
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);

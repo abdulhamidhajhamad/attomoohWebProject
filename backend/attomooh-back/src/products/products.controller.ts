@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   HttpCode,
   HttpStatus,
+  Logger,
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
@@ -29,6 +30,8 @@ import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe.js';
 
 @Controller('products')
 export class ProductsController {
+  private readonly logger = new Logger(ProductsController.name);
+
   constructor(private readonly productsService: ProductsService) {}
 
   /**
@@ -67,7 +70,7 @@ export class ProductsController {
   @Header('Cache-Control', 'public, max-age=60')
   async findAll() {
     const result = await this.productsService.findAll();
-    console.log('[findAll] result:', JSON.stringify(result, null, 2));
+    this.logger.log(`Found ${result.length} products`);
     return result;
   }
 

@@ -127,3 +127,16 @@
 .actions button {
   flex: 1;
 }
+
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .actions button {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+}

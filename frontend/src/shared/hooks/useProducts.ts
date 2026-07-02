@@ -211,6 +211,7 @@ export function useProduct(id: string | undefined): UseProductResult {
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
+  const fetchGen = useRef(0);
 
   const fetchProduct = useCallback(
     async (skipCache = false) => {
@@ -238,13 +239,14 @@ export function useProduct(id: string | undefined): UseProductResult {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const gen = ++fetchGen.current;
       setLoading(true);
       setError(null);
 
       try {
         const sig = abortRef.current?.signal;
         const data = await productsService.getById(id, sig);
-        if (mounted.current) {
+        if (mounted.current && gen === fetchGen.current) {
           setProduct(data);
           setCache(cacheKey, data);
         }
@@ -252,11 +254,11 @@ export function useProduct(id: string | undefined): UseProductResult {
         if (err instanceof DOMException && err.name === 'AbortError') {
           return;
         }
-        if (mounted.current) {
+        if (mounted.current && gen === fetchGen.current) {
           setError(err instanceof Error ? err.message : 'المنتج غير موجود');
         }
       } finally {
-        if (mounted.current) {
+        if (mounted.current && gen === fetchGen.current) {
           setLoading(false);
         }
       }

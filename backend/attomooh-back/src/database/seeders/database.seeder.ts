@@ -71,12 +71,15 @@ export class DatabaseSeeder implements OnModuleInit {
       this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
     );
 
+    const defaultTechPassword =
+      this.configService.get<string>('TECH_PASSWORD', 'Tech@123');
+
     const technicians = [
       {
         customId: 'EMP-000002',
         name: 'abo hane',
         email: 'abohane@company.com',
-        password: 'Tech@123',
+        password: defaultTechPassword,
         phone: '0500000001',
         jobTitle: 'Technician',
       },
@@ -84,7 +87,7 @@ export class DatabaseSeeder implements OnModuleInit {
         customId: 'EMP-000003',
         name: 'abdalwahab',
         email: 'abdalwahab@company.com',
-        password: 'Tech@123',
+        password: defaultTechPassword,
         phone: '0500000002',
         jobTitle: 'Technician',
       },

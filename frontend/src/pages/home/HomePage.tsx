@@ -44,27 +44,8 @@ export default function HomePage() {
       {/* Hero Slider */}
       <HeroSlider />
 
-      {/* Stats */}
-      <div className="container">
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <div className={styles.statNumber}>500+</div>
-            <div className={styles.statLabel}>{t('trust.clients')}</div>
-          </div>
-          <div className={styles.stat}>
-            <div className={styles.statNumber}>200+</div>
-            <div className={styles.statLabel}>{t('trust.products')}</div>
-          </div>
-          <div className={styles.stat}>
-            <div className={styles.statNumber}>10+</div>
-            <div className={styles.statLabel}>{t('trust.years')}</div>
-          </div>
-          <div className={styles.stat}>
-            <div className={styles.statNumber}>24/7</div>
-            <div className={styles.statLabel}>{t('trust.support')}</div>
-          </div>
-        </div>
-      </div>
+      {/* Brand Logos — آخر سكشن قبل الفوتر */}
+      <BrandSlider />
 
       {/* Featured Products */}
       {productsLoading ? (
@@ -134,8 +115,27 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Brand Logos — آخر سكشن قبل الفوتر */}
-      <BrandSlider />
+      {/* Stats */}
+      <div className="container">
+        <div className={styles.stats}>
+          <div className={styles.stat}>
+            <div className={styles.statNumber}>500+</div>
+            <div className={styles.statLabel}>{t('trust.clients')}</div>
+          </div>
+          <div className={styles.stat}>
+            <div className={styles.statNumber}>200+</div>
+            <div className={styles.statLabel}>{t('trust.products')}</div>
+          </div>
+          <div className={styles.stat}>
+            <div className={styles.statNumber}>10+</div>
+            <div className={styles.statLabel}>{t('trust.years')}</div>
+          </div>
+          <div className={styles.stat}>
+            <div className={styles.statNumber}>24/7</div>
+            <div className={styles.statLabel}>{t('trust.support')}</div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
