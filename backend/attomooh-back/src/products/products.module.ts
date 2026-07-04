@@ -8,9 +8,7 @@ import { CategoriesModule } from '../categories/categories.module.js';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Product.name, schema: ProductSchema },
-    ]),
+    MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
     CategoriesModule,
   ],
   controllers: [ProductsController],

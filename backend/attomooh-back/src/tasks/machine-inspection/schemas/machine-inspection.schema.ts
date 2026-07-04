@@ -8,7 +8,13 @@ export type MachineInspectionDocument = HydratedDocument<MachineInspection>;
 
 @Schema({
   timestamps: true,
-  toJSON: { virtuals: true, transform(_doc, ret: Record<string, unknown>) { delete ret.__v; return ret; } },
+  toJSON: {
+    virtuals: true,
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.__v;
+      return ret;
+    },
+  },
 })
 export class MachineInspection {
   @Prop({ type: Types.ObjectId, ref: 'MachineReception', required: true })
@@ -33,7 +39,7 @@ export class MachineInspection {
   pauseReason: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
-  technician: Types.ObjectId;
+  technician: Types.ObjectId | null;
 
   @Prop({ default: '' })
   technicianName: string;
@@ -72,4 +78,5 @@ export class MachineInspection {
   updatedAt: Date;
 }
 
-export const MachineInspectionSchema = SchemaFactory.createForClass(MachineInspection);
+export const MachineInspectionSchema =
+  SchemaFactory.createForClass(MachineInspection);

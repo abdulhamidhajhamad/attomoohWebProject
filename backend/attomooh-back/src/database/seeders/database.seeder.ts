@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { Employee, EmployeeDocument } from '../../employees/schemas/employee.schema.js';
+import {
+  Employee,
+  EmployeeDocument,
+} from '../../employees/schemas/employee.schema.js';
 import { UserRole } from '../../common/enums/user-role.enum.js';
 import {
   Category,
@@ -15,7 +18,8 @@ export class DatabaseSeeder implements OnModuleInit {
   private readonly logger = new Logger(DatabaseSeeder.name);
 
   constructor(
-    @InjectModel(Employee.name) private readonly employeeModel: Model<EmployeeDocument>,
+    @InjectModel(Employee.name)
+    private readonly employeeModel: Model<EmployeeDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
     private readonly configService: ConfigService,
@@ -34,7 +38,9 @@ export class DatabaseSeeder implements OnModuleInit {
       'ADMIN_EMAIL',
       'admin@company.com',
     );
-    const existingAdmin = await this.employeeModel.findOne({ email: adminEmail });
+    const existingAdmin = await this.employeeModel.findOne({
+      email: adminEmail,
+    });
 
     if (existingAdmin) {
       this.logger.log('Admin employee already exists, skipping seed');
@@ -71,8 +77,10 @@ export class DatabaseSeeder implements OnModuleInit {
       this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
     );
 
-    const defaultTechPassword =
-      this.configService.get<string>('TECH_PASSWORD', 'Tech@123');
+    const defaultTechPassword = this.configService.get<string>(
+      'TECH_PASSWORD',
+      'Tech@123',
+    );
 
     const technicians = [
       {
@@ -121,18 +129,26 @@ export class DatabaseSeeder implements OnModuleInit {
     const roots = [
       {
         name: { ar: 'معدات مطاعم', en: 'Restaurant Equipment' },
-        description: { ar: 'تجهيزات ومعدات المطاعم والمطابخ الصناعية', en: 'Restaurant and industrial kitchen equipment and supplies' },
+        description: {
+          ar: 'تجهيزات ومعدات المطاعم والمطابخ الصناعية',
+          en: 'Restaurant and industrial kitchen equipment and supplies',
+        },
         icon: 'chef-hat',
       },
       {
         name: { ar: 'معدات ملاحم', en: 'Butchery Equipment' },
-        description: { ar: 'تجهيزات ومعدات الملاحم ومحلات اللحوم', en: 'Butchery and meat shop equipment and supplies' },
+        description: {
+          ar: 'تجهيزات ومعدات الملاحم ومحلات اللحوم',
+          en: 'Butchery and meat shop equipment and supplies',
+        },
         icon: 'beef',
       },
     ];
 
     for (const root of roots) {
-      const exists = await this.categoryModel.findOne({ 'name.ar': root.name.ar });
+      const exists = await this.categoryModel.findOne({
+        'name.ar': root.name.ar,
+      });
       if (exists) continue;
 
       await this.categoryModel.create({

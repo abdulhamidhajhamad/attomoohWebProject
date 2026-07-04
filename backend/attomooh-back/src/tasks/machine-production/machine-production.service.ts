@@ -1,12 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Types } from 'mongoose';
 import { MachineProductionRepository } from './repositories/machine-production.repository.js';
-import { MachineProductionDocument } from './schemas/machine-production.schema.js';
+import {
+  MachineProduction,
+  MachineProductionDocument,
+} from './schemas/machine-production.schema.js';
 import { CreateMachineProductionDto } from './dto/create-machine-production.dto.js';
 import { UpdateMachineProductionDto } from './dto/update-machine-production.dto.js';
 import { IdGeneratorService } from '../../common/services/id-generator.service.js';
 import { IdPrefix } from '../../common/enums/id-prefix.enum.js';
 import { MachineTaskReportDto } from '../../common/dto/machine-task-report.dto.js';
+import { SparePart } from '../../common/schemas/spare-part.schema.js';
+import { TimeLog } from '../../common/schemas/time-log.schema.js';
 
 @Injectable()
 export class MachineProductionService {
@@ -18,10 +27,14 @@ export class MachineProductionService {
   async create(
     dto: CreateMachineProductionDto,
   ): Promise<MachineProductionDocument> {
-    const customId = dto.customId?.trim() || (await this.idGenerator.generateId(IdPrefix.PRODUCTION));
+    const customId =
+      dto.customId?.trim() ||
+      (await this.idGenerator.generateId(IdPrefix.PRODUCTION));
     const machineName = dto.machineName?.trim() ?? '';
     const machineDetails = dto.machineDetails?.trim() ?? '';
-    const machineNameAndDetails = dto.machineNameAndDetails?.trim() || [machineName, machineDetails].filter(Boolean).join(' - ');
+    const machineNameAndDetails =
+      dto.machineNameAndDetails?.trim() ||
+      [machineName, machineDetails].filter(Boolean).join(' - ');
 
     if (!machineNameAndDetails) {
       throw new BadRequestException('Machine name/details is required');
@@ -40,11 +53,13 @@ export class MachineProductionService {
         ? new Types.ObjectId(dto.technician)
         : undefined,
       technicianName: dto.technicianName ?? '',
-      materialsAndParts: (dto.materialsAndParts ?? []).map((part) => ({
-        name: part.name,
-        quantity: part.quantity ?? 1,
-        cost: part.cost ?? 0,
-      })) as any,
+      materialsAndParts: (dto.materialsAndParts ?? []).map(
+        (part): SparePart => ({
+          name: part.name,
+          quantity: part.quantity ?? 1,
+          cost: part.cost ?? 0,
+        }),
+      ),
       readyForDelivery: dto.readyForDelivery ?? false,
       technicianFee: dto.technicianFee ?? 0,
       companyFee: dto.companyFee ?? 0,
@@ -61,12 +76,9 @@ export class MachineProductionService {
     return this.repo.findAll({ search });
   }
 
-  async findById(
-    id: Types.ObjectId,
-  ): Promise<MachineProductionDocument> {
+  async findById(id: Types.ObjectId): Promise<MachineProductionDocument> {
     const d = await this.repo.findById(id);
-    if (!d)
-      throw new NotFoundException('Production record not found');
+    if (!d) throw new NotFoundException('Production record not found');
     return d;
   }
 
@@ -74,7 +86,7 @@ export class MachineProductionService {
     id: Types.ObjectId,
     dto: UpdateMachineProductionDto,
   ): Promise<MachineProductionDocument> {
-    const data: Record<string, unknown> = { ...dto };
+    const data: Partial<MachineProduction> = {};
 
     if (dto.customId !== undefined) data.customId = dto.customId.trim();
 
@@ -85,32 +97,31 @@ export class MachineProductionService {
     }
 
     if (dto.technician !== undefined)
-      data.technician = dto.technician
-        ? new Types.ObjectId(dto.technician)
-        : null;
+      data.technician = dto.technician ? new Types.ObjectId(dto.technician) : null;
 
     if (dto.technician !== undefined && dto.technician) data.technicianName = '';
-    if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
+    if (dto.technician === undefined && dto.technicianName !== undefined)
+      data.technician = null;
 
-    if (dto.materialsAndParts !== undefined) {
+    if (dto.machineName !== undefined) data.machineName = dto.machineName;
+    if (dto.machineDetails !== undefined) data.machineDetails = dto.machineDetails;
+
+    if (dto.materialsAndParts !== undefined)
       data.materialsAndParts = dto.materialsAndParts.map((part) => ({
         name: part.name,
         quantity: part.quantity ?? 1,
         cost: part.cost ?? 0,
       }));
-    }
 
-    if (dto.scheduledStartTime !== undefined) {
+    if (dto.scheduledStartTime !== undefined)
       data.scheduledStartTime = dto.scheduledStartTime
         ? new Date(dto.scheduledStartTime)
         : null;
-    }
 
-    if (dto.scheduledEndTime !== undefined) {
+    if (dto.scheduledEndTime !== undefined)
       data.scheduledEndTime = dto.scheduledEndTime
         ? new Date(dto.scheduledEndTime)
         : null;
-    }
 
     const hasName = dto.machineName !== undefined;
     const hasDetails = dto.machineDetails !== undefined;
@@ -119,29 +130,32 @@ export class MachineProductionService {
     if (hasName || hasDetails || hasCombined) {
       const current = await this.findById(id);
       const machineName = (dto.machineName ?? current.machineName ?? '').trim();
-      const machineDetails = (dto.machineDetails ?? current.machineDetails ?? '').trim();
-      const combined = dto.machineNameAndDetails?.trim() || [machineName, machineDetails].filter(Boolean).join(' - ');
+      const machineDetails = (
+        dto.machineDetails ??
+        current.machineDetails ??
+        ''
+      ).trim();
+      const combined =
+        dto.machineNameAndDetails?.trim() ||
+        [machineName, machineDetails].filter(Boolean).join(' - ');
       data.machineName = machineName;
       data.machineDetails = machineDetails;
       data.machineNameAndDetails = combined;
     }
 
-    const u = await this.repo.updateById(id, data as any);
-    if (!u)
-      throw new NotFoundException('Production record not found');
+    const u = await this.repo.updateById(id, data);
+    if (!u) throw new NotFoundException('Production record not found');
     return u;
   }
 
-  async startWork(
-    id: Types.ObjectId,
-  ): Promise<MachineProductionDocument> {
+  async startWork(id: Types.ObjectId): Promise<MachineProductionDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
       action: 'start',
       timestamp: new Date(),
       pauseReason: '',
-    } as any);
-    (d as any).status = 'in_progress';
+    } as TimeLog);
+    d.status = 'in_progress';
     return d.save();
   }
 
@@ -154,21 +168,19 @@ export class MachineProductionService {
       action: 'pause',
       timestamp: new Date(),
       pauseReason: reason ?? '',
-    } as any);
-    (d as any).status = 'postponed';
+    } as TimeLog);
+    d.status = 'postponed';
     return d.save();
   }
 
-  async resumeWork(
-    id: Types.ObjectId,
-  ): Promise<MachineProductionDocument> {
+  async resumeWork(id: Types.ObjectId): Promise<MachineProductionDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
       action: 'resume',
       timestamp: new Date(),
       pauseReason: '',
-    } as any);
-    (d as any).status = 'in_progress';
+    } as TimeLog);
+    d.status = 'in_progress';
     return d.save();
   }
 
@@ -181,34 +193,47 @@ export class MachineProductionService {
       action: 'finish',
       timestamp: new Date(),
       pauseReason: '',
-    } as any);
+    } as TimeLog);
     d.readyForDelivery = true;
-    (d as any).status = 'ready';
-    d.productionDurationMs = this.calcDuration(d.timeLogs as any);
+    d.status = 'ready';
+    d.productionDurationMs = this.calcDuration(d.timeLogs);
 
     if (report) {
       if (report.pauseReason !== undefined) d.pauseReason = report.pauseReason;
-      if (report.spareParts !== undefined) d.materialsAndParts = report.spareParts as any;
-      if (report.technicianFee !== undefined) d.technicianFee = report.technicianFee;
+      if (report.spareParts !== undefined)
+        d.materialsAndParts = report.spareParts as SparePart[];
+      if (report.technicianFee !== undefined)
+        d.technicianFee = report.technicianFee;
       if (report.companyFee !== undefined) d.companyFee = report.companyFee;
     }
 
     return d.save();
   }
 
-  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineProductionDocument> {
+  async rejectTask(
+    id: Types.ObjectId,
+    reason: string,
+  ): Promise<MachineProductionDocument> {
     const d = await this.findById(id);
-    (d as any).status = 'rejected';
-    (d as any).rejectionReason = reason;
-    d.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    d.status = 'rejected';
+    d.rejectionReason = reason;
+    d.timeLogs.push({
+      action: 'reject',
+      timestamp: new Date(),
+      pauseReason: reason,
+    } as TimeLog);
     return d.save();
   }
 
-  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+  async findByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineProductionDocument[]> {
     return this.repo.findByTechnician(technicianId);
   }
 
-  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+  async findActiveByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineProductionDocument[]> {
     return this.repo.findActiveByTechnician(technicianId);
   }
 
@@ -216,18 +241,13 @@ export class MachineProductionService {
     await this.repo.deleteById(id);
   }
 
-  private calcDuration(
-    logs: Array<{ action: string; timestamp: Date }>,
-  ): number {
+  private calcDuration(logs: TimeLog[]): number {
     let total = 0;
     let start: Date | null = null;
     for (const l of logs) {
       if (l.action === 'start' || l.action === 'resume')
         start = new Date(l.timestamp);
-      else if (
-        (l.action === 'pause' || l.action === 'finish') &&
-        start
-      ) {
+      else if ((l.action === 'pause' || l.action === 'finish') && start) {
         total += new Date(l.timestamp).getTime() - start.getTime();
         start = null;
       }

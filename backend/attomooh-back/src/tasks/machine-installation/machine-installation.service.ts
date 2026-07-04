@@ -37,16 +37,16 @@ export class MachineInstallationService {
     });
   }
 
-  async findAll(status?: string, search?: string): Promise<MachineInstallationDocument[]> {
+  async findAll(
+    status?: string,
+    search?: string,
+  ): Promise<MachineInstallationDocument[]> {
     return this.repo.findAll({ status, search });
   }
 
-  async findById(
-    id: Types.ObjectId,
-  ): Promise<MachineInstallationDocument> {
+  async findById(id: Types.ObjectId): Promise<MachineInstallationDocument> {
     const d = await this.repo.findById(id);
-    if (!d)
-      throw new NotFoundException('Installation record not found');
+    if (!d) throw new NotFoundException('Installation record not found');
     return d;
   }
 
@@ -55,13 +55,16 @@ export class MachineInstallationService {
     dto: UpdateMachineInstallationDto,
   ): Promise<MachineInstallationDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.machineReception !== undefined) data.machineReception = new Types.ObjectId(dto.machineReception);
+    if (dto.machineReception !== undefined)
+      data.machineReception = new Types.ObjectId(dto.machineReception);
     if (dto.technician !== undefined)
       data.technician = dto.technician
         ? new Types.ObjectId(dto.technician)
         : null;
-    if (dto.technician !== undefined && dto.technician) data.technicianName = '';
-    if (dto.technician === undefined && dto.technicianName !== undefined) data.technician = null;
+    if (dto.technician !== undefined && dto.technician)
+      data.technicianName = '';
+    if (dto.technician === undefined && dto.technicianName !== undefined)
+      data.technician = null;
     if (dto.scheduledStartTime !== undefined) {
       data.scheduledStartTime = dto.scheduledStartTime
         ? new Date(dto.scheduledStartTime)
@@ -73,14 +76,11 @@ export class MachineInstallationService {
         : null;
     }
     const u = await this.repo.updateById(id, data as any);
-    if (!u)
-      throw new NotFoundException('Installation record not found');
+    if (!u) throw new NotFoundException('Installation record not found');
     return u;
   }
 
-  async startWork(
-    id: Types.ObjectId,
-  ): Promise<MachineInstallationDocument> {
+  async startWork(id: Types.ObjectId): Promise<MachineInstallationDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
       action: 'start',
@@ -105,9 +105,7 @@ export class MachineInstallationService {
     return d.save();
   }
 
-  async resumeWork(
-    id: Types.ObjectId,
-  ): Promise<MachineInstallationDocument> {
+  async resumeWork(id: Types.ObjectId): Promise<MachineInstallationDocument> {
     const d = await this.findById(id);
     d.timeLogs.push({
       action: 'resume',
@@ -133,27 +131,40 @@ export class MachineInstallationService {
 
     if (report) {
       if (report.pauseReason !== undefined) d.pauseReason = report.pauseReason;
-      if (report.technicianReport !== undefined) d.technicianReport = report.technicianReport;
-      if (report.technicianFee !== undefined) d.technicianFee = report.technicianFee;
+      if (report.technicianReport !== undefined)
+        d.technicianReport = report.technicianReport;
+      if (report.technicianFee !== undefined)
+        d.technicianFee = report.technicianFee;
       if (report.companyFee !== undefined) d.companyFee = report.companyFee;
     }
 
     return d.save();
   }
 
-  async rejectTask(id: Types.ObjectId, reason: string): Promise<MachineInstallationDocument> {
+  async rejectTask(
+    id: Types.ObjectId,
+    reason: string,
+  ): Promise<MachineInstallationDocument> {
     const d = await this.findById(id);
     d.status = InstallationStatus.REJECTED;
     (d as any).rejectionReason = reason;
-    d.timeLogs.push({ action: 'reject', timestamp: new Date(), pauseReason: reason } as any);
+    d.timeLogs.push({
+      action: 'reject',
+      timestamp: new Date(),
+      pauseReason: reason,
+    } as any);
     return d.save();
   }
 
-  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+  async findByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineInstallationDocument[]> {
     return this.repo.findByTechnician(technicianId);
   }
 
-  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineInstallationDocument[]> {
+  async findActiveByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineInstallationDocument[]> {
     return this.repo.findActiveByTechnician(technicianId);
   }
 
@@ -169,10 +180,7 @@ export class MachineInstallationService {
     for (const l of logs) {
       if (l.action === 'start' || l.action === 'resume')
         start = new Date(l.timestamp);
-      else if (
-        (l.action === 'pause' || l.action === 'finish') &&
-        start
-      ) {
+      else if ((l.action === 'pause' || l.action === 'finish') && start) {
         total += new Date(l.timestamp).getTime() - start.getTime();
         start = null;
       }

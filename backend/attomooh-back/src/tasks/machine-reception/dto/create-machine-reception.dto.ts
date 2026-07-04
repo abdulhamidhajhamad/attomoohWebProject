@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsMongoId, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsMongoId,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateMachineReceptionDto {
@@ -16,7 +24,9 @@ export class CreateMachineReceptionDto {
   @IsString() @IsOptional() receivedParts?: string;
   @IsString() @IsOptional() customerProblemDesc?: string;
   @IsString() @IsOptional() notes?: string;
-  @Transform(({ value }) => value === null ? undefined : value)
-  @IsMongoId() @IsOptional() receivedBy?: string | null;
+  @Transform(({ value }) => (value === null ? undefined : value))
+  @IsMongoId()
+  @IsOptional()
+  receivedBy?: string | null;
   @IsString() @IsOptional() receivedByName?: string;
 }

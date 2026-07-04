@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsMongoId, IsNotEmpty, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsMongoId,
+  IsNotEmpty,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateMaintenanceScheduleDto {
   @IsMongoId() @IsNotEmpty() machineReception: string;

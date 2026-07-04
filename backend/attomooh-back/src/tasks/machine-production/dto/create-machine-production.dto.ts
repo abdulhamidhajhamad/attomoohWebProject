@@ -27,7 +27,11 @@ export class CreateMachineProductionDto {
   @IsString() @IsOptional() pauseReason?: string;
   @IsMongoId() @IsOptional() technician?: string;
   @IsString() @IsOptional() technicianName?: string;
-  @IsArray() @ValidateNested({ each: true }) @Type(() => MaterialPartDto) @IsOptional() materialsAndParts?: MaterialPartDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MaterialPartDto)
+  @IsOptional()
+  materialsAndParts?: MaterialPartDto[];
   @IsBoolean() @IsOptional() readyForDelivery?: boolean;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;

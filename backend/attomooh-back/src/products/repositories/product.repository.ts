@@ -15,7 +15,10 @@ export class ProductRepository {
     return product.save();
   }
 
-  async findAll(projection?: ProjectionType<Product>, filter?: Record<string, unknown>): Promise<ProductDocument[]> {
+  async findAll(
+    projection?: ProjectionType<Product>,
+    filter?: Record<string, unknown>,
+  ): Promise<ProductDocument[]> {
     return this.productModel
       .find(filter ?? {})
       .select(projection ?? '')
@@ -25,7 +28,10 @@ export class ProductRepository {
       .exec();
   }
 
-  async findById(id: Types.ObjectId, projection?: ProjectionType<Product>): Promise<ProductDocument | null> {
+  async findById(
+    id: Types.ObjectId,
+    projection?: ProjectionType<Product>,
+  ): Promise<ProductDocument | null> {
     return this.productModel
       .findById(id)
       .select(projection ?? '')

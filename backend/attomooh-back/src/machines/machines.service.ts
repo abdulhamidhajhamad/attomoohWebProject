@@ -15,16 +15,23 @@ export class MachinesService {
   ) {}
 
   async create(dto: CreateMachineDto): Promise<MachineDocument> {
-    const customId = dto.customId || (await this.idGenerator.generateId(IdPrefix.MACHINE));
+    const customId =
+      dto.customId || (await this.idGenerator.generateId(IdPrefix.MACHINE));
     return this.machineRepo.create({
       customId,
       name: dto.name,
       technician1Name: dto.technician1Name?.trim() ?? '',
       technician2Name: dto.technician2Name?.trim() ?? '',
       technician3Name: dto.technician3Name?.trim() ?? '',
-      technician1: dto.technician1 ? new Types.ObjectId(dto.technician1) : undefined,
-      technician2: dto.technician2 ? new Types.ObjectId(dto.technician2) : undefined,
-      technician3: dto.technician3 ? new Types.ObjectId(dto.technician3) : undefined,
+      technician1: dto.technician1
+        ? new Types.ObjectId(dto.technician1)
+        : undefined,
+      technician2: dto.technician2
+        ? new Types.ObjectId(dto.technician2)
+        : undefined,
+      technician3: dto.technician3
+        ? new Types.ObjectId(dto.technician3)
+        : undefined,
       isActive: dto.isActive ?? true,
     });
   }
@@ -43,16 +50,31 @@ export class MachinesService {
     return this.machineRepo.search(query);
   }
 
-  async update(id: Types.ObjectId, dto: UpdateMachineDto): Promise<MachineDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdateMachineDto,
+  ): Promise<MachineDocument> {
     const data: Record<string, unknown> = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.technician1Name !== undefined) data.technician1Name = dto.technician1Name?.trim() ?? '';
-    if (dto.technician2Name !== undefined) data.technician2Name = dto.technician2Name?.trim() ?? '';
-    if (dto.technician3Name !== undefined) data.technician3Name = dto.technician3Name?.trim() ?? '';
-    if (dto.technician1 !== undefined) data.technician1 = dto.technician1 ? new Types.ObjectId(dto.technician1) : null;
-    if (dto.technician2 !== undefined) data.technician2 = dto.technician2 ? new Types.ObjectId(dto.technician2) : null;
-    if (dto.technician3 !== undefined) data.technician3 = dto.technician3 ? new Types.ObjectId(dto.technician3) : null;
+    if (dto.technician1Name !== undefined)
+      data.technician1Name = dto.technician1Name?.trim() ?? '';
+    if (dto.technician2Name !== undefined)
+      data.technician2Name = dto.technician2Name?.trim() ?? '';
+    if (dto.technician3Name !== undefined)
+      data.technician3Name = dto.technician3Name?.trim() ?? '';
+    if (dto.technician1 !== undefined)
+      data.technician1 = dto.technician1
+        ? new Types.ObjectId(dto.technician1)
+        : null;
+    if (dto.technician2 !== undefined)
+      data.technician2 = dto.technician2
+        ? new Types.ObjectId(dto.technician2)
+        : null;
+    if (dto.technician3 !== undefined)
+      data.technician3 = dto.technician3
+        ? new Types.ObjectId(dto.technician3)
+        : null;
     const updated = await this.machineRepo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Machine not found');
     return updated;

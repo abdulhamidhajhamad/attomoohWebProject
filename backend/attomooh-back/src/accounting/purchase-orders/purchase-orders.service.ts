@@ -16,12 +16,16 @@ export class PurchaseOrdersService {
   ) {}
 
   async create(dto: CreatePurchaseOrderDto): Promise<PurchaseOrderDocument> {
-    const customId = dto.customId || (await this.idGenerator.generateId(IdPrefix.PURCHASE_ORDER));
+    const customId =
+      dto.customId ||
+      (await this.idGenerator.generateId(IdPrefix.PURCHASE_ORDER));
 
     return this.repo.create({
       customId,
       date: dto.date ? new Date(dto.date) : new Date(),
-      requestedBy: dto.requestedBy ? new Types.ObjectId(dto.requestedBy) : undefined,
+      requestedBy: dto.requestedBy
+        ? new Types.ObjectId(dto.requestedBy)
+        : undefined,
       requestedByName: dto.requestedByName ?? '',
       materialType: dto.materialType ?? MaterialType.SPARE_PARTS,
       machine: dto.machine ? new Types.ObjectId(dto.machine) : undefined,
@@ -44,11 +48,21 @@ export class PurchaseOrdersService {
     return order;
   }
 
-  async update(id: Types.ObjectId, dto: UpdatePurchaseOrderDto): Promise<PurchaseOrderDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdatePurchaseOrderDto,
+  ): Promise<PurchaseOrderDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.requestedBy !== undefined) data.requestedBy = dto.requestedBy ? new Types.ObjectId(dto.requestedBy) : undefined;
-    if (dto.machine !== undefined) data.machine = dto.machine ? new Types.ObjectId(dto.machine) : undefined;
-    if (dto.supplier !== undefined) data.supplier = dto.supplier ? new Types.ObjectId(dto.supplier) : undefined;
+    if (dto.requestedBy !== undefined)
+      data.requestedBy = dto.requestedBy
+        ? new Types.ObjectId(dto.requestedBy)
+        : undefined;
+    if (dto.machine !== undefined)
+      data.machine = dto.machine ? new Types.ObjectId(dto.machine) : undefined;
+    if (dto.supplier !== undefined)
+      data.supplier = dto.supplier
+        ? new Types.ObjectId(dto.supplier)
+        : undefined;
     if (dto.date !== undefined) data.date = new Date(dto.date);
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Purchase order not found');

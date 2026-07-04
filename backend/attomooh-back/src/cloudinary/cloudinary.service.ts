@@ -91,7 +91,11 @@ export class CloudinaryService {
             result: UploadApiResponse | undefined,
           ) => {
             if (error || !result) {
-              reject(new BadRequestException(error?.message ?? 'Image upload failed'));
+              reject(
+                new BadRequestException(
+                  error?.message ?? 'Image upload failed',
+                ),
+              );
               return;
             }
 

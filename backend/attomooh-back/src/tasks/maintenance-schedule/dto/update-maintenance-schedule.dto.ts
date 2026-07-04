@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsMongoId, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsMongoId,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 import { ScheduleStatus } from '../../../common/enums/schedule-status.enum.js';
 
 export class UpdateMaintenanceScheduleDto {

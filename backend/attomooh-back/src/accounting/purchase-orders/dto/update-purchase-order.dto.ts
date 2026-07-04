@@ -1,4 +1,16 @@
-import { IsString, IsOptional, IsMongoId, IsNotEmpty, IsNumber, Min, IsArray, ValidateNested, IsEnum, IsBoolean, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsMongoId,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  IsBoolean,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { MaterialType } from '../../../common/enums/material-type.enum.js';
 
@@ -16,7 +28,11 @@ export class UpdatePurchaseOrderDto {
   @IsEnum(MaterialType) @IsOptional() materialType?: MaterialType;
   @IsMongoId() @IsOptional() machine?: string;
   @IsString() @IsOptional() machineDetails?: string;
-  @IsArray() @ValidateNested({ each: true }) @Type(() => LineItemDto) @IsOptional() items?: LineItemDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LineItemDto)
+  @IsOptional()
+  items?: LineItemDto[];
   @IsMongoId() @IsOptional() supplier?: string;
   @IsString() @IsOptional() supplierName?: string;
   @IsBoolean() @IsOptional() approved?: boolean;

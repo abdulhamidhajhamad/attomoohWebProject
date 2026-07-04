@@ -81,10 +81,13 @@ export class ProductsService {
     return result;
   }
 
-  private readonly LIST_PROJECTION = 'name brand model price categories images specifications isActive createdAt updatedAt';
+  private readonly LIST_PROJECTION =
+    'name brand model price categories images specifications isActive createdAt updatedAt';
 
   async findAll(): Promise<ProductDocument[]> {
-    return this.productRepository.findAll(this.LIST_PROJECTION, { isActive: true });
+    return this.productRepository.findAll(this.LIST_PROJECTION, {
+      isActive: true,
+    });
   }
 
   async findAllAdmin(): Promise<ProductDocument[]> {
@@ -104,7 +107,11 @@ export class ProductsService {
   async findByCategory(categoryId: Types.ObjectId): Promise<ProductDocument[]> {
     // ── Validate category exists ──
     await this.categoriesService.findById(categoryId);
-    return this.productRepository.findByCategory(categoryId, this.LIST_PROJECTION, { isActive: true });
+    return this.productRepository.findByCategory(
+      categoryId,
+      this.LIST_PROJECTION,
+      { isActive: true },
+    );
   }
 
   async update(
@@ -120,11 +127,15 @@ export class ProductsService {
 
     const updateData: Record<string, unknown> = {};
 
-    if (updateProductDto.name) updateData.name = await makeBilingual(updateProductDto.name);
-    if (updateProductDto.brand !== undefined) updateData.brand = updateProductDto.brand.trim();
+    if (updateProductDto.name)
+      updateData.name = await makeBilingual(updateProductDto.name);
+    if (updateProductDto.brand !== undefined)
+      updateData.brand = updateProductDto.brand.trim();
     if (updateProductDto.model) updateData.model = updateProductDto.model;
-    if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
-    if (updateProductDto.isActive !== undefined) updateData.isActive = updateProductDto.isActive;
+    if (updateProductDto.price !== undefined)
+      updateData.price = updateProductDto.price;
+    if (updateProductDto.isActive !== undefined)
+      updateData.isActive = updateProductDto.isActive;
 
     // ── Merge specifications (add new keys + update existing, keep untouched) ──
     if (updateProductDto.specifications) {
@@ -148,8 +159,12 @@ export class ProductsService {
     }
 
     // ── Determine which old images to keep vs delete ──
-    let imagesToKeep: { publicId: string; secureUrl: string; isCover: boolean }[] = [];
-    let imagesToDelete: string[] = [];
+    let imagesToKeep: {
+      publicId: string;
+      secureUrl: string;
+      isCover: boolean;
+    }[] = [];
+    const imagesToDelete: string[] = [];
 
     if (updateProductDto.existingImages !== undefined) {
       // explicit keep-list: delete any old image whose URL is NOT in existingImages
@@ -238,7 +253,9 @@ export class ProductsService {
     // ── Delete from MongoDB FIRST — respond instantly ──
     const deleted = await this.productRepository.delete(id);
     if (!deleted) {
-      this.logger.warn(`Product ${id} not found during delete (race condition?)`);
+      this.logger.warn(
+        `Product ${id} not found during delete (race condition?)`,
+      );
       throw new NotFoundException('Product not found');
     }
 

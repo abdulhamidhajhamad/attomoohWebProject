@@ -94,9 +94,7 @@ export class ServiceOrdersService {
   async findAll(status?: string): Promise<ServiceOrderDocument[]> {
     if (
       status &&
-      Object.values(ServiceOrderStatus).includes(
-        status as ServiceOrderStatus,
-      )
+      Object.values(ServiceOrderStatus).includes(status as ServiceOrderStatus)
     ) {
       return this.orderRepo.findByStatus(status as ServiceOrderStatus);
     }
@@ -126,12 +124,10 @@ export class ServiceOrdersService {
     if (dto.customer !== undefined)
       data.customer = new Types.ObjectId(dto.customer);
     if (dto.customerName !== undefined) data.customerName = dto.customerName;
-    if (dto.customerPhone !== undefined)
-      data.customerPhone = dto.customerPhone;
+    if (dto.customerPhone !== undefined) data.customerPhone = dto.customerPhone;
     if (dto.customerAddress !== undefined)
       data.customerAddress = dto.customerAddress;
-    if (dto.customerNotes !== undefined)
-      data.customerNotes = dto.customerNotes;
+    if (dto.customerNotes !== undefined) data.customerNotes = dto.customerNotes;
     if (dto.warranty !== undefined) data.warranty = dto.warranty;
     if (dto.expectedDeliveryDate !== undefined)
       data.expectedDeliveryDate = new Date(dto.expectedDeliveryDate);
@@ -164,7 +160,9 @@ export class ServiceOrdersService {
       order.status === ServiceOrderStatus.READY ||
       order.status === ServiceOrderStatus.DELIVERED
     ) {
-      throw new BadRequestException('Cannot assign to a completed/delivered order');
+      throw new BadRequestException(
+        'Cannot assign to a completed/delivered order',
+      );
     }
 
     const tech = await this.employeesService.findById(
@@ -413,7 +411,9 @@ export class ServiceOrdersService {
       this.employeesService.findTechnicians(),
     ]);
 
-    const statsByTechnicianId = new Map(taskStats.map((row) => [row.technicianId, row]));
+    const statsByTechnicianId = new Map(
+      taskStats.map((row) => [row.technicianId, row]),
+    );
 
     return technicians
       .map((tech) => {
@@ -509,7 +509,10 @@ export class ServiceOrdersService {
     return {
       maintenance: getCollection('MachineMaint', 'machinemaints'),
       inspection: getCollection('MachineInspection', 'machineinspections'),
-      installation: getCollection('MachineInstallation', 'machineinstallations'),
+      installation: getCollection(
+        'MachineInstallation',
+        'machineinstallations',
+      ),
       production: getCollection('MachineProduction', 'machineproductions'),
       receptions: getCollection('MachineReception', 'machinereceptions'),
       machines: getCollection('Machine', 'machines'),
@@ -684,7 +687,9 @@ export class ServiceOrdersService {
     >;
   }
 
-  private async aggregateTaskStatsByTechnician(): Promise<TaskTechnicianStats[]> {
+  private async aggregateTaskStatsByTechnician(): Promise<
+    TaskTechnicianStats[]
+  > {
     const collections = this.getTaskCollectionNames();
     const completedStatuses = ['ready', 'delivered', 'completed', 'done'];
 

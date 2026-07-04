@@ -29,14 +29,19 @@ async function cleanEmployees() {
 
     // Drop both collections to start fresh
     console.log('🗑️  Dropping employees collection...');
-    await employeesCollection.drop().catch(() => console.log('   Collection does not exist, skipping'));
+    await employeesCollection
+      .drop()
+      .catch(() => console.log('   Collection does not exist, skipping'));
 
     console.log('🗑️  Dropping users collection...');
-    await usersCollection.drop().catch(() => console.log('   Collection does not exist, skipping'));
+    await usersCollection
+      .drop()
+      .catch(() => console.log('   Collection does not exist, skipping'));
 
     console.log('\n✅ All old data cleaned successfully!');
-    console.log('📝 Next step: Restart your application to let the seeder create fresh data');
-
+    console.log(
+      '📝 Next step: Restart your application to let the seeder create fresh data',
+    );
   } catch (error) {
     console.error('❌ Cleaning failed:', error);
     process.exit(1);

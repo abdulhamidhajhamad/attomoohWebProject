@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Employee, EmployeeSchema } from '../employees/schemas/employee.schema.js';
+import {
+  Employee,
+  EmployeeSchema,
+} from '../employees/schemas/employee.schema.js';
 import {
   Category,
   CategorySchema,

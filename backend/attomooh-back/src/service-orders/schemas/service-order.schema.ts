@@ -137,7 +137,11 @@ export class ServiceOrder {
 
   /* ── حالة أمر الخدمة ── */
 
-  @Prop({ required: true, enum: ServiceOrderStatus, default: ServiceOrderStatus.WAITING })
+  @Prop({
+    required: true,
+    enum: ServiceOrderStatus,
+    default: ServiceOrderStatus.WAITING,
+  })
   status: ServiceOrderStatus;
 
   /** الفني المعيّن */

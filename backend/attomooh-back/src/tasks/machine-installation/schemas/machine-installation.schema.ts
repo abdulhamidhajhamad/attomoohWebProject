@@ -3,8 +3,7 @@ import { HydratedDocument, Types } from 'mongoose';
 import { TimeLog } from '../../../common/schemas/time-log.schema.js';
 import { InstallationStatus } from '../../../common/enums/installation-status.enum.js';
 
-export type MachineInstallationDocument =
-  HydratedDocument<MachineInstallation>;
+export type MachineInstallationDocument = HydratedDocument<MachineInstallation>;
 
 @Schema({
   timestamps: true,

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -20,7 +24,9 @@ export class EmployeesService {
     private readonly idGen: IdGeneratorService,
     private readonly configService: ConfigService,
   ) {
-    this.SALT_ROUNDS = Number(this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10));
+    this.SALT_ROUNDS = Number(
+      this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
+    );
   }
 
   async create(dto: CreateEmployeeDto): Promise<EmployeeDocument> {
@@ -30,7 +36,8 @@ export class EmployeesService {
       if (exists) throw new ConflictException('Email already exists');
     }
 
-    const customId = dto.customId || (await this.idGen.generateId(IdPrefix.EMPLOYEE));
+    const customId =
+      dto.customId || (await this.idGen.generateId(IdPrefix.EMPLOYEE));
 
     // Hash password if provided
     let hashedPassword: string | undefined;
@@ -68,7 +75,10 @@ export class EmployeesService {
     return this.repo.search(query);
   }
 
-  async update(id: Types.ObjectId, dto: UpdateEmployeeDto): Promise<EmployeeDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdateEmployeeDto,
+  ): Promise<EmployeeDocument> {
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundException('Employee not found');
 
@@ -82,9 +92,11 @@ export class EmployeesService {
     if (dto.address !== undefined) data.address = dto.address;
     if (dto.notes !== undefined) data.notes = dto.notes;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.technicianStatus !== undefined) data.technicianStatus = dto.technicianStatus;
+    if (dto.technicianStatus !== undefined)
+      data.technicianStatus = dto.technicianStatus;
 
-    if (dto.area !== undefined) data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
+    if (dto.area !== undefined)
+      data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
 
     // System access: email/role/password
     if (dto.email !== undefined) {
@@ -133,7 +145,10 @@ export class EmployeesService {
     return this.repo.findTechnicians();
   }
 
-  async updateTechnicianStatus(id: Types.ObjectId, status: TechnicianStatus): Promise<EmployeeDocument> {
+  async updateTechnicianStatus(
+    id: Types.ObjectId,
+    status: TechnicianStatus,
+  ): Promise<EmployeeDocument> {
     const updated = await this.repo.updateTechnicianStatus(id, status);
     if (!updated) throw new NotFoundException('Employee not found');
     return updated;

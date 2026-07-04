@@ -28,12 +28,18 @@ export class CreateCategoryDto {
 
   /** Parent category IDs — omit or send empty for root categories */
   @IsArray()
-  @ArrayMaxSize(5, { message: 'A category can be linked to up to 5 parent categories' })
+  @ArrayMaxSize(5, {
+    message: 'A category can be linked to up to 5 parent categories',
+  })
   @IsMongoId({ each: true })
   @IsOptional()
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value;
-    if (typeof value === 'string') return value.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (typeof value === 'string')
+      return value
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter(Boolean);
     return [];
   })
   parentIds?: string[];

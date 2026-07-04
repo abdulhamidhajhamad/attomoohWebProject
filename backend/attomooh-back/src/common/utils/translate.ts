@@ -47,9 +47,7 @@ export async function translateToEnglish(text: string): Promise<string> {
     }
 
     const data = (await res.json()) as Array<Array<[string, string]>>;
-    const translated = data[0]
-      .map((segment) => segment[0])
-      .join('');
+    const translated = data[0].map((segment) => segment[0]).join('');
 
     const result = translated || text;
     setCachedTranslation(text, result);

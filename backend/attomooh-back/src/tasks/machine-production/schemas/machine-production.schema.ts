@@ -3,8 +3,7 @@ import { HydratedDocument, Types } from 'mongoose';
 import { TimeLog } from '../../../common/schemas/time-log.schema.js';
 import { SparePart } from '../../../common/schemas/spare-part.schema.js';
 
-export type MachineProductionDocument =
-  HydratedDocument<MachineProduction>;
+export type MachineProductionDocument = HydratedDocument<MachineProduction>;
 
 @Schema({
   timestamps: true,
@@ -19,7 +18,7 @@ export type MachineProductionDocument =
 export class MachineProduction {
   @Prop({ unique: true, required: true }) customId: string;
   @Prop({ type: Types.ObjectId, ref: 'MachineReception', default: null })
-  machineReception: Types.ObjectId;
+  machineReception: Types.ObjectId | null;
   @Prop({ default: '' }) machineName: string;
   @Prop({ default: '' }) machineDetails: string;
   @Prop({ required: true }) machineNameAndDetails: string;
@@ -27,7 +26,7 @@ export class MachineProduction {
   @Prop({ default: Date.now }) date: Date;
   @Prop({ default: '' }) pauseReason: string;
   @Prop({ type: Types.ObjectId, ref: 'Employee', default: null })
-  technician: Types.ObjectId;
+  technician: Types.ObjectId | null;
   @Prop({ default: '' }) technicianName: string;
   @Prop({ default: 0 }) productionDurationMs: number;
   @Prop({ type: [SparePart], default: [] }) materialsAndParts: SparePart[];

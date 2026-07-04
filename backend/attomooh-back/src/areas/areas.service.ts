@@ -15,7 +15,8 @@ export class AreasService {
   ) {}
 
   async create(dto: CreateAreaDto): Promise<AreaDocument> {
-    const customId = dto.customId || (await this.idGenerator.generateId(IdPrefix.AREA));
+    const customId =
+      dto.customId || (await this.idGenerator.generateId(IdPrefix.AREA));
     return this.areaRepo.create({
       customId,
       name: dto.name,

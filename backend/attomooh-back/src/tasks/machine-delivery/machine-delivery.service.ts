@@ -1,18 +1,41 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { MachineDeliveryRepository } from './repositories/machine-delivery.repository.js';
 import { MachineDeliveryDocument } from './schemas/machine-delivery.schema.js';
 import { CreateMachineDeliveryDto } from './dto/create-machine-delivery.dto.js';
 import { UpdateMachineDeliveryDto } from './dto/update-machine-delivery.dto.js';
-import { MachineReception, MachineReceptionDocument } from '../machine-reception/schemas/machine-reception.schema.js';
-import { MachineInspection, MachineInspectionDocument } from '../machine-inspection/schemas/machine-inspection.schema.js';
-import { MachineMaint, MachineMaintDocument } from '../machine-maintenance/schemas/machine-maint.schema.js';
-import { MachineInstallation, MachineInstallationDocument } from '../machine-installation/schemas/machine-installation.schema.js';
-import { MachineProduction, MachineProductionDocument } from '../machine-production/schemas/machine-production.schema.js';
+import {
+  MachineReception,
+  MachineReceptionDocument,
+} from '../machine-reception/schemas/machine-reception.schema.js';
+import {
+  MachineInspection,
+  MachineInspectionDocument,
+} from '../machine-inspection/schemas/machine-inspection.schema.js';
+import {
+  MachineMaint,
+  MachineMaintDocument,
+} from '../machine-maintenance/schemas/machine-maint.schema.js';
+import {
+  MachineInstallation,
+  MachineInstallationDocument,
+} from '../machine-installation/schemas/machine-installation.schema.js';
+import {
+  MachineProduction,
+  MachineProductionDocument,
+} from '../machine-production/schemas/machine-production.schema.js';
 import { ReceptionStatus } from '../../common/enums/reception-status.enum.js';
 
-type DeliveryTaskType = 'inspection' | 'maintenance' | 'installation' | 'production';
+type DeliveryTaskType =
+  | 'inspection'
+  | 'maintenance'
+  | 'installation'
+  | 'production';
 
 type DeliveryTaskDocument =
   | MachineInspectionDocument
@@ -46,33 +69,51 @@ export class MachineDeliveryService {
     private readonly productionModel: Model<MachineProductionDocument>,
   ) {}
 
-  async create(dto: CreateMachineDeliveryDto): Promise<MachineDeliveryDocument> {
+  async create(
+    dto: CreateMachineDeliveryDto,
+  ): Promise<MachineDeliveryDocument> {
     const machineReceptionId = new Types.ObjectId(dto.machineReception);
-    const reception = await this.receptionModel.findById(machineReceptionId).exec();
+    const reception = await this.receptionModel
+      .findById(machineReceptionId)
+      .exec();
     if (!reception) throw new NotFoundException('Machine reception not found');
 
     if (reception.status === ReceptionStatus.DELIVERED) {
       throw new BadRequestException('Machine is already delivered');
     }
 
-    const existingDelivery = await this.repo.findByMachineReception(machineReceptionId);
+    const existingDelivery =
+      await this.repo.findByMachineReception(machineReceptionId);
     if (existingDelivery) {
-      throw new BadRequestException('Machine delivery already exists for this reception');
+      throw new BadRequestException(
+        'Machine delivery already exists for this reception',
+      );
     }
 
-    const taskResolution = await this.findReadyTaskForReception(machineReceptionId);
+    const taskResolution =
+      await this.findReadyTaskForReception(machineReceptionId);
     if (taskResolution.hasTasks && !taskResolution.task) {
-      throw new BadRequestException('Assigned task is not ready for delivery yet');
+      throw new BadRequestException(
+        'Assigned task is not ready for delivery yet',
+      );
     }
 
-    if (!taskResolution.hasTasks && reception.status !== ReceptionStatus.READY) {
+    if (
+      !taskResolution.hasTasks &&
+      reception.status !== ReceptionStatus.READY
+    ) {
       throw new BadRequestException('Machine is not ready for delivery yet');
     }
 
     const technicianFee = dto.technicianFee;
     const companyFee = dto.companyFee;
-    if (!this.isNonNegativeNumber(technicianFee) || !this.isNonNegativeNumber(companyFee)) {
-      throw new BadRequestException('Technician fee and company fee are required before delivery');
+    if (
+      !this.isNonNegativeNumber(technicianFee) ||
+      !this.isNonNegativeNumber(companyFee)
+    ) {
+      throw new BadRequestException(
+        'Technician fee and company fee are required before delivery',
+      );
     }
 
     const inputReport = this.normalizeText(dto.technicianReport);
@@ -84,11 +125,16 @@ export class MachineDeliveryService {
     const finalReport = inputReport || taskReport || receptionReport;
 
     if (!finalReport) {
-      throw new BadRequestException('Technician report is required before delivery');
+      throw new BadRequestException(
+        'Technician report is required before delivery',
+      );
     }
 
     if (taskResolution.task) {
-      if (!this.isTaskReadyForDelivery(taskResolution.task) && this.isExternalTaskCandidate(taskResolution.task)) {
+      if (
+        !this.isTaskReadyForDelivery(taskResolution.task) &&
+        this.isExternalTaskCandidate(taskResolution.task)
+      ) {
         this.markTaskReadyForDelivery(taskResolution.task);
       }
 
@@ -113,16 +159,20 @@ export class MachineDeliveryService {
       customerName: dto.customerName ?? '',
       deliveryDate: dto.deliveryDate ? new Date(dto.deliveryDate) : new Date(),
       notes: dto.notes ?? '',
-      deliveredBy: dto.deliveredBy ? new Types.ObjectId(dto.deliveredBy) : undefined,
+      deliveredBy: dto.deliveredBy
+        ? new Types.ObjectId(dto.deliveredBy)
+        : undefined,
     });
 
     reception.status = ReceptionStatus.DELIVERED;
     await reception.save();
 
-    return this.findById(created._id as Types.ObjectId);
+    return this.findById(created._id);
   }
 
-  async findAll(): Promise<MachineDeliveryDocument[]> { return this.repo.findAll(); }
+  async findAll(): Promise<MachineDeliveryDocument[]> {
+    return this.repo.findAll();
+  }
 
   async findById(id: Types.ObjectId): Promise<MachineDeliveryDocument> {
     const doc = await this.repo.findById(id);
@@ -130,10 +180,19 @@ export class MachineDeliveryService {
     return doc;
   }
 
-  async update(id: Types.ObjectId, dto: UpdateMachineDeliveryDto): Promise<MachineDeliveryDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdateMachineDeliveryDto,
+  ): Promise<MachineDeliveryDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.deliveredBy !== undefined) data.deliveredBy = dto.deliveredBy ? new Types.ObjectId(dto.deliveredBy) : undefined;
-    if (dto.deliveryDate !== undefined) data.deliveryDate = dto.deliveryDate ? new Date(dto.deliveryDate) : new Date();
+    if (dto.deliveredBy !== undefined)
+      data.deliveredBy = dto.deliveredBy
+        ? new Types.ObjectId(dto.deliveredBy)
+        : undefined;
+    if (dto.deliveryDate !== undefined)
+      data.deliveryDate = dto.deliveryDate
+        ? new Date(dto.deliveryDate)
+        : new Date();
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Machine delivery not found');
     return updated;
@@ -148,48 +207,78 @@ export class MachineDeliveryService {
 
     const receptionId = this.extractObjectId(existing.machineReception);
     if (receptionId) {
-      await this.receptionModel.findByIdAndUpdate(receptionId, { status: ReceptionStatus.READY }).exec();
+      await this.receptionModel
+        .findByIdAndUpdate(receptionId, { status: ReceptionStatus.READY })
+        .exec();
     }
   }
 
-  private async findReadyTaskForReception(machineReceptionId: Types.ObjectId): Promise<DeliveryTaskResolution> {
-    const [inspection, maintenance, installation, production] = await Promise.all([
-      this.inspectionModel.findOne({ machineReception: machineReceptionId }).sort({ updatedAt: -1 }).exec(),
-      this.maintenanceModel.findOne({ machineReception: machineReceptionId }).sort({ updatedAt: -1 }).exec(),
-      this.installationModel.findOne({ machineReception: machineReceptionId }).sort({ updatedAt: -1 }).exec(),
-      this.productionModel.findOne({ machineReception: machineReceptionId }).sort({ updatedAt: -1 }).exec(),
-    ]);
+  private async findReadyTaskForReception(
+    machineReceptionId: Types.ObjectId,
+  ): Promise<DeliveryTaskResolution> {
+    const [inspection, maintenance, installation, production] =
+      await Promise.all([
+        this.inspectionModel
+          .findOne({ machineReception: machineReceptionId })
+          .sort({ updatedAt: -1 })
+          .exec(),
+        this.maintenanceModel
+          .findOne({ machineReception: machineReceptionId })
+          .sort({ updatedAt: -1 })
+          .exec(),
+        this.installationModel
+          .findOne({ machineReception: machineReceptionId })
+          .sort({ updatedAt: -1 })
+          .exec(),
+        this.productionModel
+          .findOne({ machineReception: machineReceptionId })
+          .sort({ updatedAt: -1 })
+          .exec(),
+      ]);
 
     const candidates: DeliveryTaskCandidate[] = [];
     if (inspection) candidates.push({ type: 'inspection', doc: inspection });
     if (maintenance) candidates.push({ type: 'maintenance', doc: maintenance });
-    if (installation) candidates.push({ type: 'installation', doc: installation });
+    if (installation)
+      candidates.push({ type: 'installation', doc: installation });
     if (production) candidates.push({ type: 'production', doc: production });
 
     if (candidates.length === 0) {
       return { task: null, hasTasks: false };
     }
 
-    const readyCandidates = candidates.filter((candidate) => this.isTaskReadyForDelivery(candidate));
+    const readyCandidates = candidates.filter((candidate) =>
+      this.isTaskReadyForDelivery(candidate),
+    );
     if (readyCandidates.length > 0) {
       readyCandidates.sort(
         (a, b) =>
-          this.getTaskTimeMs((b.doc as any).updatedAt ?? (b.doc as any).createdAt) -
-          this.getTaskTimeMs((a.doc as any).updatedAt ?? (a.doc as any).createdAt),
+          this.getTaskTimeMs(
+            (b.doc as any).updatedAt ?? (b.doc as any).createdAt,
+          ) -
+          this.getTaskTimeMs(
+            (a.doc as any).updatedAt ?? (a.doc as any).createdAt,
+          ),
       );
 
       return { task: readyCandidates[0] ?? null, hasTasks: true };
     }
 
-    const externalCandidates = candidates.filter((candidate) => this.isExternalTaskCandidate(candidate));
+    const externalCandidates = candidates.filter((candidate) =>
+      this.isExternalTaskCandidate(candidate),
+    );
     if (externalCandidates.length === 0) {
       return { task: null, hasTasks: true };
     }
 
     externalCandidates.sort(
       (a, b) =>
-        this.getTaskTimeMs((b.doc as any).updatedAt ?? (b.doc as any).createdAt) -
-        this.getTaskTimeMs((a.doc as any).updatedAt ?? (a.doc as any).createdAt),
+        this.getTaskTimeMs(
+          (b.doc as any).updatedAt ?? (b.doc as any).createdAt,
+        ) -
+        this.getTaskTimeMs(
+          (a.doc as any).updatedAt ?? (a.doc as any).createdAt,
+        ),
     );
 
     return { task: externalCandidates[0] ?? null, hasTasks: true };
@@ -210,10 +299,14 @@ export class MachineDeliveryService {
     const status = String((candidate.doc as any).status ?? '').toLowerCase();
     if (status === 'rejected') return false;
 
-    const technicianName = this.normalizeText((candidate.doc as any).technicianName);
+    const technicianName = this.normalizeText(
+      (candidate.doc as any).technicianName,
+    );
     if (!technicianName) return false;
 
-    const technicianId = this.extractObjectId((candidate.doc as any).technician);
+    const technicianId = this.extractObjectId(
+      (candidate.doc as any).technician,
+    );
     return !technicianId;
   }
 
@@ -246,7 +339,11 @@ export class MachineDeliveryService {
       return new Types.ObjectId(value);
     }
 
-    if (value && typeof value === 'object' && '_id' in (value as Record<string, unknown>)) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      '_id' in (value as Record<string, unknown>)
+    ) {
       const nestedId = (value as Record<string, unknown>)._id;
 
       if (nestedId instanceof Types.ObjectId) return nestedId;

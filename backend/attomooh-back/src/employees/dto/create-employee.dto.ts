@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsMongoId, IsEnum, IsEmail, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsMongoId,
+  IsEnum,
+  IsEmail,
+  MinLength,
+} from 'class-validator';
 import { EmployeeCategory } from '../../common/enums/employee-category.enum.js';
 import { UserRole } from '../../common/enums/user-role.enum.js';
 

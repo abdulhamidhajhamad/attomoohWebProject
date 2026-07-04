@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsMongoId, IsBoolean, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsMongoId,
+  IsBoolean,
+  IsNumber,
+  Min,
+} from 'class-validator';
 
 export class UpdateTransportDto {
   @IsMongoId() @IsOptional() machineReception?: string;

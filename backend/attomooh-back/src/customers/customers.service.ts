@@ -62,9 +62,12 @@ export class CustomersService {
     if (dto.phone !== undefined) data.phone = dto.phone;
     if (dto.address !== undefined) data.address = dto.address?.trim() ?? '';
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() ?? '';
-    if (dto.technician1Name !== undefined) data.technician1Name = dto.technician1Name?.trim() ?? '';
-    if (dto.technician2Name !== undefined) data.technician2Name = dto.technician2Name?.trim() ?? '';
-    if (dto.technician3Name !== undefined) data.technician3Name = dto.technician3Name?.trim() ?? '';
+    if (dto.technician1Name !== undefined)
+      data.technician1Name = dto.technician1Name?.trim() ?? '';
+    if (dto.technician2Name !== undefined)
+      data.technician2Name = dto.technician2Name?.trim() ?? '';
+    if (dto.technician3Name !== undefined)
+      data.technician3Name = dto.technician3Name?.trim() ?? '';
     if (dto.area !== undefined)
       data.area = dto.area ? new Types.ObjectId(dto.area) : undefined;
     if (dto.technician1 !== undefined)

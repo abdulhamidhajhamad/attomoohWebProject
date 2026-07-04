@@ -56,10 +56,12 @@ import { PurchaseOrdersModule } from './accounting/purchase-orders/purchase-orde
 @Module({
   imports: [
     // ── Rate Limiting ──
-    ThrottlerModule.forRoot([{
-      ttl: 60_000,
-      limit: 60,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 60,
+      },
+    ]),
 
     // ── Global Config ──
     ConfigModule.forRoot({

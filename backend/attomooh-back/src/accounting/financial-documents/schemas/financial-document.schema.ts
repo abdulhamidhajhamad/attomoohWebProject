@@ -7,7 +7,13 @@ export type FinancialDocumentDocument = HydratedDocument<FinancialDocument>;
 
 @Schema({
   timestamps: true,
-  toJSON: { virtuals: true, transform(_doc, ret: Record<string, unknown>) { delete ret.__v; return ret; } },
+  toJSON: {
+    virtuals: true,
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.__v;
+      return ret;
+    },
+  },
 })
 export class FinancialDocument {
   @Prop({ unique: true, required: true })
@@ -59,7 +65,8 @@ export class FinancialDocument {
   updatedAt: Date;
 }
 
-export const FinancialDocumentSchema = SchemaFactory.createForClass(FinancialDocument);
+export const FinancialDocumentSchema =
+  SchemaFactory.createForClass(FinancialDocument);
 FinancialDocumentSchema.index({ type: 1, date: -1 });
 FinancialDocumentSchema.index({ customer: 1 });
 FinancialDocumentSchema.index({ supplier: 1 });
