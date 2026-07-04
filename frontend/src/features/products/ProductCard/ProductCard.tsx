@@ -48,10 +48,11 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const message = generateProductInquiry(name, lang);
+      const productUrl = `${window.location.origin}/products/${product.slug}`;
+      const message = generateProductInquiry(name, lang, productUrl);
       requestWhatsApp(message);
     },
-    [name, lang, requestWhatsApp],
+    [name, lang, product.slug, requestWhatsApp],
   );
 
   return (

@@ -30,11 +30,16 @@ export function generateQuoteMessage(
 export function generateProductInquiry(
   productName: string,
   lang: 'ar' | 'en',
+  productUrl?: string,
 ): string {
   if (lang === 'ar') {
-    return `مرحباً، أرغب في طلب المنتج التالي عبر واتساب: ${productName}`;
+    let msg = `مرحباً، أرغب في طلب المنتج التالي عبر واتساب: ${productName}`;
+    if (productUrl) msg += `\n\nرابط المنتج: ${productUrl}`;
+    return msg;
   }
-  return `Hello, I would like to order this product via WhatsApp: ${productName}`;
+  let msg = `Hello, I would like to order this product via WhatsApp: ${productName}`;
+  if (productUrl) msg += `\n\nProduct link: ${productUrl}`;
+  return msg;
 }
 
 export function openWhatsApp(message: string): void {
