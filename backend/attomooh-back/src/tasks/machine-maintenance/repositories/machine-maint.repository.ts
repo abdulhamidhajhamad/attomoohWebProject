@@ -32,9 +32,7 @@ export class MachineMaintRepository {
       .exec();
   }
 
-  async findById(
-    id: Types.ObjectId,
-  ): Promise<MachineMaintDocument | null> {
+  async findById(id: Types.ObjectId): Promise<MachineMaintDocument | null> {
     return this.model
       .findById(id)
       .populate(this.receptionPopulate)
@@ -42,7 +40,9 @@ export class MachineMaintRepository {
       .exec();
   }
 
-  async findAll(params: { status?: string; search?: string } = {}): Promise<MachineMaintDocument[]> {
+  async findAll(
+    params: { status?: string; search?: string } = {},
+  ): Promise<MachineMaintDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.status) filter.status = params.status;
     if (params.search) {
@@ -74,13 +74,13 @@ export class MachineMaintRepository {
       .exec();
   }
 
-  async deleteById(
-    id: Types.ObjectId,
-  ): Promise<MachineMaintDocument | null> {
+  async deleteById(id: Types.ObjectId): Promise<MachineMaintDocument | null> {
     return this.model.findByIdAndDelete(id).exec();
   }
 
-  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+  async findByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineMaintDocument[]> {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
@@ -89,7 +89,9 @@ export class MachineMaintRepository {
       .exec();
   }
 
-  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineMaintDocument[]> {
+  async findActiveByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineMaintDocument[]> {
     return this.model
       .find({
         technician: technicianId,

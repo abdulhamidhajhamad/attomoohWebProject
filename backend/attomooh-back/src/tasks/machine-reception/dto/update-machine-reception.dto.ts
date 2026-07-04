@@ -1,4 +1,16 @@
-import { IsString, IsOptional, IsBoolean, IsMongoId, IsDateString, IsEnum, IsNumber, IsArray, ValidateNested, Min, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsMongoId,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+  Min,
+  IsNotEmpty,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ReceptionStatus } from '../../../common/enums/reception-status.enum.js';
 
@@ -22,13 +34,19 @@ export class UpdateMachineReceptionDto {
   @IsString() @IsOptional() receivedParts?: string;
   @IsString() @IsOptional() customerProblemDesc?: string;
   @IsString() @IsOptional() notes?: string;
-  @Transform(({ value }) => value === null ? undefined : value)
-  @IsMongoId() @IsOptional() receivedBy?: string | null;
+  @Transform(({ value }) => (value === null ? undefined : value))
+  @IsMongoId()
+  @IsOptional()
+  receivedBy?: string | null;
   @IsString() @IsOptional() receivedByName?: string;
   @IsMongoId() @IsOptional() assignedTo?: string;
   @IsEnum(ReceptionStatus) @IsOptional() status?: ReceptionStatus;
   @IsString() @IsOptional() technicianReport?: string;
-  @IsArray() @ValidateNested({ each: true }) @Type(() => SparePartDto) @IsOptional() spareParts?: SparePartDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SparePartDto)
+  @IsOptional()
+  spareParts?: SparePartDto[];
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;
   @IsNumber() @Min(0) @IsOptional() companyFee?: number;
 }

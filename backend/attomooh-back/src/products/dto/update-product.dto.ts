@@ -29,7 +29,11 @@ export class UpdateProductDto {
 
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value;
-    if (typeof value === 'string') return value.split(',').map((v: string) => v.trim()).filter(Boolean);
+    if (typeof value === 'string')
+      return value
+        .split(',')
+        .map((v: string) => v.trim())
+        .filter(Boolean);
     return [value];
   })
   @IsArray()

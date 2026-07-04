@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, Min, IsMongoId } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  Min,
+  IsMongoId,
+} from 'class-validator';
 
 export class UpdateToolDto {
   @IsString() @IsOptional() name?: string;

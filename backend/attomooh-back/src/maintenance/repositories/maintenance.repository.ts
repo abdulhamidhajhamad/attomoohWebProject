@@ -26,7 +26,10 @@ export class MaintenanceRepository {
       .findById(id)
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .exec();
   }
 
@@ -35,7 +38,10 @@ export class MaintenanceRepository {
       .find()
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -45,7 +51,10 @@ export class MaintenanceRepository {
       .find({ status })
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -57,7 +66,10 @@ export class MaintenanceRepository {
       .find({ assignedTo: technicianId })
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -74,7 +86,10 @@ export class MaintenanceRepository {
       })
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -87,7 +102,10 @@ export class MaintenanceRepository {
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .exec();
   }
 
@@ -165,7 +183,10 @@ export class MaintenanceRepository {
       .find(filter)
       .populate('assignedTo', 'name email phone technicianStatus')
       .populate('createdBy', 'name email')
-      .populate({ path: 'serviceOrder', populate: { path: 'machineType', select: 'name' } })
+      .populate({
+        path: 'serviceOrder',
+        populate: { path: 'machineType', select: 'name' },
+      })
       .sort({ scheduledDate: 1, scheduledStartTime: 1 })
       .exec();
   }

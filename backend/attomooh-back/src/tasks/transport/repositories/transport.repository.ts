@@ -5,7 +5,10 @@ import { Transport, TransportDocument } from '../schemas/transport.schema.js';
 
 @Injectable()
 export class TransportRepository {
-  constructor(@InjectModel(Transport.name) private readonly model: Model<TransportDocument>) {}
+  constructor(
+    @InjectModel(Transport.name)
+    private readonly model: Model<TransportDocument>,
+  ) {}
   async create(data: Partial<Transport>): Promise<TransportDocument> {
     const doc = await new this.model(data).save();
     return this.model
@@ -15,8 +18,16 @@ export class TransportRepository {
       .orFail()
       .exec();
   }
-  async findById(id: Types.ObjectId): Promise<TransportDocument | null> { return this.model.findById(id).populate('machineReception').populate('logistic', 'name phone').exec(); }
-  async findAll(params: { search?: string } = {}): Promise<TransportDocument[]> {
+  async findById(id: Types.ObjectId): Promise<TransportDocument | null> {
+    return this.model
+      .findById(id)
+      .populate('machineReception')
+      .populate('logistic', 'name phone')
+      .exec();
+  }
+  async findAll(
+    params: { search?: string } = {},
+  ): Promise<TransportDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.search) {
       const rx = new RegExp(params.search, 'i');
@@ -28,14 +39,24 @@ export class TransportRepository {
         { pauseReason: rx },
       ];
     }
-    return this.model.find(filter).sort({ createdAt: -1 }).populate('machineReception').populate('logistic', 'name phone').exec();
+    return this.model
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .populate('machineReception')
+      .populate('logistic', 'name phone')
+      .exec();
   }
-  async updateById(id: Types.ObjectId, data: Partial<Transport>): Promise<TransportDocument | null> {
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<Transport>,
+  ): Promise<TransportDocument | null> {
     return this.model
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('machineReception')
       .populate('logistic', 'name phone')
       .exec();
   }
-  async deleteById(id: Types.ObjectId): Promise<TransportDocument | null> { return this.model.findByIdAndDelete(id).exec(); }
+  async deleteById(id: Types.ObjectId): Promise<TransportDocument | null> {
+    return this.model.findByIdAndDelete(id).exec();
+  }
 }

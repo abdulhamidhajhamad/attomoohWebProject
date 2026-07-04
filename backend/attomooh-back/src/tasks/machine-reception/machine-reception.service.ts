@@ -8,10 +8,22 @@ import { UpdateMachineReceptionDto } from './dto/update-machine-reception.dto.js
 import { IdGeneratorService } from '../../common/services/id-generator.service.js';
 import { IdPrefix } from '../../common/enums/id-prefix.enum.js';
 import { ReceptionStatus } from '../../common/enums/reception-status.enum.js';
-import { MachineInspection, MachineInspectionDocument } from '../machine-inspection/schemas/machine-inspection.schema.js';
-import { MachineMaint, MachineMaintDocument } from '../machine-maintenance/schemas/machine-maint.schema.js';
-import { MachineInstallation, MachineInstallationDocument } from '../machine-installation/schemas/machine-installation.schema.js';
-import { MachineProduction, MachineProductionDocument } from '../machine-production/schemas/machine-production.schema.js';
+import {
+  MachineInspection,
+  MachineInspectionDocument,
+} from '../machine-inspection/schemas/machine-inspection.schema.js';
+import {
+  MachineMaint,
+  MachineMaintDocument,
+} from '../machine-maintenance/schemas/machine-maint.schema.js';
+import {
+  MachineInstallation,
+  MachineInstallationDocument,
+} from '../machine-installation/schemas/machine-installation.schema.js';
+import {
+  MachineProduction,
+  MachineProductionDocument,
+} from '../machine-production/schemas/machine-production.schema.js';
 
 @Injectable()
 export class MachineReceptionService {
@@ -28,9 +40,14 @@ export class MachineReceptionService {
     private readonly productionModel: Model<MachineProductionDocument>,
   ) {}
 
-  async create(dto: CreateMachineReceptionDto): Promise<MachineReceptionDocument> {
-    const customId = dto.customId || (await this.idGen.generateId(IdPrefix.RECEPTION));
-    const receivedBy = dto.receivedBy ? new Types.ObjectId(dto.receivedBy) : undefined;
+  async create(
+    dto: CreateMachineReceptionDto,
+  ): Promise<MachineReceptionDocument> {
+    const customId =
+      dto.customId || (await this.idGen.generateId(IdPrefix.RECEPTION));
+    const receivedBy = dto.receivedBy
+      ? new Types.ObjectId(dto.receivedBy)
+      : undefined;
     return this.repo.create({
       customId,
       machine: dto.machine ? new Types.ObjectId(dto.machine) : undefined,
@@ -41,7 +58,9 @@ export class MachineReceptionService {
       customerPhone: dto.customerPhone ?? '',
       customerAddress: dto.customerAddress ?? '',
       warranty: dto.warranty ?? false,
-      expectedDeliveryDate: dto.expectedDeliveryDate ? new Date(dto.expectedDeliveryDate) : undefined,
+      expectedDeliveryDate: dto.expectedDeliveryDate
+        ? new Date(dto.expectedDeliveryDate)
+        : undefined,
       condition: dto.condition ?? 'complete',
       receivedParts: dto.receivedParts ?? '',
       customerProblemDesc: dto.customerProblemDesc ?? '',
@@ -53,16 +72,23 @@ export class MachineReceptionService {
 
   async findAll(
     status?: string,
-    options: { excludeAssigned?: boolean; includeExternalPending?: boolean } = {},
+    options: {
+      excludeAssigned?: boolean;
+      includeExternalPending?: boolean;
+    } = {},
   ): Promise<MachineReceptionDocument[]> {
-    let rows = status ? await this.repo.findByStatus(status) : await this.repo.findAll();
+    let rows = status
+      ? await this.repo.findByStatus(status)
+      : await this.repo.findAll();
 
     if (status === ReceptionStatus.READY) {
-      const readyTaskReceptionIds = await this.getReadyForDeliveryReceptionIds();
+      const readyTaskReceptionIds =
+        await this.getReadyForDeliveryReceptionIds();
       const candidateReceptionIds = new Set<string>(readyTaskReceptionIds);
 
       if (options.includeExternalPending) {
-        const externalTaskReceptionIds = await this.getExternalTechnicianReceptionIds();
+        const externalTaskReceptionIds =
+          await this.getExternalTechnicianReceptionIds();
         for (const externalId of externalTaskReceptionIds) {
           candidateReceptionIds.add(externalId);
         }
@@ -87,7 +113,8 @@ export class MachineReceptionService {
         }
 
         rows = Array.from(merged.values()).sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
       } else {
         rows = rows.filter((row) => row.status !== ReceptionStatus.DELIVERED);
@@ -110,10 +137,17 @@ export class MachineReceptionService {
     return doc;
   }
 
-  async update(id: Types.ObjectId, dto: UpdateMachineReceptionDto): Promise<MachineReceptionDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdateMachineReceptionDto,
+  ): Promise<MachineReceptionDocument> {
     const data: Record<string, unknown> = { ...dto };
-    if (dto.machine !== undefined) data.machine = dto.machine ? new Types.ObjectId(dto.machine) : undefined;
-    if (dto.customer !== undefined) data.customer = dto.customer ? new Types.ObjectId(dto.customer) : undefined;
+    if (dto.machine !== undefined)
+      data.machine = dto.machine ? new Types.ObjectId(dto.machine) : undefined;
+    if (dto.customer !== undefined)
+      data.customer = dto.customer
+        ? new Types.ObjectId(dto.customer)
+        : undefined;
     if (dto.receivedBy !== undefined) {
       if (dto.receivedBy) {
         data.receivedBy = new Types.ObjectId(dto.receivedBy);
@@ -127,8 +161,14 @@ export class MachineReceptionService {
       // Update manual name without touching the linked employee
       data.receivedByName = dto.receivedByName;
     }
-    if (dto.assignedTo !== undefined) data.assignedTo = dto.assignedTo ? new Types.ObjectId(dto.assignedTo) : undefined;
-    if (dto.expectedDeliveryDate !== undefined) data.expectedDeliveryDate = dto.expectedDeliveryDate ? new Date(dto.expectedDeliveryDate) : undefined;
+    if (dto.assignedTo !== undefined)
+      data.assignedTo = dto.assignedTo
+        ? new Types.ObjectId(dto.assignedTo)
+        : undefined;
+    if (dto.expectedDeliveryDate !== undefined)
+      data.expectedDeliveryDate = dto.expectedDeliveryDate
+        ? new Date(dto.expectedDeliveryDate)
+        : undefined;
     const updated = await this.repo.updateById(id, data as any);
     if (!updated) throw new NotFoundException('Machine reception not found');
     return updated;
@@ -136,28 +176,47 @@ export class MachineReceptionService {
 
   async startWork(id: Types.ObjectId): Promise<MachineReceptionDocument> {
     const doc = await this.findById(id);
-    doc.timeLogs.push({ action: 'start', timestamp: new Date(), pauseReason: '' } as any);
+    doc.timeLogs.push({
+      action: 'start',
+      timestamp: new Date(),
+      pauseReason: '',
+    } as any);
     doc.status = ReceptionStatus.IN_MAINTENANCE;
     return doc.save();
   }
 
-  async pauseWork(id: Types.ObjectId, reason: string): Promise<MachineReceptionDocument> {
+  async pauseWork(
+    id: Types.ObjectId,
+    reason: string,
+  ): Promise<MachineReceptionDocument> {
     const doc = await this.findById(id);
-    doc.timeLogs.push({ action: 'pause', timestamp: new Date(), pauseReason: reason ?? '' } as any);
+    doc.timeLogs.push({
+      action: 'pause',
+      timestamp: new Date(),
+      pauseReason: reason ?? '',
+    } as any);
     doc.status = ReceptionStatus.POSTPONED;
     return doc.save();
   }
 
   async resumeWork(id: Types.ObjectId): Promise<MachineReceptionDocument> {
     const doc = await this.findById(id);
-    doc.timeLogs.push({ action: 'resume', timestamp: new Date(), pauseReason: '' } as any);
+    doc.timeLogs.push({
+      action: 'resume',
+      timestamp: new Date(),
+      pauseReason: '',
+    } as any);
     doc.status = ReceptionStatus.IN_MAINTENANCE;
     return doc.save();
   }
 
   async finishWork(id: Types.ObjectId): Promise<MachineReceptionDocument> {
     const doc = await this.findById(id);
-    doc.timeLogs.push({ action: 'finish', timestamp: new Date(), pauseReason: '' } as any);
+    doc.timeLogs.push({
+      action: 'finish',
+      timestamp: new Date(),
+      pauseReason: '',
+    } as any);
     doc.status = ReceptionStatus.READY;
     doc.totalDurationMs = this.calculateDuration(doc.timeLogs as any);
     return doc.save();
@@ -168,13 +227,18 @@ export class MachineReceptionService {
     if (!deleted) throw new NotFoundException('Machine reception not found');
   }
 
-  private calculateDuration(logs: Array<{ action: string; timestamp: Date }>): number {
+  private calculateDuration(
+    logs: Array<{ action: string; timestamp: Date }>,
+  ): number {
     let total = 0;
     let startTime: Date | null = null;
     for (const log of logs) {
       if (log.action === 'start' || log.action === 'resume') {
         startTime = new Date(log.timestamp);
-      } else if ((log.action === 'pause' || log.action === 'finish') && startTime) {
+      } else if (
+        (log.action === 'pause' || log.action === 'finish') &&
+        startTime
+      ) {
         total += new Date(log.timestamp).getTime() - startTime.getTime();
         startTime = null;
       }
@@ -183,46 +247,58 @@ export class MachineReceptionService {
   }
 
   private async getAssignedReceptionIds(): Promise<Set<string>> {
-    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
-      this.inspectionModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-      }),
-      this.maintenanceModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-      }),
-      this.installationModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-      }),
-      this.productionModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-      }),
-    ]);
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] =
+      await Promise.all([
+        this.inspectionModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+        }),
+        this.maintenanceModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+        }),
+        this.installationModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+        }),
+        this.productionModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+        }),
+      ]);
 
-    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    const allIds = [
+      ...inspectionIds,
+      ...maintenanceIds,
+      ...installationIds,
+      ...productionIds,
+    ].map((id) => String(id));
     return new Set(allIds);
   }
 
   private async getReadyForDeliveryReceptionIds(): Promise<Set<string>> {
-    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
-      this.inspectionModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-        $or: [{ readyForDelivery: true }, { status: 'ready' }],
-      }),
-      this.maintenanceModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-        $or: [{ readyForDelivery: true }, { status: 'ready' }],
-      }),
-      this.installationModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-        status: 'ready',
-      }),
-      this.productionModel.distinct('machineReception', {
-        machineReception: { $exists: true, $ne: null },
-        $or: [{ readyForDelivery: true }, { status: 'ready' }],
-      }),
-    ]);
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] =
+      await Promise.all([
+        this.inspectionModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+          $or: [{ readyForDelivery: true }, { status: 'ready' }],
+        }),
+        this.maintenanceModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+          $or: [{ readyForDelivery: true }, { status: 'ready' }],
+        }),
+        this.installationModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+          status: 'ready',
+        }),
+        this.productionModel.distinct('machineReception', {
+          machineReception: { $exists: true, $ne: null },
+          $or: [{ readyForDelivery: true }, { status: 'ready' }],
+        }),
+      ]);
 
-    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    const allIds = [
+      ...inspectionIds,
+      ...maintenanceIds,
+      ...installationIds,
+      ...productionIds,
+    ].map((id) => String(id));
     return new Set(allIds);
   }
 
@@ -234,14 +310,26 @@ export class MachineReceptionService {
       status: { $ne: 'rejected' },
     };
 
-    const [inspectionIds, maintenanceIds, installationIds, productionIds] = await Promise.all([
-      this.inspectionModel.distinct('machineReception', externalTaskCriteria),
-      this.maintenanceModel.distinct('machineReception', externalTaskCriteria),
-      this.installationModel.distinct('machineReception', externalTaskCriteria),
-      this.productionModel.distinct('machineReception', externalTaskCriteria),
-    ]);
+    const [inspectionIds, maintenanceIds, installationIds, productionIds] =
+      await Promise.all([
+        this.inspectionModel.distinct('machineReception', externalTaskCriteria),
+        this.maintenanceModel.distinct(
+          'machineReception',
+          externalTaskCriteria,
+        ),
+        this.installationModel.distinct(
+          'machineReception',
+          externalTaskCriteria,
+        ),
+        this.productionModel.distinct('machineReception', externalTaskCriteria),
+      ]);
 
-    const allIds = [...inspectionIds, ...maintenanceIds, ...installationIds, ...productionIds].map((id) => String(id));
+    const allIds = [
+      ...inspectionIds,
+      ...maintenanceIds,
+      ...installationIds,
+      ...productionIds,
+    ].map((id) => String(id));
     return new Set(allIds);
   }
 }

@@ -41,7 +41,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, employee.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      employee.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }

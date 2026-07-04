@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { MachineInspection, MachineInspectionDocument } from '../schemas/machine-inspection.schema.js';
+import {
+  MachineInspection,
+  MachineInspectionDocument,
+} from '../schemas/machine-inspection.schema.js';
 
 @Injectable()
 export class MachineInspectionRepository {
-  constructor(@InjectModel(MachineInspection.name) private readonly model: Model<MachineInspectionDocument>) {}
+  constructor(
+    @InjectModel(MachineInspection.name)
+    private readonly model: Model<MachineInspectionDocument>,
+  ) {}
 
   private readonly receptionPopulate = {
     path: 'machineReception',
@@ -16,7 +22,9 @@ export class MachineInspectionRepository {
     ],
   };
 
-  async create(data: Partial<MachineInspection>): Promise<MachineInspectionDocument> {
+  async create(
+    data: Partial<MachineInspection>,
+  ): Promise<MachineInspectionDocument> {
     const doc = await new this.model(data).save();
     return this.model
       .findById(doc._id)
@@ -25,8 +33,18 @@ export class MachineInspectionRepository {
       .orFail()
       .exec();
   }
-  async findById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findById(id).populate(this.receptionPopulate).populate('technician', 'name phone').exec(); }
-  async findAll(params: { status?: string; search?: string } = {}): Promise<MachineInspectionDocument[]> {
+  async findById(
+    id: Types.ObjectId,
+  ): Promise<MachineInspectionDocument | null> {
+    return this.model
+      .findById(id)
+      .populate(this.receptionPopulate)
+      .populate('technician', 'name phone')
+      .exec();
+  }
+  async findAll(
+    params: { status?: string; search?: string } = {},
+  ): Promise<MachineInspectionDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.status) filter.status = params.status;
     if (params.search) {
@@ -39,18 +57,32 @@ export class MachineInspectionRepository {
         { pauseReason: rx },
       ];
     }
-    return this.model.find(filter).sort({ createdAt: -1 }).populate(this.receptionPopulate).populate('technician', 'name phone').exec();
+    return this.model
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .populate(this.receptionPopulate)
+      .populate('technician', 'name phone')
+      .exec();
   }
-  async updateById(id: Types.ObjectId, data: Partial<MachineInspection>): Promise<MachineInspectionDocument | null> {
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<MachineInspection>,
+  ): Promise<MachineInspectionDocument | null> {
     return this.model
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate(this.receptionPopulate)
       .populate('technician', 'name phone')
       .exec();
   }
-  async deleteById(id: Types.ObjectId): Promise<MachineInspectionDocument | null> { return this.model.findByIdAndDelete(id).exec(); }
+  async deleteById(
+    id: Types.ObjectId,
+  ): Promise<MachineInspectionDocument | null> {
+    return this.model.findByIdAndDelete(id).exec();
+  }
 
-  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineInspectionDocument[]> {
+  async findByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineInspectionDocument[]> {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
@@ -59,7 +91,9 @@ export class MachineInspectionRepository {
       .exec();
   }
 
-  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineInspectionDocument[]> {
+  async findActiveByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineInspectionDocument[]> {
     return this.model
       .find({
         technician: technicianId,

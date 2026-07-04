@@ -6,7 +6,9 @@ import { ToolsMgmtService } from './tools-mgmt.service.js';
 import { ToolsMgmtController } from './tools-mgmt.controller.js';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Tool.name, schema: ToolSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: Tool.name, schema: ToolSchema }]),
+  ],
   controllers: [ToolsMgmtController],
   providers: [ToolsMgmtService, ToolRepository],
   exports: [ToolsMgmtService],

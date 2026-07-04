@@ -12,7 +12,7 @@ export class SupplierRepository {
 
   async create(data: Partial<Supplier>): Promise<SupplierDocument> {
     const doc = await new this.supplierModel(data).save();
-    return this.findById(doc._id as Types.ObjectId) as Promise<SupplierDocument>;
+    return this.findById(doc._id) as Promise<SupplierDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<SupplierDocument | null> {
@@ -20,7 +20,11 @@ export class SupplierRepository {
   }
 
   async findAll(): Promise<SupplierDocument[]> {
-    return this.supplierModel.find().sort({ createdAt: -1 }).populate('area').exec();
+    return this.supplierModel
+      .find()
+      .sort({ createdAt: -1 })
+      .populate('area')
+      .exec();
   }
 
   async search(query: string): Promise<SupplierDocument[]> {
@@ -32,7 +36,10 @@ export class SupplierRepository {
       .exec();
   }
 
-  async updateById(id: Types.ObjectId, data: Partial<Supplier>): Promise<SupplierDocument | null> {
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<Supplier>,
+  ): Promise<SupplierDocument | null> {
     return this.supplierModel
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('area')

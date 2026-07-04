@@ -7,7 +7,9 @@ import { TechnicianStatus } from '../../common/enums/technician-status.enum.js';
 
 @Injectable()
 export class EmployeeRepository {
-  constructor(@InjectModel(Employee.name) private readonly model: Model<EmployeeDocument>) {}
+  constructor(
+    @InjectModel(Employee.name) private readonly model: Model<EmployeeDocument>,
+  ) {}
 
   async create(data: Partial<Employee>): Promise<EmployeeDocument> {
     return new this.model(data).save();
@@ -23,11 +25,21 @@ export class EmployeeRepository {
 
   async search(query: string): Promise<EmployeeDocument[]> {
     const regex = new RegExp(query, 'i');
-    return this.model.find({ $or: [{ name: regex }, { phone: regex }] }).populate('area').sort({ name: 1 }).exec();
+    return this.model
+      .find({ $or: [{ name: regex }, { phone: regex }] })
+      .populate('area')
+      .sort({ name: 1 })
+      .exec();
   }
 
-  async updateById(id: Types.ObjectId, data: Partial<Employee>): Promise<EmployeeDocument | null> {
-    return this.model.findByIdAndUpdate(id, data, { returnDocument: 'after' }).populate('area').exec();
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<Employee>,
+  ): Promise<EmployeeDocument | null> {
+    return this.model
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .populate('area')
+      .exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<EmployeeDocument | null> {
@@ -49,7 +61,16 @@ export class EmployeeRepository {
     return this.model.find({ role: UserRole.TECHNICIAN }).exec();
   }
 
-  async updateTechnicianStatus(id: Types.ObjectId, status: TechnicianStatus): Promise<EmployeeDocument | null> {
-    return this.model.findByIdAndUpdate(id, { technicianStatus: status }, { returnDocument: 'after' }).exec();
+  async updateTechnicianStatus(
+    id: Types.ObjectId,
+    status: TechnicianStatus,
+  ): Promise<EmployeeDocument | null> {
+    return this.model
+      .findByIdAndUpdate(
+        id,
+        { technicianStatus: status },
+        { returnDocument: 'after' },
+      )
+      .exec();
   }
 }

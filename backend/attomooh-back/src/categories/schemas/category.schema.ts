@@ -13,10 +13,24 @@ export type CategoryDocument = HydratedDocument<Category>;
   },
 })
 export class Category {
-  @Prop({ type: { ar: { type: String, required: true, trim: true }, en: { type: String, required: true, trim: true } }, required: true, _id: false })
+  @Prop({
+    type: {
+      ar: { type: String, required: true, trim: true },
+      en: { type: String, required: true, trim: true },
+    },
+    required: true,
+    _id: false,
+  })
   name: { ar: string; en: string };
 
-  @Prop({ type: { ar: { type: String, trim: true, default: '' }, en: { type: String, trim: true, default: '' } }, default: { ar: '', en: '' }, _id: false })
+  @Prop({
+    type: {
+      ar: { type: String, trim: true, default: '' },
+      en: { type: String, trim: true, default: '' },
+    },
+    default: { ar: '', en: '' },
+    _id: false,
+  })
   description: { ar: string; en: string };
 
   @Prop({ trim: true, default: '' })

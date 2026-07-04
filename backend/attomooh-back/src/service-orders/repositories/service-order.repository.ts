@@ -59,7 +59,11 @@ export class ServiceOrderRepository {
     return this.findAll({
       assignedTo: technicianId,
       status: {
-        $in: [ServiceOrderStatus.WAITING, ServiceOrderStatus.IN_MAINTENANCE, ServiceOrderStatus.POSTPONED],
+        $in: [
+          ServiceOrderStatus.WAITING,
+          ServiceOrderStatus.IN_MAINTENANCE,
+          ServiceOrderStatus.POSTPONED,
+        ],
       },
     });
   }
@@ -151,7 +155,12 @@ export class ServiceOrderRepository {
 
   /** Count orders by technician (for reports) */
   async countByTechnician(): Promise<
-    { technicianId: string; technicianName: string; count: number; completed: number }[]
+    {
+      technicianId: string;
+      technicianName: string;
+      count: number;
+      completed: number;
+    }[]
   > {
     return this.orderModel.aggregate([
       {
@@ -234,7 +243,10 @@ export class ServiceOrderRepository {
             ],
           },
           customerName: {
-            $ifNull: ['$cust.name', { $ifNull: ['$_id.customerName', 'غير محدد'] }],
+            $ifNull: [
+              '$cust.name',
+              { $ifNull: ['$_id.customerName', 'غير محدد'] },
+            ],
           },
           count: 1,
         },

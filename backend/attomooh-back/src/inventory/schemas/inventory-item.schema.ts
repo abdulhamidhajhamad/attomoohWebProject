@@ -5,7 +5,13 @@ export type InventoryItemDocument = HydratedDocument<InventoryItem>;
 
 @Schema({
   timestamps: true,
-  toJSON: { virtuals: true, transform(_doc, ret: Record<string, unknown>) { delete ret.__v; return ret; } },
+  toJSON: {
+    virtuals: true,
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.__v;
+      return ret;
+    },
+  },
 })
 export class InventoryItem {
   @Prop({ unique: true, required: true })

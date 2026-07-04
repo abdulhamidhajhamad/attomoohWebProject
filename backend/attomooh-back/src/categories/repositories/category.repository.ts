@@ -77,14 +77,14 @@ export class CategoryRepository {
         .exec();
 
       for (const child of children) {
-        const childId = (child._id as Types.ObjectId).toString();
+        const childId = child._id.toString();
         if (!descendants.has(childId)) {
           descendants.set(childId, child);
         }
 
         if (!visited.has(childId)) {
           visited.add(childId);
-          queue.push(child._id as Types.ObjectId);
+          queue.push(child._id);
         }
       }
     }
@@ -104,10 +104,7 @@ export class CategoryRepository {
   }
 
   /** Bulk-update for level recalculations */
-  async updateLevel(
-    id: Types.ObjectId,
-    level: number,
-  ): Promise<void> {
+  async updateLevel(id: Types.ObjectId, level: number): Promise<void> {
     await this.categoryModel.updateOne({ _id: id }, { $set: { level } }).exec();
   }
 
@@ -116,7 +113,9 @@ export class CategoryRepository {
     id: Types.ObjectId,
     parents: Types.ObjectId[],
   ): Promise<void> {
-    await this.categoryModel.updateOne({ _id: id }, { $set: { parents } }).exec();
+    await this.categoryModel
+      .updateOne({ _id: id }, { $set: { parents } })
+      .exec();
   }
 
   /* ── Delete ── */
@@ -140,10 +139,7 @@ export class CategoryRepository {
   /** Remove a specific parent from all categories that reference it */
   async removeParentFromAll(parentId: Types.ObjectId): Promise<void> {
     await this.categoryModel
-      .updateMany(
-        { parents: parentId },
-        { $pull: { parents: parentId } },
-      )
+      .updateMany({ parents: parentId }, { $pull: { parents: parentId } })
       .exec();
   }
 

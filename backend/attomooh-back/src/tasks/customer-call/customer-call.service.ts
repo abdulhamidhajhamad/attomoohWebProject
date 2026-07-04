@@ -37,7 +37,10 @@ export class CustomerCallService {
     return d;
   }
 
-  async update(id: Types.ObjectId, dto: UpdateCustomerCallDto): Promise<CustomerCallDocument> {
+  async update(
+    id: Types.ObjectId,
+    dto: UpdateCustomerCallDto,
+  ): Promise<CustomerCallDocument> {
     const data: Record<string, unknown> = { ...dto };
 
     if (dto.customer !== undefined) {

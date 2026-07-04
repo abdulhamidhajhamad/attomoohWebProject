@@ -47,7 +47,14 @@ export class Employee {
 
   /* ── Auth fields (optional — only for employees with system access) ── */
 
-  @Prop({ type: String, sparse: true, unique: true, lowercase: true, trim: true, default: null })
+  @Prop({
+    type: String,
+    sparse: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    default: null,
+  })
   email: string | null;
 
   @Prop({ type: String, select: false, default: null })

@@ -33,17 +33,33 @@ async function bootstrap() {
 
   // ── Security Headers ──
   app.use(helmet());
-
   // ── CORS ──
+  const frontendUrl = configService.get<string>(
+    'FRONTEND_URL',
+    'http://localhost:5173',
+  );
+  const vercelPreviewPattern = /^https:\/\/[_\w-]+\.vercel\.app$/;
+
   app.enableCors({
-    origin: configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, Render health check)
+      if (!origin) return callback(null, true);
+
+      // Allow the configured frontend URL (set via FRONTEND_URL env var)
+      if (origin === frontendUrl) return callback(null, true);
+
+      // Allow Vercel production and preview deployments
+      if (vercelPreviewPattern.test(origin)) return callback(null, true);
+
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
-
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
 
   logger.log(`🚀 Application is running on: http://localhost:${port}`);
 }
-bootstrap();
+
+void bootstrap();

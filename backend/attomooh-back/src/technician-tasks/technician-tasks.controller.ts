@@ -10,8 +10,15 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Types } from 'mongoose';
-import { TechnicianTasksService, TaskType } from './technician-tasks.service.js';
-import { MachineTaskReportDto, RejectionDto, PauseReasonDto } from '../common/dto/machine-task-report.dto.js';
+import {
+  TechnicianTasksService,
+  TaskType,
+} from './technician-tasks.service.js';
+import {
+  MachineTaskReportDto,
+  RejectionDto,
+  PauseReasonDto,
+} from '../common/dto/machine-task-report.dto.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../common/enums/user-role.enum.js';
@@ -20,11 +27,18 @@ interface AuthenticatedRequest {
   user: { _id: Types.ObjectId };
 }
 
-const VALID_TASK_TYPES: TaskType[] = ['inspection', 'maintenance', 'installation', 'production'];
+const VALID_TASK_TYPES: TaskType[] = [
+  'inspection',
+  'maintenance',
+  'installation',
+  'production',
+];
 
 function validateTaskType(type: string): TaskType {
   if (!VALID_TASK_TYPES.includes(type as TaskType)) {
-    throw new BadRequestException(`Invalid task type: ${type}. Valid types: ${VALID_TASK_TYPES.join(', ')}`);
+    throw new BadRequestException(
+      `Invalid task type: ${type}. Valid types: ${VALID_TASK_TYPES.join(', ')}`,
+    );
   }
   return type as TaskType;
 }
@@ -72,7 +86,12 @@ export class TechnicianTasksController {
   ) {
     const taskType = validateTaskType(type);
     const taskId = parseObjectId(id);
-    return this.service.pauseTask(taskType, taskId, req.user._id, dto.reason ?? '');
+    return this.service.pauseTask(
+      taskType,
+      taskId,
+      req.user._id,
+      dto.reason ?? '',
+    );
   }
 
   @Patch(':type/:id/resume')

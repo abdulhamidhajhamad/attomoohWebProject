@@ -5,7 +5,13 @@ export type VehicleDocument = HydratedDocument<Vehicle>;
 
 @Schema({
   timestamps: true,
-  toJSON: { virtuals: true, transform(_doc, ret: Record<string, unknown>) { delete ret.__v; return ret; } },
+  toJSON: {
+    virtuals: true,
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.__v;
+      return ret;
+    },
+  },
 })
 export class Vehicle {
   @Prop({ unique: true, required: true })

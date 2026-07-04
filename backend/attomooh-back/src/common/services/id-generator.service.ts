@@ -49,7 +49,7 @@ export class IdGeneratorService {
       },
       { returnDocument: 'after', upsert: true },
     );
-    const padded = String(doc!.value).padStart(doc!.padLength || 7, '0');
+    const padded = String(doc.value).padStart(doc.padLength || 7, '0');
     return `${prefix}${padded}`;
   }
 

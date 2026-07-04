@@ -58,7 +58,7 @@ export class MaintenanceService {
       // Auto-generate title from order info
       const machineName =
         order.machineType && typeof order.machineType === 'object'
-          ? (order.machineType as { name?: string }).name ?? ''
+          ? ((order.machineType as { name?: string }).name ?? '')
           : '';
       const details = order.machineDetails ?? '';
       const machine = machineName || details || 'آلة';
@@ -73,7 +73,8 @@ export class MaintenanceService {
 
     // Scheduling fields (calendar)
     if (dto.scheduledDate) data.scheduledDate = new Date(dto.scheduledDate);
-    if (dto.scheduledStartTime) data.scheduledStartTime = dto.scheduledStartTime;
+    if (dto.scheduledStartTime)
+      data.scheduledStartTime = dto.scheduledStartTime;
     if (dto.scheduledEndTime) data.scheduledEndTime = dto.scheduledEndTime;
 
     // If admin assigns a technician immediately
@@ -113,9 +114,12 @@ export class MaintenanceService {
     if (dto.machineInfo !== undefined) updateData.machineInfo = dto.machineInfo;
     if (dto.location !== undefined) updateData.location = dto.location;
     if (dto.priority !== undefined) updateData.priority = dto.priority;
-    if (dto.scheduledDate !== undefined) updateData.scheduledDate = new Date(dto.scheduledDate);
-    if (dto.scheduledStartTime !== undefined) updateData.scheduledStartTime = dto.scheduledStartTime;
-    if (dto.scheduledEndTime !== undefined) updateData.scheduledEndTime = dto.scheduledEndTime;
+    if (dto.scheduledDate !== undefined)
+      updateData.scheduledDate = new Date(dto.scheduledDate);
+    if (dto.scheduledStartTime !== undefined)
+      updateData.scheduledStartTime = dto.scheduledStartTime;
+    if (dto.scheduledEndTime !== undefined)
+      updateData.scheduledEndTime = dto.scheduledEndTime;
 
     if (dto.assignedTo !== undefined) {
       const tech = await this.employeesService.findById(

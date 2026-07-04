@@ -44,7 +44,9 @@ export class MachineProductionRepository {
       .exec();
   }
 
-  async findAll(params: { search?: string } = {}): Promise<MachineProductionDocument[]> {
+  async findAll(
+    params: { search?: string } = {},
+  ): Promise<MachineProductionDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.search) {
       const rx = new RegExp(params.search, 'i');
@@ -82,7 +84,9 @@ export class MachineProductionRepository {
     return this.model.findByIdAndDelete(id).exec();
   }
 
-  async findByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+  async findByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineProductionDocument[]> {
     return this.model
       .find({ technician: technicianId })
       .sort({ createdAt: -1 })
@@ -91,7 +95,9 @@ export class MachineProductionRepository {
       .exec();
   }
 
-  async findActiveByTechnician(technicianId: Types.ObjectId): Promise<MachineProductionDocument[]> {
+  async findActiveByTechnician(
+    technicianId: Types.ObjectId,
+  ): Promise<MachineProductionDocument[]> {
     return this.model
       .find({
         technician: technicianId,

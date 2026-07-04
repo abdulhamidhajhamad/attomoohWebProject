@@ -24,14 +24,16 @@ export class AreaRepository {
 
   async search(query: string): Promise<AreaDocument[]> {
     const regex = new RegExp(query, 'i');
-    return this.areaModel
-      .find({ name: regex })
-      .sort({ name: 1 })
-      .exec();
+    return this.areaModel.find({ name: regex }).sort({ name: 1 }).exec();
   }
 
-  async updateById(id: Types.ObjectId, data: Partial<Area>): Promise<AreaDocument | null> {
-    return this.areaModel.findByIdAndUpdate(id, data, { returnDocument: 'after' }).exec();
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<Area>,
+  ): Promise<AreaDocument | null> {
+    return this.areaModel
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
+      .exec();
   }
 
   async deleteById(id: Types.ObjectId): Promise<AreaDocument | null> {

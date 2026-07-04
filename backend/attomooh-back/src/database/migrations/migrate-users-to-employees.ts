@@ -40,7 +40,9 @@ async function migrateUsersToEmployees() {
     const employeesCollection = db.collection('employees');
 
     // Get all users
-    const users = await usersCollection.find({}).toArray() as unknown as User[];
+    const users = (await usersCollection
+      .find({})
+      .toArray()) as unknown as User[];
 
     if (users.length === 0) {
       console.log('ℹ️  No users found to migrate');
@@ -54,10 +56,14 @@ async function migrateUsersToEmployees() {
 
     for (const user of users) {
       // Check if employee with same email already exists
-      const existingEmployee = await employeesCollection.findOne({ email: user.email });
+      const existingEmployee = await employeesCollection.findOne({
+        email: user.email,
+      });
 
       if (existingEmployee) {
-        console.log(`⏭️  Skipping user ${user.email} - already exists as employee`);
+        console.log(
+          `⏭️  Skipping user ${user.email} - already exists as employee`,
+        );
         skippedCount++;
         continue;
       }
@@ -103,7 +109,6 @@ async function migrateUsersToEmployees() {
     console.log('⚠️  To delete the old "users" collection, run:');
     console.log('   db.users.drop()');
     console.log('   in MongoDB shell or Compass');
-
   } catch (error) {
     console.error('❌ Migration failed:', error);
     process.exit(1);

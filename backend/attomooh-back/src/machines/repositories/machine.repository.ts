@@ -12,11 +12,12 @@ export class MachineRepository {
 
   async create(data: Partial<Machine>): Promise<MachineDocument> {
     const doc = await new this.machineModel(data).save();
-    return this.findById(doc._id as Types.ObjectId) as Promise<MachineDocument>;
+    return this.findById(doc._id) as Promise<MachineDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<MachineDocument | null> {
-    return this.machineModel.findById(id)
+    return this.machineModel
+      .findById(id)
       .populate('technician1', 'name phone')
       .populate('technician2', 'name phone')
       .populate('technician3', 'name phone')
@@ -24,7 +25,9 @@ export class MachineRepository {
   }
 
   async findAll(): Promise<MachineDocument[]> {
-    return this.machineModel.find().sort({ createdAt: -1 })
+    return this.machineModel
+      .find()
+      .sort({ createdAt: -1 })
       .populate('technician1', 'name phone')
       .populate('technician2', 'name phone')
       .populate('technician3', 'name phone')
@@ -42,7 +45,10 @@ export class MachineRepository {
       .exec();
   }
 
-  async updateById(id: Types.ObjectId, data: Partial<Machine>): Promise<MachineDocument | null> {
+  async updateById(
+    id: Types.ObjectId,
+    data: Partial<Machine>,
+  ): Promise<MachineDocument | null> {
     return this.machineModel
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .populate('technician1', 'name phone')

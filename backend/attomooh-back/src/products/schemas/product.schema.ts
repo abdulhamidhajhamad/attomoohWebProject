@@ -29,7 +29,14 @@ export type ProductDocument = HydratedDocument<Product>;
   },
 })
 export class Product {
-  @Prop({ type: { ar: { type: String, required: true, trim: true }, en: { type: String, required: true, trim: true } }, required: true, _id: false })
+  @Prop({
+    type: {
+      ar: { type: String, required: true, trim: true },
+      en: { type: String, required: true, trim: true },
+    },
+    required: true,
+    _id: false,
+  })
   name: { ar: string; en: string };
 
   @Prop({ required: true, trim: true })

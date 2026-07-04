@@ -26,7 +26,11 @@ export class UpdateMachineMaintDto {
   @IsString() @IsOptional() pauseReason?: string;
   @IsMongoId() @IsOptional() technician?: string;
   @IsString() @IsOptional() technicianName?: string;
-  @IsArray() @ValidateNested({ each: true }) @Type(() => SparePartDto) @IsOptional() spareParts?: SparePartDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SparePartDto)
+  @IsOptional()
+  spareParts?: SparePartDto[];
   @IsString() @IsOptional() technicianReport?: string;
   @IsEnum(MaintenanceStatus) @IsOptional() status?: MaintenanceStatus;
   @IsNumber() @Min(0) @IsOptional() technicianFee?: number;

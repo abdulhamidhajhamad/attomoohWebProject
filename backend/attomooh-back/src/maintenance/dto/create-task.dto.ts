@@ -55,13 +55,17 @@ export class CreateTaskDto {
 
   /** Scheduled start time — HH:mm (e.g. "09:00") */
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'scheduledStartTime must be HH:mm format' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'scheduledStartTime must be HH:mm format',
+  })
   @IsOptional()
   scheduledStartTime?: string;
 
   /** Scheduled end time — HH:mm (e.g. "11:30") */
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'scheduledEndTime must be HH:mm format' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'scheduledEndTime must be HH:mm format',
+  })
   @IsOptional()
   scheduledEndTime?: string;
 }

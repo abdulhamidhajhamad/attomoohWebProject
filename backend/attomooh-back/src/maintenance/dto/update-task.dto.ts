@@ -40,12 +40,16 @@ export class UpdateTaskDto {
   scheduledDate?: string;
 
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'scheduledStartTime must be HH:mm format' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'scheduledStartTime must be HH:mm format',
+  })
   @IsOptional()
   scheduledStartTime?: string;
 
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'scheduledEndTime must be HH:mm format' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    message: 'scheduledEndTime must be HH:mm format',
+  })
   @IsOptional()
   scheduledEndTime?: string;
 }

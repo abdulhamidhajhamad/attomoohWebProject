@@ -5,7 +5,13 @@ export type MachineDeliveryDocument = HydratedDocument<MachineDelivery>;
 
 @Schema({
   timestamps: true,
-  toJSON: { virtuals: true, transform(_doc, ret: Record<string, unknown>) { delete ret.__v; return ret; } },
+  toJSON: {
+    virtuals: true,
+    transform(_doc, ret: Record<string, unknown>) {
+      delete ret.__v;
+      return ret;
+    },
+  },
 })
 export class MachineDelivery {
   @Prop({ type: Types.ObjectId, ref: 'MachineReception', required: true })
@@ -33,4 +39,5 @@ export class MachineDelivery {
   updatedAt: Date;
 }
 
-export const MachineDeliverySchema = SchemaFactory.createForClass(MachineDelivery);
+export const MachineDeliverySchema =
+  SchemaFactory.createForClass(MachineDelivery);

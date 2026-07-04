@@ -12,7 +12,7 @@ export class CustomerRepository {
 
   async create(data: Partial<Customer>): Promise<CustomerDocument> {
     const doc = await new this.customerModel(data).save();
-    return this.findById(doc._id as Types.ObjectId) as Promise<CustomerDocument>;
+    return this.findById(doc._id) as Promise<CustomerDocument>;
   }
 
   async findById(id: Types.ObjectId): Promise<CustomerDocument | null> {

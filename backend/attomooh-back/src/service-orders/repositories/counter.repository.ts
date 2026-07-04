@@ -20,6 +20,6 @@ export class CounterRepository {
       { $inc: { value: 1 } },
       { returnDocument: 'after', upsert: true },
     );
-    return doc!.value;
+    return doc.value;
   }
 }

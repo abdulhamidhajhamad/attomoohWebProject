@@ -46,9 +46,8 @@ export class CategoriesService {
 
     // 2. Resolve parents + calculate level
     const normalizedParentIds = this.normalizeParentIds(dto.parentIds);
-    const { parentOids, level } = await this.resolveParentsForAssignment(
-      normalizedParentIds,
-    );
+    const { parentOids, level } =
+      await this.resolveParentsForAssignment(normalizedParentIds);
 
     // 3. Auto-translate name and description
     const bilingualName = await makeBilingual(dto.name);
@@ -176,14 +175,18 @@ export class CategoriesService {
         parents: newParentOids,
         level: newLevel,
       };
-      delete (updateData as Record<string, unknown>)['parentIds'];
+      delete updateData['parentIds'];
       if (imageUrl !== undefined) updateData.image = imageUrl;
 
       // Auto-translate if name/description changed
       if (dto.name) updateData.name = await makeBilingual(dto.name);
-      if (dto.description) updateData.description = await makeBilingual(dto.description);
+      if (dto.description)
+        updateData.description = await makeBilingual(dto.description);
 
-      const updated = await this.categoryRepository.update(id, updateData as UpdateCategoryDto);
+      const updated = await this.categoryRepository.update(
+        id,
+        updateData as UpdateCategoryDto,
+      );
       if (!updated) throw new NotFoundException('Category not found');
 
       await this.recalculateAllLevels();
@@ -192,14 +195,18 @@ export class CategoriesService {
 
     // Simple update (no parent change)
     const updateData: Record<string, unknown> = { ...dto };
-    delete (updateData as Record<string, unknown>)['parentIds'];
+    delete updateData['parentIds'];
     if (imageUrl !== undefined) updateData.image = imageUrl;
 
     // Auto-translate if name/description changed
     if (dto.name) updateData.name = await makeBilingual(dto.name);
-    if (dto.description) updateData.description = await makeBilingual(dto.description);
+    if (dto.description)
+      updateData.description = await makeBilingual(dto.description);
 
-    const updated = await this.categoryRepository.update(id, updateData as UpdateCategoryDto);
+    const updated = await this.categoryRepository.update(
+      id,
+      updateData as UpdateCategoryDto,
+    );
     if (!updated) {
       throw new NotFoundException('Category not found');
     }
@@ -220,7 +227,7 @@ export class CategoriesService {
     // Snapshot descendants before unlinking the deleted node
     const descendants = await this.categoryRepository.findDescendants(id);
     const candidateOrphanIds = new Set(
-      descendants.map((d) => (d._id as Types.ObjectId).toString()),
+      descendants.map((d) => d._id.toString()),
     );
 
     // Detach this category from children, then delete it.
@@ -261,7 +268,7 @@ export class CategoriesService {
     if (!category) {
       throw new NotFoundException(`Category "${name}" not found`);
     }
-    await this.delete(category._id as Types.ObjectId);
+    await this.delete(category._id);
   }
 
   /* ════════════════════════════════════
@@ -276,7 +283,7 @@ export class CategoriesService {
 
     // Initialize node data and parent-to-children lookup.
     for (const cat of categories) {
-      const id = (cat._id as Types.ObjectId).toString();
+      const id = cat._id.toString();
       const parentStrings = (cat.parents ?? []).map((p) => p.toString());
 
       nodeData.set(id, {
@@ -306,7 +313,9 @@ export class CategoriesService {
     const buildNode = (id: string, lineage: Set<string>): CategoryTreeNode => {
       const baseNode = nodeData.get(id);
       if (!baseNode) {
-        throw new NotFoundException(`Category node "${id}" not found while building tree`);
+        throw new NotFoundException(
+          `Category node "${id}" not found while building tree`,
+        );
       }
 
       if (lineage.has(id)) {
@@ -318,7 +327,9 @@ export class CategoriesService {
       nextLineage.add(id);
 
       const childIds = Array.from(new Set(childrenByParent.get(id) ?? []));
-      const children = childIds.map((childId) => buildNode(childId, nextLineage));
+      const children = childIds.map((childId) =>
+        buildNode(childId, nextLineage),
+      );
 
       return {
         ...baseNode,
@@ -353,9 +364,10 @@ export class CategoriesService {
 
     const descendantIdSet = new Set<string>();
     if (categoryId) {
-      const descendants = await this.categoryRepository.findDescendants(categoryId);
+      const descendants =
+        await this.categoryRepository.findDescendants(categoryId);
       for (const descendant of descendants) {
-        descendantIdSet.add((descendant._id as Types.ObjectId).toString());
+        descendantIdSet.add(descendant._id.toString());
       }
     }
 
@@ -380,7 +392,7 @@ export class CategoriesService {
         );
       }
 
-      parentOids.push(parent._id as Types.ObjectId);
+      parentOids.push(parent._id);
       parentLevels.add(parent.level);
     }
 
@@ -409,14 +421,14 @@ export class CategoriesService {
     const parentsById = new Map<string, string[]>();
 
     for (const category of categories) {
-      byId.set((category._id as Types.ObjectId).toString(), category);
+      byId.set(category._id.toString(), category);
     }
 
     const resolvedLevels = new Map<string, number>();
     const unresolvedIds = new Set<string>();
 
     for (const category of categories) {
-      const categoryId = (category._id as Types.ObjectId).toString();
+      const categoryId = category._id.toString();
       const validParentIds = (category.parents ?? [])
         .map((parent) => parent.toString())
         .filter((parentId) => byId.has(parentId));
@@ -466,26 +478,27 @@ export class CategoriesService {
       );
       for (const unresolvedId of unresolvedIds) {
         const current = byId.get(unresolvedId);
-        const fallbackLevel = current ? Math.min(Math.max(current.level, 0), MAX_LEVEL) : MAX_LEVEL;
+        const fallbackLevel = current
+          ? Math.min(Math.max(current.level, 0), MAX_LEVEL)
+          : MAX_LEVEL;
         resolvedLevels.set(unresolvedId, fallbackLevel);
       }
     }
 
     for (const category of categories) {
-      const categoryId = (category._id as Types.ObjectId).toString();
+      const categoryId = category._id.toString();
       const nextLevel = resolvedLevels.get(categoryId) ?? 0;
       if (category.level !== nextLevel) {
-        await this.categoryRepository.updateLevel(
-          category._id as Types.ObjectId,
-          nextLevel,
-        );
+        await this.categoryRepository.updateLevel(category._id, nextLevel);
       }
     }
   }
 
   private toInlineDataUrl(file: UploadedImageFile): string {
     if (!file.buffer || file.buffer.length === 0) {
-      throw new BadRequestException('Image upload failed and fallback image data is empty');
+      throw new BadRequestException(
+        'Image upload failed and fallback image data is empty',
+      );
     }
 
     const mimeType = file.mimetype || 'image/jpeg';

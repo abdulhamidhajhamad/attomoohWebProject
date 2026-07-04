@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsMongoId, IsNotEmpty, IsDateString, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsMongoId,
+  IsNotEmpty,
+  IsDateString,
+  IsNumber,
+  Min,
+} from 'class-validator';
 
 export class CreateMachineDeliveryDto {
   @IsMongoId() @IsNotEmpty() machineReception: string;
