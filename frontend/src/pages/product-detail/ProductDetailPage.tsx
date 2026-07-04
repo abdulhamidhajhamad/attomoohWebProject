@@ -116,7 +116,7 @@ export default function ProductDetailPage() {
 
   const handleInquire = useCallback(() => {
     if (!product) return;
-    const message = generateProductInquiry(name, lang);
+    const message = generateProductInquiry(name, lang, window.location.href);
     requestWhatsApp(message);
   }, [name, lang, product, requestWhatsApp]);
 
