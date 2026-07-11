@@ -82,6 +82,16 @@
   color: #374151;
 }
 
+.controlBtnActive {
+  background: #f3e8ff;
+  color: #90297d;
+  border-color: #90297d;
+}
+
+.controlBtnActive:hover {
+  background: #ede9fe;
+}
+
 /* ── Tree Container ── */
 .treeContainer {
   background: #fff;
@@ -101,6 +111,13 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: #374151;
+}
+
+.reorderHint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-right: auto;
 }
 
 /* ── Tree Row ── */
@@ -234,6 +251,24 @@
   background: #dbeafe;
 }
 
+.reorderBtn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3e8ff;
+  color: #90297d;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reorderBtn:hover {
+  background: #e9d5ff;
+}
+
 .deleteRowBtn {
   width: 30px;
   height: 30px;
@@ -274,6 +309,171 @@
   font-weight: 600;
   color: #6b7280;
   margin-bottom: 16px;
+}
+
+/* ── Reorder Editor ── */
+.reorderEditor {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin: 8px 0;
+  padding: 16px 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reorderHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reorderList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.reorderItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.reorderItemInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reorderItemName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reorderItemBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reorderInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.reorderInputLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.reorderOrderInput {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: center;
+  color: #1a1a2e;
+  direction: ltr;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.reorderOrderInput:focus {
+  border-color: #90297d;
+  box-shadow: 0 0 0 3px rgba(144, 41, 125, 0.1);
+}
+
+.reorderOrderInput::-webkit-inner-spin-button {
+  opacity: 1;
+}
+
+.reorderActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.reorderSaveBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: #90297d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reorderSaveBtn:hover {
+  background: #6e1f60;
+}
+
+.reorderSaveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reorderCancelBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reorderCancelBtn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reorderCancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── Note ── */

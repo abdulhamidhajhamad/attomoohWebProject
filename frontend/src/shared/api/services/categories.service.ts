@@ -23,6 +23,7 @@ import type {
   ApiCategoryTreeNode,
   CreateCategoryRequest,
   UpdateCategoryRequest,
+  UpdateChildrenOrderRequest,
 } from '../types';
 import type { Category } from '../../types';
 
@@ -124,6 +125,19 @@ export const categoriesService = {
     const data = await httpClient.put<ApiCategory>(
       ENDPOINTS.CATEGORIES.BY_ID(id),
       category,
+      true,
+    );
+    return mapApiCategory(data);
+  },
+
+  /** PUT /categories/:id/children-order — Admin only */
+  async updateChildrenOrder(
+    parentId: string,
+    children: { subCategoryId: string; sortOrder: number }[],
+  ): Promise<Category> {
+    const data = await httpClient.put<ApiCategory>(
+      ENDPOINTS.CATEGORIES.CHILDREN_ORDER(parentId),
+      { children } satisfies UpdateChildrenOrderRequest,
       true,
     );
     return mapApiCategory(data);

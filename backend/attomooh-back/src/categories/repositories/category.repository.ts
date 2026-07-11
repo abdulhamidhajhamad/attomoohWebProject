@@ -43,6 +43,11 @@ export class CategoryRepository {
 
   /* ── Read — hierarchy queries ── */
 
+  /** Find children of a parent without sorting (raw filter for sort-order processing) */
+  async findByParent(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
+    return this.categoryModel.find({ parents: parentId }).exec();
+  }
+
   /** Get all root categories (level 0, no parents) */
   async findRoots(): Promise<CategoryDocument[]> {
     return this.categoryModel
@@ -106,6 +111,20 @@ export class CategoryRepository {
   /** Bulk-update for level recalculations */
   async updateLevel(id: Types.ObjectId, level: number): Promise<void> {
     await this.categoryModel.updateOne({ _id: id }, { $set: { level } }).exec();
+  }
+
+  /** Replace the entire childrenOrder array atomically */
+  async updateChildrenOrder(
+    parentId: Types.ObjectId,
+    childrenOrder: { subCategoryId: Types.ObjectId; sortOrder: number }[],
+  ): Promise<CategoryDocument | null> {
+    return this.categoryModel
+      .findByIdAndUpdate(
+        parentId,
+        { $set: { childrenOrder } },
+        { returnDocument: 'after' },
+      )
+      .exec();
   }
 
   /** Update the parents array of a category */

@@ -50,6 +50,23 @@ export class Category {
   @Prop({ default: true })
   isActive: boolean;
 
+  /**
+   * Per-parent-child sort order for this parent's direct children.
+   * Each entry maps a sub-category to its display order under THIS parent.
+   * A sub-category can appear under multiple parents with different sortOrders.
+   */
+  @Prop({
+    type: [
+      {
+        subCategoryId: { type: Types.ObjectId, ref: 'Category', required: true },
+        sortOrder: { type: Number, default: 0 },
+      },
+    ],
+    default: [],
+    _id: false,
+  })
+  childrenOrder: { subCategoryId: Types.ObjectId; sortOrder: number }[];
+
   createdAt: Date;
   updatedAt: Date;
 }

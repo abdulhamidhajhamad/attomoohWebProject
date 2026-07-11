@@ -9,6 +9,7 @@ import { Types } from 'mongoose';
 import { CategoryRepository } from './repositories/category.repository.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { UpdateChildrenOrderDto } from './dto/children-order.dto.js';
 import { CategoryDocument } from './schemas/category.schema.js';
 import { makeBilingual } from '../common/utils/translate.js';
 import {
@@ -108,14 +109,28 @@ export class CategoriesService {
     return this.categoryRepository.findRoots();
   }
 
-  /** Direct children of a category */
+  /** Direct children of a category, sorted by childrenOrder */
   async findChildren(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
-    // Verify parent exists
-    const parent = await this.categoryRepository.findById(parentId);
+    const [parent, children] = await Promise.all([
+      this.categoryRepository.findById(parentId),
+      this.categoryRepository.findByParent(parentId),
+    ]);
+
     if (!parent) {
       throw new NotFoundException('Parent category not found');
     }
-    return this.categoryRepository.findChildren(parentId);
+
+    // Build sort-order map from the parent's childrenOrder array
+    const orderMap = new Map<string, number>(
+      (parent.childrenOrder ?? []).map((co) => [co.subCategoryId.toString(), co.sortOrder]),
+    );
+
+    // Sort children by sortOrder; unknown entries go last
+    return children.sort((a, b) => {
+      const orderA = orderMap.get(a._id.toString()) ?? Number.MAX_SAFE_INTEGER;
+      const orderB = orderMap.get(b._id.toString()) ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
   }
 
   /** Full category tree: roots with nested children */
@@ -214,6 +229,50 @@ export class CategoriesService {
   }
 
   /* ════════════════════════════════════
+     CHILDREN ORDER — context-aware sorting
+     ════════════════════════════════════ */
+
+  /**
+   * Replace the entire childrenOrder array for a parent category.
+   * Each entry specifies the sort order of a child under THIS parent.
+   */
+  async updateChildrenOrder(
+    parentId: Types.ObjectId,
+    dto: UpdateChildrenOrderDto,
+  ): Promise<CategoryDocument> {
+    const parent = await this.categoryRepository.findById(parentId);
+    if (!parent) {
+      throw new NotFoundException('Parent category not found');
+    }
+
+    // Validate every subCategoryId is actually a child of this parent
+    const actualChildren = await this.categoryRepository.findByParent(parentId);
+    const actualChildSet = new Set(actualChildren.map((c) => c._id.toString()));
+
+    for (const item of dto.children) {
+      if (!actualChildSet.has(item.subCategoryId)) {
+        throw new BadRequestException(
+          `Category "${item.subCategoryId}" is not a child of parent "${parentId}"`,
+        );
+      }
+    }
+
+    const updated = await this.categoryRepository.updateChildrenOrder(
+      parentId,
+      dto.children.map((item) => ({
+        subCategoryId: new Types.ObjectId(item.subCategoryId),
+        sortOrder: item.sortOrder,
+      })),
+    );
+
+    if (!updated) {
+      throw new NotFoundException('Parent category not found');
+    }
+
+    return updated;
+  }
+
+  /* ════════════════════════════════════
      DELETE — cascade
      ════════════════════════════════════ */
 
@@ -278,6 +337,7 @@ export class CategoriesService {
   /** Build a tree from flat list (a category may appear under multiple parents). */
   private buildTree(categories: CategoryDocument[]): CategoryTreeNode[] {
     const nodeData = new Map<string, Omit<CategoryTreeNode, 'children'>>();
+    const byId = new Map<string, CategoryDocument>();
     const childrenByParent = new Map<string, string[]>();
     const rootIds: string[] = [];
 
@@ -286,6 +346,7 @@ export class CategoriesService {
       const id = cat._id.toString();
       const parentStrings = (cat.parents ?? []).map((p) => p.toString());
 
+      byId.set(id, cat);
       nodeData.set(id, {
         _id: id,
         name: cat.name as unknown as string,
@@ -326,8 +387,20 @@ export class CategoriesService {
       const nextLineage = new Set(lineage);
       nextLineage.add(id);
 
+      // Sort children by this parent's childrenOrder
+      const parent = byId.get(id);
+      const orderMap = new Map<string, number>(
+        (parent?.childrenOrder ?? []).map((co) => [co.subCategoryId.toString(), co.sortOrder]),
+      );
+
       const childIds = Array.from(new Set(childrenByParent.get(id) ?? []));
-      const children = childIds.map((childId) =>
+      const sortedChildIds = [...childIds].sort((a, b) => {
+        const orderA = orderMap.get(a) ?? Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.get(b) ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
+
+      const children = sortedChildIds.map((childId) =>
         buildNode(childId, nextLineage),
       );
 

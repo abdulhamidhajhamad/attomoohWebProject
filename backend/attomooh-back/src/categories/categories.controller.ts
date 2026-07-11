@@ -21,6 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CategoriesService } from './categories.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { UpdateChildrenOrderDto } from './dto/children-order.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { UserRole } from '../common/enums/user-role.enum.js';
@@ -123,6 +124,20 @@ export class CategoriesController {
     imageFile?: Express.Multer.File,
   ) {
     return this.categoriesService.update(id, updateCategoryDto, imageFile);
+  }
+
+  /**
+   * PUT /categories/:id/children-order
+   * Update the display order of children under a parent — Admin only
+   */
+  @Put(':id/children-order')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async updateChildrenOrder(
+    @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
+    @Body() dto: UpdateChildrenOrderDto,
+  ) {
+    return this.categoriesService.updateChildrenOrder(id, dto);
   }
 
   /**
