@@ -61,8 +61,10 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
         <div className={styles.imageWrapper}>
           {product.images[0] && !imgError ? (
             <img
-              src={transformCloudinaryUrl(product.images[0])}
+              src={transformCloudinaryUrl(product.images[0], 400)}
               alt={name}
+              width={400}
+              height={400}
               className={styles.image}
               loading="lazy"
               onError={() => setImgError(true)}
