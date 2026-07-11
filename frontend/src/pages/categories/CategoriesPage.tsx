@@ -215,7 +215,18 @@ export default function CategoriesPage() {
 
   const currentItems = useMemo(() => {
     if (!breadcrumbIds.length) return categoryTree;
-    return childrenOf(breadcrumbIds[breadcrumbIds.length - 1], categories);
+    const parentId = breadcrumbIds[breadcrumbIds.length - 1];
+    const parent = categories.find((c) => c.id === parentId);
+    const children = categories.filter((c) => c.parentIds.includes(parentId));
+    if (!parent?.childrenOrder) return children;
+    const orderMap = new Map(
+      parent.childrenOrder.map((co) => [co.subCategoryId, co.sortOrder]),
+    );
+    return [...children].sort((a, b) => {
+      const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
   }, [breadcrumbIds, categoryTree, categories]);
 
   const hasChildren = useCallback(
