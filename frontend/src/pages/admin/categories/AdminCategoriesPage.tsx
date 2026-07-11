@@ -227,8 +227,6 @@ function ReorderEditor({
   onCancel,
   saving,
 }: ReorderEditorProps) {
-  const levelColor = LEVEL_COLORS[parent.level] ?? LEVEL_COLORS[0];
-
   return (
     <div
       className={styles.reorderEditor}
