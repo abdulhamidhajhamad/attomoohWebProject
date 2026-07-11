@@ -19,6 +19,7 @@ export const ENDPOINTS = {
     ROOTS: '/categories/roots',
     BY_ID: (id: string) => `/categories/${id}`,
     CHILDREN: (id: string) => `/categories/${id}/children`,
+    CHILDREN_ORDER: (id: string) => `/categories/${id}/children-order`,
   },
 
   // ── Products ──

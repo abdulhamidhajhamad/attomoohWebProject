@@ -59,6 +59,7 @@ export function mapApiCategory(c: ApiCategory): Category {
     isActive: c.isActive,
     parentIds: c.parents ?? [],
     level: c.level ?? 0,
+    childrenOrder: c.childrenOrder,
     productCount: 0,
   };
 }
@@ -99,6 +100,20 @@ export function buildCategoryTree(categories: Category[]): Category[] {
           parent.children!.push(cat);
         }
       }
+    }
+  }
+
+  // Sort each parent's children by childrenOrder
+  for (const cat of map.values()) {
+    if (cat.children && cat.children.length > 1 && cat.childrenOrder) {
+      const orderMap = new Map(
+        cat.childrenOrder.map((co) => [co.subCategoryId, co.sortOrder]),
+      );
+      cat.children.sort((a, b) => {
+        const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
     }
   }
 

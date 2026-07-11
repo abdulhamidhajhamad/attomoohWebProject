@@ -42,6 +42,7 @@ export interface ApiCategory {
   parents: string[];
   level: number;
   isActive: boolean;
+  childrenOrder?: { subCategoryId: string; sortOrder: number }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -209,6 +210,10 @@ export interface UpdateTaskRequest {
 /* ═══════════════════════════════════
    Create / Update DTOs
    ═══════════════════════════════════ */
+
+export interface UpdateChildrenOrderRequest {
+  children: { subCategoryId: string; sortOrder: number }[];
+}
 
 export interface CreateCategoryRequest {
   name: string;

@@ -6,6 +6,9 @@ import {
   ChevronLeft,
   FolderTree,
   Edit2,
+  ListOrdered,
+  Save,
+  X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -34,6 +37,14 @@ interface TreeRowProps {
   toggleExpand: (id: string) => void;
   onDelete: (id: string, name: string, hasChildren: boolean) => void;
   deleting: string | null;
+  isReorderMode: boolean;
+  reorderParentId: string | null;
+  reorderValues: Record<string, number>;
+  onStartReorder: (parentId: string) => void;
+  onReorderValueChange: (childId: string, value: number) => void;
+  onSaveReorder: (parentId: string) => Promise<void>;
+  onCancelReorder: () => void;
+  reorderSaving: boolean;
 }
 
 function TreeRow({
@@ -43,10 +54,34 @@ function TreeRow({
   toggleExpand,
   onDelete,
   deleting,
+  isReorderMode,
+  reorderParentId,
+  reorderValues,
+  onStartReorder,
+  onReorderValueChange,
+  onSaveReorder,
+  onCancelReorder,
+  reorderSaving,
 }: TreeRowProps) {
   const children = allCategories.filter((c) => c.parentIds.includes(category.id));
   const hasChildren = children.length > 0;
   const isExpanded = expandedIds.has(category.id);
+
+  // Sort children by childrenOrder for display
+  const sortedChildren = (() => {
+    if (!hasChildren) return children;
+    if (!category.childrenOrder) return children;
+    const orderMap = new Map(
+      category.childrenOrder.map((co) => [co.subCategoryId, co.sortOrder]),
+    );
+    return [...children].sort((a, b) => {
+      const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
+  })();
+
+  const isEditingReorder = isReorderMode && reorderParentId === category.id;
   const Icon = getLucideIcon(category.icon);
   const levelColor = LEVEL_COLORS[category.level] ?? LEVEL_COLORS[0];
 
@@ -93,7 +128,15 @@ function TreeRow({
 
         {/* Actions */}
         <div className={styles.rowActions}>
-          {/* Edit button */}
+          {isReorderMode && hasChildren && !isEditingReorder && (
+            <button
+              className={styles.reorderBtn}
+              title="ترتيب الأبناء"
+              onClick={() => onStartReorder(category.id)}
+            >
+              <ListOrdered size={14} />
+            </button>
+          )}
           <Link
             to={`/admin/categories/${category.id}/edit`}
             className={styles.editBtn}
@@ -101,7 +144,6 @@ function TreeRow({
           >
             <Edit2 size={14} />
           </Link>
-          {/* Only show "Add sub" if level < 2 */}
           {category.level < 2 && (
             <Link
               to={`/admin/categories/add?parent=${category.id}`}
@@ -123,9 +165,9 @@ function TreeRow({
       </div>
 
       {/* Children (collapsible) */}
-      {hasChildren && isExpanded && (
+      {hasChildren && isExpanded && !isEditingReorder && (
         <div className={styles.treeChildren}>
-          {children.map((child) => (
+          {sortedChildren.map((child) => (
             <TreeRow
               key={child.id}
               category={child}
@@ -134,11 +176,120 @@ function TreeRow({
               toggleExpand={toggleExpand}
               onDelete={onDelete}
               deleting={deleting}
+              isReorderMode={isReorderMode}
+              reorderParentId={reorderParentId}
+              reorderValues={reorderValues}
+              onStartReorder={onStartReorder}
+              onReorderValueChange={onReorderValueChange}
+              onSaveReorder={onSaveReorder}
+              onCancelReorder={onCancelReorder}
+              reorderSaving={reorderSaving}
             />
           ))}
         </div>
       )}
+
+      {/* Reorder editor */}
+      {isEditingReorder && (
+        <ReorderEditor
+          parent={category}
+          childrenList={sortedChildren}
+          reorderValues={reorderValues}
+          onValueChange={onReorderValueChange}
+          onSave={() => onSaveReorder(category.id)}
+          onCancel={onCancelReorder}
+          saving={reorderSaving}
+        />
+      )}
     </>
+  );
+}
+
+/* ═══════════════════════════════════
+   Reorder Editor Sub-Component
+   ═══════════════════════════════════ */
+interface ReorderEditorProps {
+  parent: Category;
+  childrenList: Category[];
+  reorderValues: Record<string, number>;
+  onValueChange: (childId: string, value: number) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+function ReorderEditor({
+  parent,
+  childrenList,
+  reorderValues,
+  onValueChange,
+  onSave,
+  onCancel,
+  saving,
+}: ReorderEditorProps) {
+  const levelColor = LEVEL_COLORS[parent.level] ?? LEVEL_COLORS[0];
+
+  return (
+    <div
+      className={styles.reorderEditor}
+      style={{ marginRight: `${24 + (parent.level + 1) * 32}px` }}
+    >
+      <div className={styles.reorderHeader}>
+        <ListOrdered size={16} />
+        <span>ترتيب أبناء: {parent.name.ar}</span>
+      </div>
+
+      <div className={styles.reorderList}>
+        {childrenList.map((child) => {
+          const childLevelColor = LEVEL_COLORS[child.level] ?? LEVEL_COLORS[0];
+          return (
+            <div key={child.id} className={styles.reorderItem}>
+              <div className={styles.reorderItemInfo}>
+                <span className={styles.reorderItemName}>{child.name.ar}</span>
+                <span
+                  className={styles.reorderItemBadge}
+                  style={{ background: `${childLevelColor}18`, color: childLevelColor }}
+                >
+                  {LEVEL_LABELS[child.level]}
+                </span>
+              </div>
+              <div className={styles.reorderInputGroup}>
+                <label className={styles.reorderInputLabel}>الترتيب</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={999}
+                  className={styles.reorderOrderInput}
+                  value={reorderValues[child.id] ?? 0}
+                  onChange={(e) =>
+                    onValueChange(child.id, Math.max(0, parseInt(e.target.value, 10) || 0))
+                  }
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={styles.reorderActions}>
+        <button
+          className={styles.reorderSaveBtn}
+          onClick={onSave}
+          disabled={saving}
+        >
+          <Save size={16} />
+          {saving ? 'جاري الحفظ...' : 'حفظ الترتيب'}
+        </button>
+        <button
+          className={styles.reorderCancelBtn}
+          onClick={onCancel}
+          disabled={saving}
+        >
+          <X size={16} />
+          إلغاء
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -150,6 +301,12 @@ export default function AdminCategoriesPage() {
   const { categories, categoryTree, loading, error, refetch } = useCategories();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Reorder state
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [reorderParentId, setReorderParentId] = useState<string | null>(null);
+  const [reorderValues, setReorderValues] = useState<Record<string, number>>({});
+  const [reorderSaving, setReorderSaving] = useState(false);
 
   // Expand all on first load
   useEffect(() => {
@@ -198,6 +355,75 @@ export default function AdminCategoriesPage() {
     [refetch],
   );
 
+  /* ── Reorder handlers ── */
+
+  const toggleReorderMode = useCallback(() => {
+    setIsReorderMode((prev) => {
+      if (prev) {
+        // Exiting reorder mode — clean up
+        setReorderParentId(null);
+        setReorderValues({});
+      }
+      return !prev;
+    });
+  }, []);
+
+  const handleStartReorder = useCallback(
+    (parentId: string) => {
+      const parent = categories.find((c) => c.id === parentId);
+      if (!parent) return;
+
+      const children = categories.filter((c) => c.parentIds.includes(parentId));
+      const orderMap = new Map(
+        (parent.childrenOrder ?? []).map((co) => [co.subCategoryId, co.sortOrder]),
+      );
+
+      // Initialize values: prefer childrenOrder, else auto-assign 0,1,2,…
+      const initial: Record<string, number> = {};
+      children.forEach((child, index) => {
+        initial[child.id] = orderMap.get(child.id) ?? index;
+      });
+
+      setReorderParentId(parentId);
+      setReorderValues(initial);
+    },
+    [categories],
+  );
+
+  const handleReorderValueChange = useCallback(
+    (childId: string, value: number) => {
+      setReorderValues((prev) => ({ ...prev, [childId]: value }));
+    },
+    [],
+  );
+
+  const handleSaveReorder = useCallback(
+    async (parentId: string) => {
+      setReorderSaving(true);
+      try {
+        const children = Object.entries(reorderValues).map(([subCategoryId, sortOrder]) => ({
+          subCategoryId,
+          sortOrder,
+        }));
+        await categoriesService.updateChildrenOrder(parentId, children);
+        invalidateCategoriesCache();
+        refetch();
+        setReorderParentId(null);
+        setReorderValues({});
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'فشل في حفظ الترتيب');
+      } finally {
+        setReorderSaving(false);
+      }
+    },
+    [reorderValues, refetch],
+  );
+
+  const handleCancelReorder = useCallback(() => {
+    setReorderParentId(null);
+    setReorderValues({});
+  }, []);
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -239,6 +465,13 @@ export default function AdminCategoriesPage() {
         <button onClick={collapseAll} className={styles.controlBtn}>
           طي الكل
         </button>
+        <button
+          onClick={toggleReorderMode}
+          className={`${styles.controlBtn} ${isReorderMode ? styles.controlBtnActive : ''}`}
+        >
+          <ListOrdered size={14} />
+          {isReorderMode ? 'إنهاء الترتيب' : 'ترتيب الأبناء'}
+        </button>
       </div>
 
       {/* Tree */}
@@ -247,6 +480,11 @@ export default function AdminCategoriesPage() {
           <div className={styles.treeHeader}>
             <FolderTree size={16} />
             <span>شجرة التصنيفات</span>
+            {isReorderMode && (
+              <span className={styles.reorderHint}>
+                انقر على أيقونة الترتيب بجانب التصنيف الأب لترتيب أبنائه
+              </span>
+            )}
           </div>
           {categoryTree.map((root) => (
             <TreeRow
@@ -257,6 +495,14 @@ export default function AdminCategoriesPage() {
               toggleExpand={toggleExpand}
               onDelete={handleDelete}
               deleting={deleting}
+              isReorderMode={isReorderMode}
+              reorderParentId={reorderParentId}
+              reorderValues={reorderValues}
+              onStartReorder={handleStartReorder}
+              onReorderValueChange={handleReorderValueChange}
+              onSaveReorder={handleSaveReorder}
+              onCancelReorder={handleCancelReorder}
+              reorderSaving={reorderSaving}
             />
           ))}
         </div>
