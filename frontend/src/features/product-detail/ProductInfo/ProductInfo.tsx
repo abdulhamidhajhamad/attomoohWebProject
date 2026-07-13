@@ -1,8 +1,8 @@
-import { memo } from 'react';
+import { useState, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import type { Product } from '../../../shared/types';
-import { TrustBar } from '../TrustBar/TrustBar';
 import styles from './ProductInfo.module.css';
 
 interface ProductInfoProps {
@@ -11,15 +11,23 @@ interface ProductInfoProps {
   lang: 'ar' | 'en';
 }
 
+const MAX_VISIBLE_SPECS = 4;
+
 export const ProductInfo = memo(function ProductInfo({
   product,
   categoryName,
   lang,
 }: ProductInfoProps) {
   const { t } = useTranslation();
+  const [specsExpanded, setSpecsExpanded] = useState(false);
   const hasPrice = (product.price ?? 0) > 0;
   const description = product.description[lang] ?? '';
   const specifications = product.specifications;
+  const specEntries = specifications ? Object.entries(specifications) : [];
+  const hasManySpecs = specEntries.length > MAX_VISIBLE_SPECS;
+  const visibleSpecs = specsExpanded
+    ? specEntries
+    : specEntries.slice(0, MAX_VISIBLE_SPECS);
 
   return (
     <div className={styles.info}>
@@ -42,44 +50,62 @@ export const ProductInfo = memo(function ProductInfo({
 
       <div className={styles.divider} />
 
-      {(specifications || product.brand) && (
+      {(specEntries.length > 0 || product.brand) && (
         <>
           <h2 className={styles.specsTitle}>{t('products.specifications')}</h2>
-          <div className={styles.specsGrid}>
-            {product.brand && (
-              <div className={styles.specRow}>
-                <span className={styles.specLabel}>
-                  {lang === 'ar' ? 'العلامة التجارية' : 'Brand'}
-                </span>
-                <Link
-                  to={`/products?brand=${encodeURIComponent(product.brand)}`}
-                  className={styles.brandLink}
-                >
-                  {product.brand}
-                </Link>
-              </div>
-            )}
-            {product.model && (
-              <div className={styles.specRow}>
-                <span className={styles.specLabel}>
-                  {lang === 'ar' ? 'الموديل' : 'Model'}
-                </span>
-                <span className={styles.specValue}>{product.model}</span>
-              </div>
-            )}
-            {specifications &&
-              Object.entries(specifications).map(([key, value]) => (
+          <div
+            className={`${styles.specsWrapper} ${!specsExpanded && hasManySpecs ? styles.specsCollapsed : ''}`}
+          >
+            <div className={styles.specsGrid}>
+              {product.brand && (
+                <div className={styles.specRow}>
+                  <span className={styles.specLabel}>
+                    {lang === 'ar' ? 'العلامة التجارية' : 'Brand'}
+                  </span>
+                  <Link
+                    to={`/products?brand=${encodeURIComponent(product.brand)}`}
+                    className={styles.brandLink}
+                  >
+                    {product.brand}
+                  </Link>
+                </div>
+              )}
+              {product.model && (
+                <div className={styles.specRow}>
+                  <span className={styles.specLabel}>
+                    {lang === 'ar' ? 'الموديل' : 'Model'}
+                  </span>
+                  <span className={styles.specValue}>{product.model}</span>
+                </div>
+              )}
+              {visibleSpecs.map(([key, value]) => (
                 <div key={key} className={styles.specRow}>
                   <span className={styles.specLabel}>{key}</span>
                   <span className={styles.specValue}>{value[lang]}</span>
                 </div>
               ))}
+            </div>
           </div>
+          {hasManySpecs && (
+            <button
+              type="button"
+              className={styles.readMoreBtn}
+              onClick={() => setSpecsExpanded((prev) => !prev)}
+            >
+              {specsExpanded
+                ? lang === 'ar'
+                  ? 'عرض أقل'
+                  : 'Show Less'
+                : `${lang === 'ar' ? 'عرض المزيد' : 'Show More'} (${specEntries.length - MAX_VISIBLE_SPECS})`}
+              <ChevronDown
+                size={16}
+                className={specsExpanded ? styles.chevronUp : ''}
+              />
+            </button>
+          )}
           <div className={styles.divider} />
         </>
       )}
-
-      <TrustBar />
     </div>
   );
 });

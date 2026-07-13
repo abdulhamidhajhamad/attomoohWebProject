@@ -59,10 +59,6 @@ export const en = {
     relatedProducts: 'Related Products',
     description: 'Description',
     peaceOfMind: 'Original spare parts & continuous maintenance guaranteed.. Your equipment stays protected even after warranty',
-    warranty: '2-Year Warranty',
-    fastDelivery: 'Fast Delivery',
-    techSupport: 'Tech Support',
-    freeReturns: 'Free Returns',
   },
 
   // Cart

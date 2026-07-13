@@ -66,6 +66,27 @@
   margin-bottom: 12px;
 }
 
+.specsWrapper {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.specsCollapsed {
+  position: relative;
+  max-height: 196px;
+}
+
+.specsCollapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, var(--color-white));
+  pointer-events: none;
+}
+
 .specsGrid {
   display: grid;
   grid-template-columns: 1fr;
@@ -116,4 +137,28 @@
 
 .brandLink:hover {
   color: var(--color-primary);
+}
+
+.readMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.readMoreBtn:hover {
+  opacity: 0.8;
+}
+
+.readMoreBtn .chevronUp {
+  transform: rotate(180deg);
 }
