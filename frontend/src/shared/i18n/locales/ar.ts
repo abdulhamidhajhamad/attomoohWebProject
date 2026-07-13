@@ -58,6 +58,11 @@ export const ar = {
     specifications: 'المواصفات',
     relatedProducts: 'منتجات ذات صلة',
     description: 'الوصف',
+    peaceOfMind: 'توفر قطع غيار أصلية وصيانة مستمرة.. معداتك في أمان حتى بعد انتهاء الكفالة',
+    warranty: 'ضمان سنتين',
+    fastDelivery: 'توصيل سريع',
+    techSupport: 'دعم فني',
+    freeReturns: 'إرجاع مجاني',
   },
 
   // Cart
