@@ -1,0 +1,47 @@
+.trustBar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+@media (max-width: 767px) {
+  .trustBar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--color-gray-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-100);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.trustItem:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.trustIcon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(144, 41, 125, 0.08);
+  border-radius: 50%;
+  color: var(--color-primary);
+}
+
+.trustText {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-gray-700);
+  line-height: 1.4;
+}
