@@ -24,7 +24,7 @@ export class CategoryRepository {
   async findAll(): Promise<CategoryDocument[]> {
     return this.categoryModel
       .find()
-      .sort({ level: 1, createdAt: 1, _id: 1 })
+      .sort({ sortOrder: 1, level: 1, createdAt: 1, _id: 1 })
       .exec();
   }
 
@@ -48,11 +48,11 @@ export class CategoryRepository {
     return this.categoryModel.find({ parents: parentId }).exec();
   }
 
-  /** Get all root categories (level 0, no parents) */
+  /** Get all root categories (level 0, no parents), sorted by sortOrder */
   async findRoots(): Promise<CategoryDocument[]> {
     return this.categoryModel
       .find({ parents: { $size: 0 } })
-      .sort({ createdAt: 1, _id: 1 })
+      .sort({ sortOrder: 1, createdAt: 1, _id: 1 })
       .exec();
   }
 

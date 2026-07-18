@@ -410,7 +410,16 @@ export class CategoriesService {
       };
     };
 
-    return rootIds.map((rootId) => buildNode(rootId, new Set()));
+    // Sort root categories by sortOrder (numeric, ascending)
+    const sortedRootIds = [...rootIds].sort((a, b) => {
+      const catA = byId.get(a);
+      const catB = byId.get(b);
+      const orderA = (catA?.sortOrder ?? 0);
+      const orderB = (catB?.sortOrder ?? 0);
+      return orderA - orderB;
+    });
+
+    return sortedRootIds.map((rootId) => buildNode(rootId, new Set()));
   }
 
   private normalizeParentIds(parentIds?: string[]): string[] {
