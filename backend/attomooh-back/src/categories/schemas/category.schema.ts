@@ -67,6 +67,10 @@ export class Category {
   })
   childrenOrder: { subCategoryId: Types.ObjectId; sortOrder: number }[];
 
+  /** Manual sort order for root categories (admin-defined). Lower = first. */
+  @Prop({ type: Number, default: 0 })
+  sortOrder: number;
+
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,10 +1,12 @@
 import {
   IsOptional,
   IsString,
+  IsNumber,
   IsMongoId,
   IsBoolean,
   IsArray,
   ArrayMaxSize,
+  Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -51,4 +53,13 @@ export class UpdateCategoryDto {
     return value;
   })
   isActive?: boolean;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return parseInt(value, 10) || 0;
+    return value;
+  })
+  sortOrder?: number;
 }
