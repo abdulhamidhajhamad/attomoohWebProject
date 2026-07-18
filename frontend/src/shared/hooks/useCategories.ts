@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { categoriesService } from '../api/services';
 import { buildCategoryTree } from '../api/mappers';
+import { sortCategoriesByOrder } from '../utils/sortCategories';
 import type { Category } from '../types';
 
 /* ═══════════════════════════════════
@@ -87,11 +88,13 @@ export function useCategories(): UseCategoriesResult {
     try {
       const data = await categoriesService.getAll();
       if (mounted.current) {
-        setCategories(data);
-        setCache(cacheKey, data);
+        // Sort flat list by admin-defined sortOrder
+        const sorted = sortCategoriesByOrder(data);
+        setCategories(sorted);
+        setCache(cacheKey, sorted);
 
         // Build tree client-side from flat list
-        const tree = buildCategoryTree(data);
+        const tree = buildCategoryTree(sorted);
         setCategoryTree(tree);
         setCache(treeCacheKey, tree);
       }

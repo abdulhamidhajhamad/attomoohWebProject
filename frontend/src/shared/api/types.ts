@@ -42,6 +42,7 @@ export interface ApiCategory {
   parents: string[];
   level: number;
   isActive: boolean;
+  sortOrder?: number;
   childrenOrder?: { subCategoryId: string; sortOrder: number }[];
   createdAt: string;
   updatedAt: string;
@@ -223,6 +224,7 @@ export interface CreateCategoryRequest {
   imageFile?: File;
   /** Send zero, one, or more parent IDs (same level). */
   parentIds?: string[];
+  sortOrder?: number;
   isActive?: boolean;
 }
 
@@ -234,6 +236,7 @@ export interface UpdateCategoryRequest {
   imageFile?: File;
   /** Send empty array to make root, or one/more parent IDs to assign parents. */
   parentIds?: string[];
+  sortOrder?: number;
   isActive?: boolean;
 }
 
