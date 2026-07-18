@@ -59,6 +59,7 @@ export function mapApiCategory(c: ApiCategory): Category {
     isActive: c.isActive,
     parentIds: c.parents ?? [],
     level: c.level ?? 0,
+    sortOrder: c.sortOrder ?? 0,
     childrenOrder: c.childrenOrder,
     productCount: 0,
   };
@@ -116,6 +117,13 @@ export function buildCategoryTree(categories: Category[]): Category[] {
       });
     }
   }
+
+  // Sort root categories by admin-defined sortOrder (ascending)
+  roots.sort((a, b) => {
+    const orderA = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
 
   return roots;
 }
