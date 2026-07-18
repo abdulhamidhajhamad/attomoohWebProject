@@ -40,7 +40,7 @@ interface TreeRowProps {
   isReorderMode: boolean;
   reorderParentId: string | null;
   reorderValues: Record<string, number>;
-  onStartReorder: (parentId: string) => void;
+  onStartReorder: (parentId: string | null) => void;
   onReorderValueChange: (childId: string, value: number) => void;
   onSaveReorder: (parentId: string) => Promise<void>;
   onCancelReorder: () => void;
@@ -367,7 +367,19 @@ export default function AdminCategoriesPage() {
   }, []);
 
   const handleStartReorder = useCallback(
-    (parentId: string) => {
+    (parentId: string | null) => {
+      if (parentId === null) {
+        // Root-level reorder — show all root categories with their sortOrder
+        const roots = categories.filter((c) => c.level === 0);
+        const initial: Record<string, number> = {};
+        roots.forEach((root) => {
+          initial[root.id] = root.sortOrder ?? 0;
+        });
+        setReorderParentId('__roots__');
+        setReorderValues(initial);
+        return;
+      }
+
       const parent = categories.find((c) => c.id === parentId);
       if (!parent) return;
 
@@ -399,11 +411,20 @@ export default function AdminCategoriesPage() {
     async (parentId: string) => {
       setReorderSaving(true);
       try {
-        const children = Object.entries(reorderValues).map(([subCategoryId, sortOrder]) => ({
-          subCategoryId,
-          sortOrder,
-        }));
-        await categoriesService.updateChildrenOrder(parentId, children);
+        if (parentId === '__roots__') {
+          // Update each root's sortOrder in parallel
+          const updates = Object.entries(reorderValues).map(
+            ([categoryId, sortOrder]) =>
+              categoriesService.update(categoryId, { sortOrder }),
+          );
+          await Promise.all(updates);
+        } else {
+          const children = Object.entries(reorderValues).map(([subCategoryId, sortOrder]) => ({
+            subCategoryId,
+            sortOrder,
+          }));
+          await categoriesService.updateChildrenOrder(parentId, children);
+        }
         invalidateCategoriesCache();
         refetch();
         setReorderParentId(null);
@@ -470,6 +491,13 @@ export default function AdminCategoriesPage() {
           <ListOrdered size={14} />
           {isReorderMode ? 'إنهاء الترتيب' : 'ترتيب الأبناء'}
         </button>
+        <button
+          onClick={() => handleStartReorder(null)}
+          className={`${styles.controlBtn} ${reorderParentId === '__roots__' ? styles.controlBtnActive : ''}`}
+        >
+          <ListOrdered size={14} />
+          ترتيب التصنيفات الرئيسية
+        </button>
       </div>
 
       {/* Tree */}
@@ -512,6 +540,29 @@ export default function AdminCategoriesPage() {
             <Plus size={18} />
             إضافة تصنيف رئيسي
           </Link>
+        </div>
+      )}
+
+      {/* Root reorder editor */}
+      {reorderParentId === '__roots__' && (
+        <div className={styles.treeContainer} style={{ marginBottom: 16 }}>
+          <div className={styles.treeHeader}>
+            <ListOrdered size={16} />
+            <span>ترتيب التصنيفات الرئيسية</span>
+          </div>
+          <ReorderEditor
+            parent={{
+              id: '__roots__',
+              name: { ar: 'التصنيفات الرئيسية', en: 'Main Categories' },
+              level: 0,
+            } as unknown as Category}
+            childrenList={categories.filter((c) => c.level === 0)}
+            reorderValues={reorderValues}
+            onValueChange={handleReorderValueChange}
+            onSave={() => handleSaveReorder('__roots__')}
+            onCancel={handleCancelReorder}
+            saving={reorderSaving}
+          />
         </div>
       )}
 
