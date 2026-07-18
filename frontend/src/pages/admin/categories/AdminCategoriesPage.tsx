@@ -17,6 +17,7 @@ import {
 } from '../../../shared/hooks/useCategories';
 import { categoriesService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
+import { Modal } from '../../../shared/ui/Modal';
 import { getLucideIcon, DefaultCategoryIcon } from '../../../shared/ui/IconResolver';
 import type { Category } from '../../../shared/types';
 import styles from './AdminCategories.module.css';
@@ -208,8 +209,16 @@ function TreeRow({
 /* ═══════════════════════════════════
    Reorder Editor Sub-Component
    ═══════════════════════════════════ */
+
+/** Minimal parent info required for reorder display */
+interface ReorderParentInfo {
+  id: string;
+  name: { ar: string; en: string };
+  level: number;
+}
+
 interface ReorderEditorProps {
-  parent: Category;
+  parent: ReorderParentInfo;
   childrenList: Category[];
   reorderValues: Record<string, number>;
   onValueChange: (childId: string, value: number) => void;
@@ -543,28 +552,25 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      {/* Root reorder editor */}
-      {reorderParentId === '__roots__' && (
-        <div className={styles.treeContainer} style={{ marginBottom: 16 }}>
-          <div className={styles.treeHeader}>
-            <ListOrdered size={16} />
-            <span>ترتيب التصنيفات الرئيسية</span>
-          </div>
-          <ReorderEditor
-            parent={{
-              id: '__roots__',
-              name: { ar: 'التصنيفات الرئيسية', en: 'Main Categories' },
-              level: 0,
-            } as unknown as Category}
-            childrenList={categories.filter((c) => c.level === 0)}
-            reorderValues={reorderValues}
-            onValueChange={handleReorderValueChange}
-            onSave={() => handleSaveReorder('__roots__')}
-            onCancel={handleCancelReorder}
-            saving={reorderSaving}
-          />
-        </div>
-      )}
+      {/* Root reorder modal */}
+      <Modal
+        open={reorderParentId === '__roots__'}
+        onClose={handleCancelReorder}
+      >
+        <ReorderEditor
+          parent={{
+            id: '__roots__',
+            name: { ar: 'التصنيفات الرئيسية', en: 'Main Categories' },
+            level: 0,
+          }}
+          childrenList={categories.filter((c) => c.level === 0)}
+          reorderValues={reorderValues}
+          onValueChange={handleReorderValueChange}
+          onSave={() => handleSaveReorder('__roots__')}
+          onCancel={handleCancelReorder}
+          saving={reorderSaving}
+        />
+      </Modal>
 
       {/* Note */}
       <div className={styles.note}>
