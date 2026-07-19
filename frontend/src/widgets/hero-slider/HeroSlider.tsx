@@ -87,7 +87,7 @@ export const HeroSlider = memo(function HeroSlider() {
                   <h1 className={styles.title}>{t('hero.title')}</h1>
                   <p className={styles.subtitle}>{t('hero.subtitle')}</p>
                   <div className={styles.actions}>
-                    <Link to="/products">
+                    <Link to="/categories">
                       <Button variant="primary" size="lg">
                         {t('hero.cta')}
                       </Button>
