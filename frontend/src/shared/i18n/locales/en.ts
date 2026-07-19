@@ -15,7 +15,7 @@ export const en = {
     badge: 'New & Exclusive',
     title: 'Modern Kitchen Equipment',
     subtitle: 'Get the best industrial equipment for your restaurant at the best prices with quality guarantee.',
-    cta: 'Browse Products',
+    cta: 'Browse Categories',
     ctaSecondary: 'Contact Us',
   },
 
