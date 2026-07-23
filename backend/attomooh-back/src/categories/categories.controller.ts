@@ -5,7 +5,9 @@ import {
   Put,
   Delete,
   Param,
+  Query,
   Body,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -15,6 +17,7 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Types } from 'mongoose';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -29,7 +32,27 @@ import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe.js';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    private readonly categoriesService: CategoriesService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  /**
+   * Verify that the request carries a valid admin JWT.
+   * Used to gate the ?showInactive=true query param.
+   */
+  private async isAdmin(req: unknown): Promise<boolean> {
+    try {
+      const headers = (req as Record<string, unknown>)?.headers as Record<string, string | undefined> | undefined;
+      const authHeader = headers?.authorization;
+      if (!authHeader) return false;
+      const token = authHeader.replace('Bearer ', '');
+      const payload = await this.jwtService.verifyAsync(token);
+      return payload.role === UserRole.ADMIN;
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * POST /categories
@@ -59,19 +82,29 @@ export class CategoriesController {
   /**
    * GET /categories
    * Get all categories (flat list) — Public
+   * Admins can pass ?showInactive=true to include deactivated categories.
    */
   @Get()
-  async findAll() {
-    return this.categoriesService.findAll();
+  async findAll(
+    @Query('showInactive') showInactive?: string,
+    @Req() req?: unknown,
+  ) {
+    const activeOnly = !(showInactive === 'true' && await this.isAdmin(req));
+    return this.categoriesService.findAll(activeOnly);
   }
 
   /**
    * GET /categories/tree
    * Get full category tree (roots → children → grandchildren) — Public
+   * Admins can pass ?showInactive=true to include deactivated categories.
    */
   @Get('tree')
-  async getTree() {
-    return this.categoriesService.getTree();
+  async getTree(
+    @Query('showInactive') showInactive?: string,
+    @Req() req?: unknown,
+  ) {
+    const activeOnly = !(showInactive === 'true' && await this.isAdmin(req));
+    return this.categoriesService.getTree(activeOnly);
   }
 
   /**

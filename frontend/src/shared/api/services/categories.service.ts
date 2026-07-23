@@ -29,9 +29,10 @@ import type { Category } from '../../types';
 
 export const categoriesService = {
   /** GET /categories — flat list, Public */
-  async getAll(): Promise<Category[]> {
+  async getAll(showInactive?: boolean): Promise<Category[]> {
+    const query = showInactive ? '?showInactive=true' : '';
     const data = await httpClient.get<ApiCategory[]>(
-      ENDPOINTS.CATEGORIES.BASE,
+      `${ENDPOINTS.CATEGORIES.BASE}${query}`,
     );
     return mapApiCategories(data);
   },

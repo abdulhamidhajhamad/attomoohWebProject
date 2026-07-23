@@ -60,7 +60,7 @@ interface UseCategoriesResult {
   refetch: () => void;
 }
 
-export function useCategories(): UseCategoriesResult {
+export function useCategories(showInactive = false): UseCategoriesResult {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryTree, setCategoryTree] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +86,7 @@ export function useCategories(): UseCategoriesResult {
     setError(null);
 
     try {
-      const data = await categoriesService.getAll();
+      const data = await categoriesService.getAll(showInactive);
       if (mounted.current) {
         // Sort flat list by admin-defined sortOrder
         const sorted = sortCategoriesByOrder(data);

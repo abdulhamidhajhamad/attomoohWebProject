@@ -91,8 +91,8 @@ export class CategoriesService {
      ════════════════════════════════════ */
 
   /** All categories flat (sorted by level then name) */
-  async findAll(): Promise<CategoryDocument[]> {
-    return this.categoryRepository.findAll();
+  async findAll(activeOnly = true): Promise<CategoryDocument[]> {
+    return this.categoryRepository.findAll(activeOnly);
   }
 
   /** Single category by ID */
@@ -105,15 +105,15 @@ export class CategoriesService {
   }
 
   /** Root categories only (level 0) */
-  async findRoots(): Promise<CategoryDocument[]> {
-    return this.categoryRepository.findRoots();
+  async findRoots(activeOnly = true): Promise<CategoryDocument[]> {
+    return this.categoryRepository.findRoots(activeOnly);
   }
 
   /** Direct children of a category, sorted by childrenOrder */
-  async findChildren(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
+  async findChildren(parentId: Types.ObjectId, activeOnly = true): Promise<CategoryDocument[]> {
     const [parent, children] = await Promise.all([
       this.categoryRepository.findById(parentId),
-      this.categoryRepository.findByParent(parentId),
+      this.categoryRepository.findByParent(parentId, activeOnly),
     ]);
 
     if (!parent) {
@@ -134,8 +134,8 @@ export class CategoriesService {
   }
 
   /** Full category tree: roots with nested children */
-  async getTree(): Promise<CategoryTreeNode[]> {
-    const allCategories = await this.categoryRepository.findAll();
+  async getTree(activeOnly = true): Promise<CategoryTreeNode[]> {
+    const allCategories = await this.categoryRepository.findAll(activeOnly);
     return this.buildTree(allCategories);
   }
 
@@ -496,7 +496,7 @@ export class CategoriesService {
   }
 
   private async recalculateAllLevels(): Promise<void> {
-    const categories = await this.categoryRepository.findAll();
+    const categories = await this.categoryRepository.findAll(false);
     if (categories.length === 0) return;
 
     const byId = new Map<string, CategoryDocument>();

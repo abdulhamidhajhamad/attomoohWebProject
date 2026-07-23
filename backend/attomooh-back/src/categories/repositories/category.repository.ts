@@ -21,9 +21,11 @@ export class CategoryRepository {
 
   /* ── Read — flat queries ── */
 
-  async findAll(): Promise<CategoryDocument[]> {
+  async findAll(activeOnly = true): Promise<CategoryDocument[]> {
+    const filter: Record<string, unknown> = {};
+    if (activeOnly) filter.isActive = true;
     return this.categoryModel
-      .find()
+      .find(filter)
       .sort({ sortOrder: 1, level: 1, createdAt: 1, _id: 1 })
       .exec();
   }
@@ -44,14 +46,18 @@ export class CategoryRepository {
   /* ── Read — hierarchy queries ── */
 
   /** Find children of a parent without sorting (raw filter for sort-order processing) */
-  async findByParent(parentId: Types.ObjectId): Promise<CategoryDocument[]> {
-    return this.categoryModel.find({ parents: parentId }).exec();
+  async findByParent(parentId: Types.ObjectId, activeOnly = true): Promise<CategoryDocument[]> {
+    const filter: Record<string, unknown> = { parents: parentId };
+    if (activeOnly) filter.isActive = true;
+    return this.categoryModel.find(filter).exec();
   }
 
   /** Get all root categories (level 0, no parents), sorted by sortOrder */
-  async findRoots(): Promise<CategoryDocument[]> {
+  async findRoots(activeOnly = true): Promise<CategoryDocument[]> {
+    const filter: Record<string, unknown> = { parents: { $size: 0 } };
+    if (activeOnly) filter.isActive = true;
     return this.categoryModel
-      .find({ parents: { $size: 0 } })
+      .find(filter)
       .sort({ sortOrder: 1, createdAt: 1, _id: 1 })
       .exec();
   }
