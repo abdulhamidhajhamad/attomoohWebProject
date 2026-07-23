@@ -41,7 +41,7 @@ const uid = () => Math.random().toString(36).substring(2, 10);
 export default function AddProductPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { categories } = useCategories();
+  const { categories } = useCategories(true);
 
   // ── Form State ──
   const [name, setName] = useState('');

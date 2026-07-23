@@ -11,10 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import {
-  useCategories,
-  invalidateCategoriesCache,
-} from '../../../shared/hooks/useCategories';
+import { useCategories } from '../../../shared/hooks/useCategories';
 import { categoriesService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import { Modal } from '../../../shared/ui/Modal';
@@ -351,7 +348,6 @@ export default function AdminCategoriesPage() {
       setDeleting(id);
       try {
         await categoriesService.deleteById(id);
-        invalidateCategoriesCache();
         refetch();
       } catch (err) {
         alert(err instanceof Error ? err.message : 'فشل في حذف التصنيف');
@@ -434,7 +430,6 @@ export default function AdminCategoriesPage() {
           }));
           await categoriesService.updateChildrenOrder(parentId, children);
         }
-        invalidateCategoriesCache();
         refetch();
         setReorderParentId(null);
         setReorderValues({});

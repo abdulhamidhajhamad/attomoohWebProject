@@ -8,7 +8,7 @@ import styles from './Dashboard.module.css';
 
 export default function DashboardPage() {
   const { products, loading: productsLoading } = useProducts();
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { categories, loading: categoriesLoading } = useCategories(true);
   const totalCartItems = useCartStore((s) => s.totalItems());
 
   const loading = productsLoading || categoriesLoading;
