@@ -98,7 +98,7 @@ export default function EditCategoryPage() {
     );
   }
 
-  const { categories } = useCategories();
+  const { categories } = useCategories(true);
   const categoriesById = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
     [categories],

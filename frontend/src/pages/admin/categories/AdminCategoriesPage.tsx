@@ -305,7 +305,7 @@ function ReorderEditor({
    ═══════════════════════════════════ */
 
 export default function AdminCategoriesPage() {
-  const { categories, categoryTree, loading, error, refetch } = useCategories();
+  const { categories, categoryTree, loading, error, refetch } = useCategories(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
