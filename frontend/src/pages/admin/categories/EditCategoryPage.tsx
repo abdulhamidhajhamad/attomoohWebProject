@@ -14,10 +14,7 @@ import { ToggleSwitch } from '../../../shared/ui/ToggleSwitch';
 import { ResultMessage } from '../../../shared/ui/ResultMessage';
 import { SubmitButton } from '../../../shared/ui/SubmitButton';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
-import {
-  useCategories,
-  invalidateCategoriesCache,
-} from '../../../shared/hooks/useCategories';
+import { useCategories } from '../../../shared/hooks/useCategories';
 import { categoriesService } from '../../../shared/api/services';
 import type { Category } from '../../../shared/types';
 import formStyles from '../../../shared/ui/AdminForm/AdminForm.module.css';
@@ -292,8 +289,6 @@ export default function EditCategoryPage() {
         parentIds: parentIds.length > 0 ? parentIds : [],
         isActive,
       });
-
-      invalidateCategoriesCache();
 
       setSubmitResult({ ok: true, msg: 'تم تحديث التصنيف بنجاح!' });
 

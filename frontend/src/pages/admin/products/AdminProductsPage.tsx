@@ -15,7 +15,7 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const { products, loading, error } = useProducts(true);
-  const { categories } = useCategories();
+  const { categories } = useCategories(true);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
