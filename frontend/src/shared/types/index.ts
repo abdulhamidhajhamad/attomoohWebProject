@@ -39,6 +39,7 @@ export interface Category {
   parentIds: string[];
   level: number;
   isActive: boolean;
+  categoryType: string;
   /**
    * Per-parent-child sort order.
    * Only present on parent categories that have childrenOrder defined.

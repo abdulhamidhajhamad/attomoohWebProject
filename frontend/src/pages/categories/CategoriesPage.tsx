@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Wrench, UtensilsCrossed } from 'lucide-react';
 import { useCategories } from '../../shared/hooks/useCategories';
 import { useLanguageDirection } from '../../shared/hooks/useLanguageDirection';
 import { useSEO } from '../../shared/hooks/useSEO';
@@ -203,7 +203,13 @@ export default function CategoriesPage() {
   const isRtl = lang === 'ar';
   const { categories, categoryTree, loading, error } = useCategories();
 
+  const [typeFilter, setTypeFilter] = useState<'machine' | 'restaurant'>('machine');
   const [breadcrumbIds, setBreadcrumbIds] = useState<string[]>([]);
+
+  const filteredTree = useMemo(
+    () => categoryTree.filter((c) => c.categoryType === typeFilter),
+    [categoryTree, typeFilter],
+  );
 
   const breadcrumbs = useMemo(
     () =>
@@ -214,7 +220,7 @@ export default function CategoriesPage() {
   );
 
   const currentItems = useMemo(() => {
-    if (!breadcrumbIds.length) return categoryTree;
+    if (!breadcrumbIds.length) return filteredTree;
     const parentId = breadcrumbIds[breadcrumbIds.length - 1];
     const parent = categories.find((c) => c.id === parentId);
     const children = categories.filter((c) => c.parentIds.includes(parentId));
@@ -248,6 +254,11 @@ export default function CategoriesPage() {
 
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
   const isSubcategoryView = breadcrumbIds.length > 0;
+
+  const switchType = useCallback((type: 'machine' | 'restaurant') => {
+    setTypeFilter(type);
+    setBreadcrumbIds([]);
+  }, []);
   const currentTitle =
     breadcrumbs.length > 0
       ? catName(breadcrumbs[breadcrumbs.length - 1], lang)
@@ -366,6 +377,27 @@ export default function CategoriesPage() {
               </span>
             ))}
           </nav>
+        )}
+
+        {!isSubcategoryView && (
+          <div className={styles.typeTabs}>
+            <button
+              type="button"
+              className={`${styles.typeTab} ${typeFilter === 'machine' ? styles.typeTabActive : ''}`}
+              onClick={() => switchType('machine')}
+            >
+              <Wrench size={16} />
+              <span>{t('categories.byMachine')}</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.typeTab} ${typeFilter === 'restaurant' ? styles.typeTabActive : ''}`}
+              onClick={() => switchType('restaurant')}
+            >
+              <UtensilsCrossed size={16} />
+              <span>{t('categories.byRestaurant')}</span>
+            </button>
+          </div>
         )}
 
         <div className={styles.titleBar}>

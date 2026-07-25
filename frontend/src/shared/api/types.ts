@@ -43,6 +43,7 @@ export interface ApiCategory {
   level: number;
   isActive: boolean;
   sortOrder?: number;
+  categoryType: string;
   childrenOrder?: { subCategoryId: string; sortOrder: number }[];
   createdAt: string;
   updatedAt: string;
@@ -226,6 +227,7 @@ export interface CreateCategoryRequest {
   parentIds?: string[];
   sortOrder?: number;
   isActive?: boolean;
+  categoryType?: string;
 }
 
 export interface UpdateCategoryRequest {
@@ -238,6 +240,7 @@ export interface UpdateCategoryRequest {
   parentIds?: string[];
   sortOrder?: number;
   isActive?: boolean;
+  categoryType?: string;
 }
 
 /** Form data for creating a product (sent as multipart/form-data) */

@@ -35,6 +35,11 @@ export const en = {
     grills: 'Grills',
     mixers: 'Mixers',
     display: 'Display Fridges',
+    byMachine: 'By Equipment',
+    byRestaurant: 'By Restaurant Type',
+    categoryType: 'Category Type',
+    machineCategoryLabel: 'Equipment Category',
+    restaurantCategoryLabel: 'Restaurant Category',
   },
 
   // Products

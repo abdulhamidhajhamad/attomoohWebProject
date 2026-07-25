@@ -35,6 +35,11 @@ export const ar = {
     grills: 'شوايات',
     mixers: 'عجانات',
     display: 'ثلاجات عرض',
+    byMachine: 'حسب الآلة',
+    byRestaurant: 'حسب المطعم',
+    categoryType: 'نوع التصنيف',
+    machineCategoryLabel: 'تصنيف آلات',
+    restaurantCategoryLabel: 'تصنيف مطعم',
   },
 
   // Products

@@ -71,6 +71,13 @@ export class Category {
   @Prop({ type: Number, default: 0 })
   sortOrder: number;
 
+  /**
+   * Category grouping type — 'machine' (حسب الآلة) or 'restaurant' (حسب المطعم).
+   * Meaningful on level-0 roots; children inherit from their parent.
+   */
+  @Prop({ type: String, enum: ['machine', 'restaurant'], default: 'machine' })
+  categoryType: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,3 +88,4 @@ export const CategorySchema = SchemaFactory.createForClass(Category);
 CategorySchema.index({ parents: 1 });
 CategorySchema.index({ level: 1 });
 CategorySchema.index({ 'name.ar': 1 }, { unique: true });
+CategorySchema.index({ categoryType: 1, sortOrder: 1 });

@@ -87,10 +87,11 @@ export class CategoriesController {
   @Get()
   async findAll(
     @Query('showInactive') showInactive?: string,
+    @Query('type') type?: string,
     @Req() req?: unknown,
   ) {
     const activeOnly = !(showInactive === 'true' && await this.isAdmin(req));
-    return this.categoriesService.findAll(activeOnly);
+    return this.categoriesService.findAll(activeOnly, type);
   }
 
   /**
@@ -101,10 +102,11 @@ export class CategoriesController {
   @Get('tree')
   async getTree(
     @Query('showInactive') showInactive?: string,
+    @Query('type') type?: string,
     @Req() req?: unknown,
   ) {
     const activeOnly = !(showInactive === 'true' && await this.isAdmin(req));
-    return this.categoriesService.getTree(activeOnly);
+    return this.categoriesService.getTree(activeOnly, type);
   }
 
   /**
@@ -112,8 +114,8 @@ export class CategoriesController {
    * Get root categories only (level 0) — Public
    */
   @Get('roots')
-  async findRoots() {
-    return this.categoriesService.findRoots();
+  async findRoots(@Query('type') type?: string) {
+    return this.categoriesService.findRoots(true, type);
   }
 
   /**

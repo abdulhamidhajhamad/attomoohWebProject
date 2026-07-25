@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Plus,
   Trash2,
@@ -9,6 +9,8 @@ import {
   ListOrdered,
   Save,
   X,
+  Wrench,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCategories } from '../../../shared/hooks/useCategories';
@@ -303,8 +305,15 @@ function ReorderEditor({
 
 export default function AdminCategoriesPage() {
   const { categories, categoryTree, loading, error, refetch } = useCategories(true);
+  const [adminType, setAdminType] = useState<'machine' | 'restaurant'>('machine');
+  const [modalType, setModalType] = useState<'machine' | 'restaurant'>('machine');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const typeFilteredTree = useMemo(
+    () => categoryTree.filter((root) => root.categoryType === adminType),
+    [categoryTree, adminType],
+  );
 
   // Reorder state
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -371,11 +380,28 @@ export default function AdminCategoriesPage() {
     });
   }, []);
 
+  const switchAdminType = useCallback((type: 'machine' | 'restaurant') => {
+    setAdminType(type);
+    if (reorderParentId === '__roots__') {
+      handleCancelReorder();
+    }
+  }, [reorderParentId]);
+
+  const handleModalTypeToggle = useCallback((type: 'machine' | 'restaurant') => {
+    setModalType(type);
+    const roots = categories.filter((c) => c.level === 0 && c.categoryType === type);
+    const initial: Record<string, number> = {};
+    roots.forEach((root) => {
+      initial[root.id] = root.sortOrder ?? 0;
+    });
+    setReorderValues(initial);
+  }, [categories]);
+
   const handleStartReorder = useCallback(
     (parentId: string | null) => {
       if (parentId === null) {
-        // Root-level reorder — show all root categories with their sortOrder
-        const roots = categories.filter((c) => c.level === 0);
+        setModalType(adminType);
+        const roots = categories.filter((c) => c.level === 0 && c.categoryType === adminType);
         const initial: Record<string, number> = {};
         roots.forEach((root) => {
           initial[root.id] = root.sortOrder ?? 0;
@@ -480,6 +506,26 @@ export default function AdminCategoriesPage() {
         <div className={styles.errorMsg}>{error}</div>
       )}
 
+      {/* Type filter */}
+      <div className={styles.typeFilterRow}>
+        <button
+          type="button"
+          className={`${styles.controlBtn} ${adminType === 'machine' ? styles.controlBtnActive : ''}`}
+          onClick={() => switchAdminType('machine')}
+        >
+          <Wrench size={14} />
+          حسب الآلة
+        </button>
+        <button
+          type="button"
+          className={`${styles.controlBtn} ${adminType === 'restaurant' ? styles.controlBtnActive : ''}`}
+          onClick={() => switchAdminType('restaurant')}
+        >
+          <UtensilsCrossed size={14} />
+          حسب المطعم
+        </button>
+      </div>
+
       {/* Controls */}
       <div className={styles.treeControls}>
         <button onClick={expandAll} className={styles.controlBtn}>
@@ -505,18 +551,18 @@ export default function AdminCategoriesPage() {
       </div>
 
       {/* Tree */}
-      {categoryTree.length > 0 ? (
+      {typeFilteredTree.length > 0 ? (
         <div className={styles.treeContainer}>
           <div className={styles.treeHeader}>
             <FolderTree size={16} />
-            <span>شجرة التصنيفات</span>
+            <span>شجرة التصنيفات — {adminType === 'machine' ? 'حسب الآلة' : 'حسب المطعم'}</span>
             {isReorderMode && (
               <span className={styles.reorderHint}>
                 انقر على أيقونة الترتيب بجانب التصنيف الأب لترتيب أبنائه
               </span>
             )}
           </div>
-          {categoryTree.map((root) => (
+          {typeFilteredTree.map((root) => (
             <TreeRow
               key={root.id}
               category={root}
@@ -552,13 +598,31 @@ export default function AdminCategoriesPage() {
         open={reorderParentId === '__roots__'}
         onClose={handleCancelReorder}
       >
+        <div style={{ padding: '16px 0', display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className={`${styles.controlBtn} ${modalType === 'machine' ? styles.controlBtnActive : ''}`}
+            onClick={() => handleModalTypeToggle('machine')}
+          >
+            <Wrench size={14} />
+            حسب الآلة
+          </button>
+          <button
+            type="button"
+            className={`${styles.controlBtn} ${modalType === 'restaurant' ? styles.controlBtnActive : ''}`}
+            onClick={() => handleModalTypeToggle('restaurant')}
+          >
+            <UtensilsCrossed size={14} />
+            حسب المطعم
+          </button>
+        </div>
         <ReorderEditor
           parent={{
             id: '__roots__',
             name: { ar: 'التصنيفات الرئيسية', en: 'Main Categories' },
             level: 0,
           }}
-          childrenList={categories.filter((c) => c.level === 0)}
+          childrenList={categories.filter((c) => c.level === 0 && c.categoryType === modalType)}
           reorderValues={reorderValues}
           onValueChange={handleReorderValueChange}
           onSave={() => handleSaveReorder('__roots__')}

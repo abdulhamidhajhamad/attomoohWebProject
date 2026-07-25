@@ -21,9 +21,10 @@ export class CategoryRepository {
 
   /* ── Read — flat queries ── */
 
-  async findAll(activeOnly = true): Promise<CategoryDocument[]> {
+  async findAll(activeOnly = true, categoryType?: string): Promise<CategoryDocument[]> {
     const filter: Record<string, unknown> = {};
     if (activeOnly) filter.isActive = true;
+    if (categoryType) filter.categoryType = categoryType;
     return this.categoryModel
       .find(filter)
       .sort({ sortOrder: 1, level: 1, createdAt: 1, _id: 1 })
@@ -53,9 +54,10 @@ export class CategoryRepository {
   }
 
   /** Get all root categories (level 0, no parents), sorted by sortOrder */
-  async findRoots(activeOnly = true): Promise<CategoryDocument[]> {
+  async findRoots(activeOnly = true, categoryType?: string): Promise<CategoryDocument[]> {
     const filter: Record<string, unknown> = { parents: { $size: 0 } };
     if (activeOnly) filter.isActive = true;
+    if (categoryType) filter.categoryType = categoryType;
     return this.categoryModel
       .find(filter)
       .sort({ sortOrder: 1, createdAt: 1, _id: 1 })

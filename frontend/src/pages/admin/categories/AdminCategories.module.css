@@ -57,6 +57,13 @@
   margin-bottom: 16px;
 }
 
+/* ── Type Filter ── */
+.typeFilterRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 /* ── Tree Controls ── */
 .treeControls {
   display: flex;

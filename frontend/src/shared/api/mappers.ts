@@ -57,6 +57,7 @@ export function mapApiCategory(c: ApiCategory): Category {
     icon: c.icon,
     image: c.image || undefined,
     isActive: c.isActive,
+    categoryType: c.categoryType ?? 'machine',
     parentIds: c.parents ?? [],
     level: c.level ?? 0,
     sortOrder: c.sortOrder ?? 0,
