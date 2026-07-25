@@ -56,7 +56,7 @@
   display: flex;
   align-items: center;
   width: max-content;
-  animation: scroll 30s linear infinite;
+  animation: scroll 45s linear infinite;
 }
 
 .track:hover {
@@ -78,14 +78,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 180px;
-  height: 90px;
+  width: 200px;
+  height: 100px;
   margin: 0 24px; /* 24px each side = 48px between items */
 }
 
 .logo {
-  max-height: 80px;
-  max-width: 160px;
+  max-height: 90px;
+  max-width: 180px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -116,7 +116,7 @@
   }
 
   .track {
-    animation-duration: 15s;
+    animation-duration: 50s;
   }
 
   .fadeLeft,
