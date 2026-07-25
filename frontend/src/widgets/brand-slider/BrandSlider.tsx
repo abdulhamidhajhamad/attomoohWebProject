@@ -2,31 +2,15 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './BrandSlider.module.css';
 
-/* ═══════════════════════════════════
-   Brand logos — add / remove as needed.
-   Import the logo and add an entry with { src, alt }.
-   ═══════════════════════════════════ */
-import logo2 from '../../img/logo2.png';
-import logo3 from '../../img/logo3.png';
-import logo4 from '../../img/logo4.png';
-import logo5 from '../../img/logo5.png';
-import logo6 from '../../img/logo6.png';
-import logo7 from '../../img/logo7.png';
-import logo8 from '../../img/ozti.png';
-import logo9 from '../../img/Nuova_Simonelli_Logo_535x.webp';
-import logo10 from '../../img/santos-logo.jpg';
+const brandModules = import.meta.glob(
+  '../../img/brands/*.{png,jpg,jpeg,webp,svg}',
+  { eager: true },
+);
 
-const BRANDS = [
-  { src: logo2, alt: 'Brand 2' },
-  { src: logo3, alt: 'Brand 3' },
-  { src: logo4, alt: 'Brand 4' },
-  { src: logo5, alt: 'Brand 5' },
-  { src: logo6, alt: 'Brand 6' },
-  { src: logo7, alt: 'Brand 7' },
-  { src: logo8, alt: 'Brand 8' },
-  { src: logo9, alt: 'Nuova' },
-  { src: logo10, alt: 'Santous' },
-] as const;
+const BRANDS = Object.entries(brandModules).map(([path, mod]) => ({
+  src: (mod as { default: string }).default,
+  alt: path.split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'Brand',
+}));
 
 /**
  * BrandSlider — infinite auto-scrolling marquee of brand logos.
@@ -40,6 +24,8 @@ const BRANDS = [
  */
 export const BrandSlider = memo(function BrandSlider() {
   const { t } = useTranslation();
+
+  if (BRANDS.length === 0) return null;
 
   return (
     <section className={styles.section} aria-label={t('brands.title')}>
