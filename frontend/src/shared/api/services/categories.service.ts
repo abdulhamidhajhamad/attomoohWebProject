@@ -29,8 +29,11 @@ import type { Category } from '../../types';
 
 export const categoriesService = {
   /** GET /categories — flat list, Public */
-  async getAll(showInactive?: boolean): Promise<Category[]> {
-    const query = showInactive ? '?showInactive=true' : '';
+  async getAll(showInactive?: boolean, type?: string): Promise<Category[]> {
+    const params = new URLSearchParams();
+    if (showInactive) params.set('showInactive', 'true');
+    if (type) params.set('type', type);
+    const query = params.toString() ? `?${params.toString()}` : '';
     const data = await httpClient.get<ApiCategory[]>(
       `${ENDPOINTS.CATEGORIES.BASE}${query}`,
     );
@@ -38,17 +41,19 @@ export const categoriesService = {
   },
 
   /** GET /categories/tree — hierarchical tree, Public */
-  async getTree(): Promise<Category[]> {
+  async getTree(type?: string): Promise<Category[]> {
+    const query = type ? `?type=${type}` : '';
     const data = await httpClient.get<ApiCategoryTreeNode[]>(
-      ENDPOINTS.CATEGORIES.TREE,
+      `${ENDPOINTS.CATEGORIES.TREE}${query}`,
     );
     return mapApiCategoryForest(data);
   },
 
   /** GET /categories/roots — root categories only, Public */
-  async getRoots(): Promise<Category[]> {
+  async getRoots(type?: string): Promise<Category[]> {
+    const query = type ? `?type=${type}` : '';
     const data = await httpClient.get<ApiCategory[]>(
-      ENDPOINTS.CATEGORIES.ROOTS,
+      `${ENDPOINTS.CATEGORIES.ROOTS}${query}`,
     );
     return mapApiCategories(data);
   },
@@ -82,6 +87,9 @@ export const categoriesService = {
     if (category.isActive !== undefined) {
       formData.append('isActive', String(category.isActive));
     }
+    if (category.categoryType) {
+      formData.append('categoryType', category.categoryType);
+    }
     if (category.imageFile) {
       formData.append('imageFile', category.imageFile);
     }
@@ -111,6 +119,9 @@ export const categoriesService = {
       }
       if (category.isActive !== undefined) {
         formData.append('isActive', String(category.isActive));
+      }
+      if (category.categoryType) {
+        formData.append('categoryType', category.categoryType);
       }
       formData.append('imageFile', category.imageFile);
 

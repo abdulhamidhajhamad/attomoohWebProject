@@ -6,6 +6,7 @@ import {
   IsMongoId,
   IsBoolean,
   IsArray,
+  IsIn,
   ArrayMaxSize,
   Min,
 } from 'class-validator';
@@ -63,4 +64,9 @@ export class CreateCategoryDto {
     return value;
   })
   sortOrder?: number;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['machine', 'restaurant'])
+  categoryType?: string;
 }

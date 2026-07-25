@@ -7,7 +7,8 @@ import {
   type ChangeEvent,
 } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, Sparkles, Layers3 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { CheckCircle2, ChevronDown, Sparkles, Layers3, Wrench, UtensilsCrossed } from 'lucide-react';
 import { PageHeader } from '../../../shared/ui/PageHeader';
 import { FormCard } from '../../../shared/ui/FormCard';
 import { ToggleSwitch } from '../../../shared/ui/ToggleSwitch';
@@ -81,6 +82,7 @@ function buildParentChain(
    ═══════════════════════════════════ */
 
 export default function AddCategoryPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const preselectedParent = searchParams.get('parent') || '';
 
@@ -100,6 +102,7 @@ export default function AddCategoryPage() {
     preselectedParent ? [preselectedParent] : [],
   );
   const [isActive, setIsActive] = useState(true);
+  const [categoryType, setCategoryType] = useState<'machine' | 'restaurant'>('machine');
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
   const parentDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +137,11 @@ export default function AddCategoryPage() {
 
   const selectedParentLevel =
     selectedParents.length > 0 ? selectedParents[0].level : null;
+
+  const inheritedType = useMemo(
+    () => selectedParents.length > 0 ? selectedParents[0].categoryType : 'machine',
+    [selectedParents],
+  );
 
   useEffect(() => {
     if (parentIds.length === 0) return;
@@ -254,6 +262,7 @@ export default function AddCategoryPage() {
         imageFile: imageFile ?? undefined,
         parentIds: parentIds.length > 0 ? parentIds : undefined,
         isActive,
+        categoryType: parentIds.length === 0 ? categoryType : inheritedType,
       });
 
       setSubmitResult({ ok: true, msg: 'تم إنشاء التصنيف بنجاح!' });
@@ -473,6 +482,38 @@ export default function AddCategoryPage() {
                 </small>
               </div>
 
+              {/* Category Type — editable for roots, inherited badge for subcategories */}
+              {parentIds.length === 0 ? (
+                <div className={formStyles.inputGroup}>
+                  <label className={formStyles.label}>{t('categories.categoryType')}</label>
+                  <div className={styles.typeToggleRow}>
+                    <button
+                      type="button"
+                      className={`${styles.typePill} ${categoryType === 'machine' ? styles.typePillActive : ''}`}
+                      onClick={() => setCategoryType('machine')}
+                    >
+                      <Wrench size={16} />
+                      <span>{t('categories.machineCategoryLabel')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.typePill} ${categoryType === 'restaurant' ? styles.typePillActive : ''}`}
+                      onClick={() => setCategoryType('restaurant')}
+                    >
+                      <UtensilsCrossed size={16} />
+                      <span>{t('categories.restaurantCategoryLabel')}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.typeBadge}>
+                  <span className={styles.typeBadgeLabel}>
+                    {t('categories.categoryType')}: {inheritedType === 'machine' ? t('categories.machineCategoryLabel') : t('categories.restaurantCategoryLabel')}
+                  </span>
+                  <span className={styles.typeBadgeHint}>(موروث من التصنيف الأب)</span>
+                </div>
+              )}
+
               <div className={styles.levelIndicator}>
                 <Layers3 size={16} />
                 <span>
@@ -524,6 +565,10 @@ export default function AddCategoryPage() {
                 <div className={formStyles.summaryItem}>
                   <span>المسار</span>
                   <strong>{hierarchyPreview}</strong>
+                </div>
+                <div className={formStyles.summaryItem}>
+                  <span>النوع</span>
+                  <strong>{parentIds.length === 0 ? (categoryType === 'machine' ? t('categories.machineCategoryLabel') : t('categories.restaurantCategoryLabel')) : (inheritedType === 'machine' ? t('categories.machineCategoryLabel') : t('categories.restaurantCategoryLabel'))}</strong>
                 </div>
                 <div className={formStyles.summaryItem}>
                   <span>الحالة</span>

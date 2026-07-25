@@ -50,7 +50,16 @@ export class CategoriesService {
     const { parentOids, level } =
       await this.resolveParentsForAssignment(normalizedParentIds);
 
-    // 3. Auto-translate name and description
+    // 3. Determine categoryType — inherit from first parent if subcategory
+    let categoryType: string;
+    if (parentOids.length > 0) {
+      const firstParent = await this.categoryRepository.findById(parentOids[0]);
+      categoryType = firstParent?.categoryType ?? 'machine';
+    } else {
+      categoryType = dto.categoryType ?? 'machine';
+    }
+
+    // 4. Auto-translate name and description
     const bilingualName = await makeBilingual(dto.name);
     const bilingualDesc = dto.description
       ? await makeBilingual(dto.description)
@@ -74,7 +83,7 @@ export class CategoriesService {
       }
     }
 
-    // 4. Persist
+    // 5. Persist
     return this.categoryRepository.create({
       name: bilingualName,
       description: bilingualDesc,
@@ -83,6 +92,7 @@ export class CategoriesService {
       parents: parentOids,
       level,
       isActive: dto.isActive ?? true,
+      categoryType,
     });
   }
 
@@ -91,8 +101,8 @@ export class CategoriesService {
      ════════════════════════════════════ */
 
   /** All categories flat (sorted by level then name) */
-  async findAll(activeOnly = true): Promise<CategoryDocument[]> {
-    return this.categoryRepository.findAll(activeOnly);
+  async findAll(activeOnly = true, categoryType?: string): Promise<CategoryDocument[]> {
+    return this.categoryRepository.findAll(activeOnly, categoryType);
   }
 
   /** Single category by ID */
@@ -105,8 +115,8 @@ export class CategoriesService {
   }
 
   /** Root categories only (level 0) */
-  async findRoots(activeOnly = true): Promise<CategoryDocument[]> {
-    return this.categoryRepository.findRoots(activeOnly);
+  async findRoots(activeOnly = true, categoryType?: string): Promise<CategoryDocument[]> {
+    return this.categoryRepository.findRoots(activeOnly, categoryType);
   }
 
   /** Direct children of a category, sorted by childrenOrder */
@@ -134,8 +144,8 @@ export class CategoriesService {
   }
 
   /** Full category tree: roots with nested children */
-  async getTree(activeOnly = true): Promise<CategoryTreeNode[]> {
-    const allCategories = await this.categoryRepository.findAll(activeOnly);
+  async getTree(activeOnly = true, categoryType?: string): Promise<CategoryTreeNode[]> {
+    const allCategories = await this.categoryRepository.findAll(activeOnly, categoryType);
     return this.buildTree(allCategories);
   }
 
@@ -356,6 +366,7 @@ export class CategoriesService {
         parents: parentStrings,
         level: cat.level,
         isActive: cat.isActive,
+        categoryType: cat.categoryType ?? 'machine',
         createdAt: cat.createdAt?.toISOString() ?? '',
         updatedAt: cat.updatedAt?.toISOString() ?? '',
       });
@@ -601,6 +612,7 @@ export interface CategoryTreeNode {
   parents: string[];
   level: number;
   isActive: boolean;
+  categoryType: string;
   children: CategoryTreeNode[];
   createdAt: string;
   updatedAt: string;
