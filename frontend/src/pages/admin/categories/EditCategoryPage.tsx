@@ -133,7 +133,9 @@ export default function EditCategoryPage() {
     setImageUrl(existingCategory.image || '');
     setParentIds(existingCategory.parentIds);
     setIsActive(existingCategory.isActive);
-    setCategoryType(existingCategory.categoryType ?? 'machine');
+    setCategoryType(
+      existingCategory.categoryType === 'restaurant' ? 'restaurant' : 'machine',
+    );
 
     // Set preview for existing image
     if (existingCategory.image) {
