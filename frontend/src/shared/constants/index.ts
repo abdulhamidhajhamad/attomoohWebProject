@@ -44,8 +44,8 @@ export const CONTACT = {
     en: 'Palestine',
   },
   workingHours: {
-    ar: 'السبت - الخميس: 8 صباحاً - 6 مساءً',
-    en: 'Saturday - Thursday: 8 AM - 6 PM',
+    ar: 'السبت - الخميس: 9 صباحاً - 6 مساءً',
+    en: 'Saturday - Thursday: 9 AM - 6 PM',
   },
 };
 

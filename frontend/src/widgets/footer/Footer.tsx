@@ -49,6 +49,9 @@ export const Footer = memo(function Footer() {
                 className={styles.footerLogoImg}
               />
             </div>
+            <div className={styles.footerCompanyName}>
+              شركة الطموح للتوريدات الصناعية
+            </div>
             <p className={styles.footerDesc}>{t('footer.description')}</p>
 
             {/* Social Media Links */}
@@ -64,9 +67,8 @@ export const Footer = memo(function Footer() {
                 <FacebookIcon />
               </a>
 
-              {/* TODO: ضع رابط صفحة الانستغرام هنا بدل # */}
               <a
-                href="#"
+                href="https://www.instagram.com/attomoohforindustrial/"
                 className={styles.socialIcon}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -139,7 +141,7 @@ export const Footer = memo(function Footer() {
         </div>
 
         <div className={styles.footerBottom}>
-          © {new Date().getFullYear()} Attomooh. {t('footer.rights')}.
+          جميع الحقوق محفوظة لشركة الطموح للتوريدات الصناعية — Attomooh {new Date().getFullYear()}
         </div>
       </div>
     </footer>
