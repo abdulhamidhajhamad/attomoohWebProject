@@ -1,8 +1,4 @@
 .serviceBadge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
   padding: 16px 20px;
   background: linear-gradient(
     135deg,
@@ -11,11 +7,31 @@
   );
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   gap: 12px;
-  z-index: 5;
+}
+
+.mobileOnly {
+  margin-top: 12px;
+}
+
+.desktopOnly {
+  display: none;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .desktopOnly {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+  }
+  .mobileOnly {
+    display: none;
+  }
 }
 
 .icon {

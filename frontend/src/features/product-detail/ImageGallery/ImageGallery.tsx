@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '../../../shared/ui/Badge/Badge';
 import { transformCloudinaryUrl } from '../../../shared/utils/cloudinary';
 import { ServiceBadge } from '../ServiceBadge/ServiceBadge';
+import badgeStyles from '../ServiceBadge/ServiceBadge.module.css';
 import styles from './ImageGallery.module.css';
 
 interface ImageGalleryProps {
@@ -132,7 +133,7 @@ export const ImageGallery = memo(function ImageGallery({
         {isOnSale && <Badge variant="sale">{lang === 'ar' ? 'خصم' : 'Sale'}</Badge>}
       </div>
 
-      <ServiceBadge />
+      <ServiceBadge className={badgeStyles.mobileOnly} />
     </div>
   );
 });
