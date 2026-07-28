@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import type { Product } from '../../../shared/types';
+import { ServiceBadge } from '../ServiceBadge/ServiceBadge';
+import badgeStyles from '../ServiceBadge/ServiceBadge.module.css';
 import styles from './ProductInfo.module.css';
 
 interface ProductInfoProps {
@@ -31,6 +33,7 @@ export const ProductInfo = memo(function ProductInfo({
 
   return (
     <div className={styles.info}>
+      <ServiceBadge className={badgeStyles.desktopOnly} />
       <span className={styles.category}>{categoryName}</span>
       <h1 className={styles.productName}>{product.name[lang]}</h1>
 
