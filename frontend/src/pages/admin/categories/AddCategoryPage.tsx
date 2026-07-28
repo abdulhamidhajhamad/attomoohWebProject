@@ -1,19 +1,21 @@
 import {
   useState,
   useMemo,
-  useRef,
   useEffect,
   type FormEvent,
   type ChangeEvent,
 } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ChevronDown, Sparkles, Layers3, Wrench, UtensilsCrossed } from 'lucide-react';
+import {
+  CheckCircle2, Sparkles, Layers3, Wrench, UtensilsCrossed, Search, X, Check,
+} from 'lucide-react';
 import { PageHeader } from '../../../shared/ui/PageHeader';
 import { FormCard } from '../../../shared/ui/FormCard';
 import { ToggleSwitch } from '../../../shared/ui/ToggleSwitch';
 import { ResultMessage } from '../../../shared/ui/ResultMessage';
 import { SubmitButton } from '../../../shared/ui/SubmitButton';
+import { Modal } from '../../../shared/ui/Modal';
 import { useCategories } from '../../../shared/hooks/useCategories';
 import { categoriesService } from '../../../shared/api/services';
 import type { Category } from '../../../shared/types';
@@ -103,23 +105,12 @@ export default function AddCategoryPage() {
   );
   const [isActive, setIsActive] = useState(true);
   const [categoryType, setCategoryType] = useState<'machine' | 'restaurant'>('machine');
-  const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
-  const parentDropdownRef = useRef<HTMLDivElement>(null);
+  const [parentModalOpen, setParentModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ── Submit State ──
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (parentDropdownRef.current && !parentDropdownRef.current.contains(e.target as Node)) {
-        setParentDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -177,12 +168,20 @@ export default function AddCategoryPage() {
       .join('  |  ');
   }, [name, selectedParentChains]);
 
-  // Build parent options (only categories with level < 2)
+  // Build parent options (only level-0 roots)
   const parentOptions = useMemo(() => {
     return categories
-      .filter((c) => c.level < 2)
-      .sort((a, b) => a.level - b.level || a.name.ar.localeCompare(b.name.ar));
+      .filter((c) => c.level === 0)
+      .sort((a, b) => a.name.ar.localeCompare(b.name.ar));
   }, [categories]);
+
+  const filteredParents = useMemo(() => {
+    if (!searchQuery) return parentOptions;
+    const q = searchQuery.toLowerCase();
+    return parentOptions.filter(
+      (c) => c.name.ar.includes(q) || c.name.en.toLowerCase().includes(q),
+    );
+  }, [parentOptions, searchQuery]);
 
   const handleToggleParent = (cat: Category) => {
     const isSelected = parentIds.includes(cat.id);
@@ -416,65 +415,80 @@ export default function AddCategoryPage() {
                   التصنيف الأب
                 </label>
 
-                <div ref={parentDropdownRef} className={styles.parentSelector}>
+                <div className={styles.parentSelector}>
                   <button
                     type="button"
                     className={styles.parentTrigger}
-                    onClick={() => setParentDropdownOpen(!parentDropdownOpen)}
+                    onClick={() => { setParentModalOpen(true); setSearchQuery(''); }}
                   >
                     <span className={parentIds.length === 0 ? styles.placeholder : styles.parentValue}>
                       {parentIds.length === 0
-                        ? 'بدون أب (تصنيف رئيسي)'
+                        ? 'اختر التصنيف الأب'
                         : selectedParents.map((parent) => parent.name.ar).join(' + ')}
                     </span>
-                    <ChevronDown
-                      size={16}
-                      className={`${styles.parentChevron} ${parentDropdownOpen ? styles.parentChevronOpen : ''}`}
-                    />
                   </button>
 
-                  {parentDropdownOpen && (
-                    <div className={styles.parentMenu}>
-                      <button
-                        type="button"
-                        className={`${styles.parentOption} ${parentIds.length === 0 ? styles.parentOptionSelected : ''}`}
-                        onClick={() => {
-                          setParentIds([]);
-                          setParentDropdownOpen(false);
-                          setSubmitResult(null);
-                        }}
-                      >
-                        <span className={styles.optionTitle}>بدون أب</span>
-                        <span className={styles.optionMeta}>تصنيف رئيسي</span>
-                      </button>
+                  <Modal open={parentModalOpen} onClose={() => { setParentModalOpen(false); setSearchQuery(''); }}>
+                    <div className={styles.modalContent}>
+                      <div className={styles.modalHeader}>
+                        <h3>اختر التصنيف الأب</h3>
+                        <button
+                          type="button"
+                          onClick={() => { setParentModalOpen(false); setSearchQuery(''); }}
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
 
-                      {parentOptions.map((cat) => {
-                        const isSelected = parentIds.includes(cat.id);
-                        return (
-                          <button
-                            type="button"
-                            key={cat.id}
-                            className={`${styles.parentOption} ${isSelected ? styles.parentOptionSelected : ''}`}
-                            onClick={() => {
-                              handleToggleParent(cat);
-                            }}
-                          >
-                            <span className={styles.optionTitle}>
-                              {isSelected ? '✓ ' : ''}
-                              {cat.level === 0 ? 'قطاع' : 'قسم'}: {cat.name.ar}
-                            </span>
-                            <span className={styles.optionMeta}>المستوى {cat.level + 1}</span>
-                          </button>
-                        );
-                      })}
+                      <div className={styles.modalSearchWrap}>
+                        <Search size={18} className={styles.modalSearchIcon} />
+                        <input
+                          className={styles.modalSearch}
+                          placeholder="بحث..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
 
-                      {parentOptions.length === 0 && (
-                        <div className={styles.parentEmpty}>
-                          لا توجد تصنيفات متاحة
-                        </div>
-                      )}
+                      <div className={styles.modalList}>
+                        <button
+                          type="button"
+                          className={`${styles.modalOption} ${parentIds.length === 0 ? styles.modalOptionSelected : ''}`}
+                          onClick={() => {
+                            setParentIds([]);
+                            setParentModalOpen(false);
+                            setSearchQuery('');
+                            setSubmitResult(null);
+                          }}
+                        >
+                          <span className={styles.modalOptionTitle}>بدون أب (تصنيف رئيسي)</span>
+                        </button>
+
+                        {filteredParents.map((cat) => {
+                          const isSelected = parentIds.includes(cat.id);
+                          return (
+                            <button
+                              type="button"
+                              key={cat.id}
+                              className={`${styles.modalOption} ${isSelected ? styles.modalOptionSelected : ''}`}
+                              onClick={() => { handleToggleParent(cat); }}
+                            >
+                              <span className={styles.modalOptionTitle}>{cat.name.ar}</span>
+                              {isSelected && <Check size={16} className={styles.modalCheck} />}
+                            </button>
+                          );
+                        })}
+
+                        {filteredParents.length === 0 && searchQuery && (
+                          <p className={styles.modalEmpty}>لا توجد تصنيفات تطابق البحث</p>
+                        )}
+                        {parentOptions.length === 0 && (
+                          <p className={styles.modalEmpty}>لا توجد تصنيفات متاحة</p>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </Modal>
                 </div>
 
                 <small className={styles.helperText}>
