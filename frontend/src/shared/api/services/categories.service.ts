@@ -24,6 +24,7 @@ import type {
   CreateCategoryRequest,
   UpdateCategoryRequest,
   UpdateChildrenOrderRequest,
+  UpdateProductOrderRequest,
 } from '../types';
 import type { Category } from '../../types';
 
@@ -137,6 +138,19 @@ export const categoriesService = {
     const data = await httpClient.put<ApiCategory>(
       ENDPOINTS.CATEGORIES.BY_ID(id),
       category,
+      true,
+    );
+    return mapApiCategory(data);
+  },
+
+  /** PUT /categories/:id/product-order — Admin only */
+  async updateProductOrder(
+    categoryId: string,
+    products: { productId: string; sortOrder: number }[],
+  ): Promise<Category> {
+    const data = await httpClient.put<ApiCategory>(
+      ENDPOINTS.CATEGORIES.PRODUCT_ORDER(categoryId),
+      { products } satisfies UpdateProductOrderRequest,
       true,
     );
     return mapApiCategory(data);

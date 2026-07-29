@@ -261,6 +261,16 @@ export class ProductsService {
 
     this.logger.log(`Product ${id} deleted from MongoDB`);
 
+    // ── Background: Clean up productOrder references in categories ──
+    setImmediate(() => {
+      this.categoriesService.removeProductFromAllOrders(id).catch((err) =>
+        this.logger.error(
+          `Background productOrder cleanup failed for product ${id}`,
+          err,
+        ),
+      );
+    });
+
     // ── Background: Cloudinary cleanup — does NOT block the response ──
     if (product.images && product.images.length > 0) {
       const publicIds = product.images.map((img) => img.publicId);

@@ -72,6 +72,23 @@ export class Category {
   sortOrder: number;
 
   /**
+   * Per-category product sort order.
+   * Each entry maps a product to its display order under THIS category.
+   * A product can belong to multiple categories with different sortOrders.
+   */
+  @Prop({
+    type: [
+      {
+        productId: { type: Types.ObjectId, ref: 'Product', required: true },
+        sortOrder: { type: Number, default: 0 },
+      },
+    ],
+    default: [],
+    _id: false,
+  })
+  productOrder: { productId: Types.ObjectId; sortOrder: number }[];
+
+  /**
    * Category grouping type — 'machine' (حسب الآلة) or 'restaurant' (حسب المطعم).
    * Meaningful on level-0 roots; children inherit from their parent.
    */

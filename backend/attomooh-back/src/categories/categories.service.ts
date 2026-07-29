@@ -10,6 +10,7 @@ import { CategoryRepository } from './repositories/category.repository.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { UpdateChildrenOrderDto } from './dto/children-order.dto.js';
+import { UpdateProductOrderDto } from './dto/product-order.dto.js';
 import { CategoryDocument } from './schemas/category.schema.js';
 import { makeBilingual } from '../common/utils/translate.js';
 import {
@@ -280,6 +281,46 @@ export class CategoriesService {
     }
 
     return updated;
+  }
+
+  /* ════════════════════════════════════
+     PRODUCT ORDER — per-category product sorting
+     ════════════════════════════════════ */
+
+  /**
+   * Replace the entire productOrder array for a category.
+   * Each entry specifies the sort order of a product under THIS category.
+   */
+  async updateProductOrder(
+    categoryId: Types.ObjectId,
+    dto: UpdateProductOrderDto,
+  ): Promise<CategoryDocument> {
+    const category = await this.categoryRepository.findById(categoryId);
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    const updated = await this.categoryRepository.updateProductOrder(
+      categoryId,
+      dto.products.map((item) => ({
+        productId: new Types.ObjectId(item.productId),
+        sortOrder: item.sortOrder,
+      })),
+    );
+
+    if (!updated) {
+      throw new NotFoundException('Category not found');
+    }
+
+    return updated;
+  }
+
+  /**
+   * Remove a product from all categories' productOrder arrays.
+   * Called when a product is deleted.
+   */
+  async removeProductFromAllOrders(productId: Types.ObjectId): Promise<void> {
+    await this.categoryRepository.pullProductFromAll(productId);
   }
 
   /* ════════════════════════════════════

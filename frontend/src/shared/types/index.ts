@@ -45,6 +45,8 @@ export interface Category {
    * Only present on parent categories that have childrenOrder defined.
    */
   childrenOrder?: { subCategoryId: string; sortOrder: number }[];
+  /** Per-category product sort order. */
+  productOrder?: { productId: string; sortOrder: number }[];
   /** Manual sort order for roots (admin-defined). Lower = first. */
   sortOrder?: number;
   children?: Category[];
