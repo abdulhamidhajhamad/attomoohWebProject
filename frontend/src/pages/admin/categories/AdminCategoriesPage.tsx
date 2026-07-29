@@ -11,14 +11,15 @@ import {
   X,
   Wrench,
   UtensilsCrossed,
+  Package,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCategories } from '../../../shared/hooks/useCategories';
-import { categoriesService } from '../../../shared/api/services';
+import { categoriesService, productsService } from '../../../shared/api/services';
 import { LoadingSpinner } from '../../../shared/ui/LoadingSpinner/LoadingSpinner';
 import { Modal } from '../../../shared/ui/Modal';
 import { getLucideIcon, DefaultCategoryIcon } from '../../../shared/ui/IconResolver';
-import type { Category } from '../../../shared/types';
+import type { Category, Product } from '../../../shared/types';
 import styles from './AdminCategories.module.css';
 
 /* ═══════════════════════════════════
@@ -41,6 +42,7 @@ interface TreeRowProps {
   reorderParentId: string | null;
   reorderValues: Record<string, number>;
   onStartReorder: (parentId: string | null) => void;
+  onStartProductReorder: (categoryId: string) => void;
   onReorderValueChange: (childId: string, value: number) => void;
   onSaveReorder: (parentId: string) => Promise<void>;
   onCancelReorder: () => void;
@@ -58,6 +60,7 @@ function TreeRow({
   reorderParentId,
   reorderValues,
   onStartReorder,
+  onStartProductReorder,
   onReorderValueChange,
   onSaveReorder,
   onCancelReorder,
@@ -137,6 +140,15 @@ function TreeRow({
               <ListOrdered size={14} />
             </button>
           )}
+          {isReorderMode && !isEditingReorder && (
+            <button
+              className={styles.reorderBtn}
+              title="ترتيب المنتجات"
+              onClick={() => onStartProductReorder(category.id)}
+            >
+              <Package size={14} />
+            </button>
+          )}
           <Link
             to={`/admin/categories/${category.id}/edit`}
             className={styles.editBtn}
@@ -180,6 +192,7 @@ function TreeRow({
               reorderParentId={reorderParentId}
               reorderValues={reorderValues}
               onStartReorder={onStartReorder}
+              onStartProductReorder={onStartProductReorder}
               onReorderValueChange={onReorderValueChange}
               onSaveReorder={onSaveReorder}
               onCancelReorder={onCancelReorder}
@@ -300,6 +313,98 @@ function ReorderEditor({
 }
 
 /* ═══════════════════════════════════
+   Product Reorder Editor Sub-Component
+   ═══════════════════════════════════ */
+
+interface ProductReorderEditorProps {
+  products: Product[];
+  reorderValues: Record<string, number>;
+  onValueChange: (productId: string, value: number) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+function ProductReorderEditor({
+  products,
+  reorderValues,
+  onValueChange,
+  onSave,
+  onCancel,
+  saving,
+}: ProductReorderEditorProps) {
+  return (
+    <div className={styles.reorderEditor}>
+      <div className={styles.reorderHeader}>
+        <Package size={16} />
+        <span>ترتيب منتجات التصنيف</span>
+      </div>
+
+      {products.length === 0 ? (
+        <div style={{ padding: '12px', textAlign: 'center', color: '#9ca3af' }}>
+          لا توجد منتجات في هذا التصنيف
+        </div>
+      ) : (
+        <div className={styles.reorderList}>
+          {products.map((product) => {
+            const isOrdered = reorderValues[product.id] !== undefined;
+            return (
+              <div key={product.id} className={styles.reorderItem}>
+                <div className={styles.reorderItemInfo}>
+                  <span className={styles.reorderItemName}>
+                    {product.name.ar}
+                  </span>
+                  {!isOrdered && (
+                    <span
+                      className={styles.reorderItemBadge}
+                      style={{ background: '#f3f4f6', color: '#9ca3af' }}
+                    >
+                      بدون ترتيب
+                    </span>
+                  )}
+                </div>
+                <div className={styles.reorderInputGroup}>
+                  <label className={styles.reorderInputLabel}>الترتيب</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={999}
+                    className={styles.reorderOrderInput}
+                    value={reorderValues[product.id] ?? 0}
+                    onChange={(e) =>
+                      onValueChange(product.id, Math.max(0, parseInt(e.target.value, 10) || 0))
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={styles.reorderActions}>
+        <button
+          className={styles.reorderSaveBtn}
+          onClick={onSave}
+          disabled={saving}
+        >
+          <Save size={16} />
+          {saving ? 'جاري الحفظ...' : 'حفظ الترتيب'}
+        </button>
+        <button
+          className={styles.reorderCancelBtn}
+          onClick={onCancel}
+          disabled={saving}
+        >
+          <X size={16} />
+          إلغاء
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════
    Main Page
    ═══════════════════════════════════ */
 
@@ -320,6 +425,13 @@ export default function AdminCategoriesPage() {
   const [reorderParentId, setReorderParentId] = useState<string | null>(null);
   const [reorderValues, setReorderValues] = useState<Record<string, number>>({});
   const [reorderSaving, setReorderSaving] = useState(false);
+
+  // Product reorder state
+  const [productReorderCategoryId, setProductReorderCategoryId] = useState<string | null>(null);
+  const [productReorderProducts, setProductReorderProducts] = useState<Product[]>([]);
+  const [productReorderValues, setProductReorderValues] = useState<Record<string, number>>({});
+  const [productReorderLoading, setProductReorderLoading] = useState(false);
+  const [productReorderSaving, setProductReorderSaving] = useState(false);
 
   // Expand all on first load
   useEffect(() => {
@@ -473,6 +585,62 @@ export default function AdminCategoriesPage() {
     setReorderValues({});
   }, []);
 
+  /* ── Product reorder handlers ── */
+
+  const handleStartProductReorder = useCallback(async (categoryId: string) => {
+    setProductReorderCategoryId(categoryId);
+    setProductReorderLoading(true);
+    try {
+      const products = await productsService.getByCategory(categoryId);
+      setProductReorderProducts(products);
+
+      const category = categories.find((c) => c.id === categoryId);
+      const orderMap = new Map(
+        (category?.productOrder ?? []).map((po) => [po.productId, po.sortOrder]),
+      );
+
+      const initial: Record<string, number> = {};
+      products.forEach((p, index) => {
+        initial[p.id] = orderMap.get(p.id) ?? index;
+      });
+      setProductReorderValues(initial);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'فشل في تحميل المنتجات');
+      setProductReorderCategoryId(null);
+    } finally {
+      setProductReorderLoading(false);
+    }
+  }, [categories]);
+
+  const handleProductReorderValueChange = useCallback((childId: string, value: number) => {
+    setProductReorderValues((prev) => ({ ...prev, [childId]: value }));
+  }, []);
+
+  const handleSaveProductReorder = useCallback(async () => {
+    if (!productReorderCategoryId) return;
+    setProductReorderSaving(true);
+    try {
+      const products = Object.entries(productReorderValues).map(([productId, sortOrder]) => ({
+        productId,
+        sortOrder,
+      }));
+      await categoriesService.updateProductOrder(productReorderCategoryId, products);
+      setProductReorderCategoryId(null);
+      setProductReorderProducts([]);
+      setProductReorderValues({});
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'فشل في حفظ ترتيب المنتجات');
+    } finally {
+      setProductReorderSaving(false);
+    }
+  }, [productReorderCategoryId, productReorderValues]);
+
+  const handleCancelProductReorder = useCallback(() => {
+    setProductReorderCategoryId(null);
+    setProductReorderProducts([]);
+    setProductReorderValues({});
+  }, []);
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -575,6 +743,7 @@ export default function AdminCategoriesPage() {
               reorderParentId={reorderParentId}
               reorderValues={reorderValues}
               onStartReorder={handleStartReorder}
+              onStartProductReorder={handleStartProductReorder}
               onReorderValueChange={handleReorderValueChange}
               onSaveReorder={handleSaveReorder}
               onCancelReorder={handleCancelReorder}
@@ -629,6 +798,27 @@ export default function AdminCategoriesPage() {
           onCancel={handleCancelReorder}
           saving={reorderSaving}
         />
+      </Modal>
+
+      {/* Product reorder modal */}
+      <Modal
+        open={productReorderCategoryId !== null && !productReorderLoading}
+        onClose={handleCancelProductReorder}
+      >
+        {productReorderLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <ProductReorderEditor
+            products={productReorderProducts}
+            reorderValues={productReorderValues}
+            onValueChange={handleProductReorderValueChange}
+            onSave={handleSaveProductReorder}
+            onCancel={handleCancelProductReorder}
+            saving={productReorderSaving}
+          />
+        )}
       </Modal>
 
       {/* Note */}

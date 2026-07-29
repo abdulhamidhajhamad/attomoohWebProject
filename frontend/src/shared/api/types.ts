@@ -45,6 +45,7 @@ export interface ApiCategory {
   sortOrder?: number;
   categoryType: string;
   childrenOrder?: { subCategoryId: string; sortOrder: number }[];
+  productOrder?: { productId: string; sortOrder: number }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -215,6 +216,10 @@ export interface UpdateTaskRequest {
 
 export interface UpdateChildrenOrderRequest {
   children: { subCategoryId: string; sortOrder: number }[];
+}
+
+export interface UpdateProductOrderRequest {
+  products: { productId: string; sortOrder: number }[];
 }
 
 export interface CreateCategoryRequest {

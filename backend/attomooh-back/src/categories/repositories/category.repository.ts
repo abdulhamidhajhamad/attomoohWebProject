@@ -170,6 +170,30 @@ export class CategoryRepository {
       .exec();
   }
 
+  /** Replace the entire productOrder array atomically */
+  async updateProductOrder(
+    categoryId: Types.ObjectId,
+    productOrder: { productId: Types.ObjectId; sortOrder: number }[],
+  ): Promise<CategoryDocument | null> {
+    return this.categoryModel
+      .findByIdAndUpdate(
+        categoryId,
+        { $set: { productOrder } },
+        { returnDocument: 'after' },
+      )
+      .exec();
+  }
+
+  /** Remove a product from all categories' productOrder arrays */
+  async pullProductFromAll(productId: Types.ObjectId): Promise<void> {
+    await this.categoryModel
+      .updateMany(
+        { 'productOrder.productId': productId },
+        { $pull: { productOrder: { productId } } },
+      )
+      .exec();
+  }
+
   /** Bulk delete by IDs */
   async deleteManyByIds(ids: Types.ObjectId[]): Promise<number> {
     const result = await this.categoryModel

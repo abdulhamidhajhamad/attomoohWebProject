@@ -56,7 +56,7 @@ export default function ProductsPage() {
     const lowerBrand = brandQuery.toLowerCase();
 
     // ── Single-pass filter ──
-    return products.filter((p) => {
+    let result = products.filter((p) => {
       // Category match (with descendants)
       if (categorySlug) {
         if (!p.categoryIds.some((id) => descendantIds.has(id))) return false;
@@ -77,7 +77,21 @@ export default function ProductsPage() {
 
       return true;
     });
-  }, [searchQuery, categorySlug, brandQuery, lang, products, descendantIds]);
+
+    // Sort by productOrder when a single category is selected
+    if (category && category.productOrder && category.productOrder.length > 0) {
+      const orderMap = new Map(
+        category.productOrder.map((po) => [po.productId, po.sortOrder]),
+      );
+      result = [...result].sort((a, b) => {
+        const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
+    }
+
+    return result;
+  }, [searchQuery, categorySlug, brandQuery, lang, products, descendantIds, category]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredProducts.slice(

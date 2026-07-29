@@ -62,6 +62,7 @@ export function mapApiCategory(c: ApiCategory): Category {
     level: c.level ?? 0,
     sortOrder: c.sortOrder ?? 0,
     childrenOrder: c.childrenOrder,
+    productOrder: c.productOrder,
     productCount: 0,
   };
 }

@@ -20,6 +20,7 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/categories/${id}`,
     CHILDREN: (id: string) => `/categories/${id}/children`,
     CHILDREN_ORDER: (id: string) => `/categories/${id}/children-order`,
+    PRODUCT_ORDER: (id: string) => `/categories/${id}/product-order`,
   },
 
   // ── Products ──
