@@ -122,7 +122,15 @@ export class ProductsController {
   async update(
     @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
     @Body() updateProductDto: UpdateProductDto,
-    @UploadedFiles() files?: Express.Multer.File[],
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp|jpg)$/ }),
+        ],
+      }),
+    )
+    files?: Express.Multer.File[],
   ) {
     return this.productsService.update(id, updateProductDto, files);
   }

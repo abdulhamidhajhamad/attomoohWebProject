@@ -31,6 +31,30 @@ export class DatabaseSeeder implements OnModuleInit {
     await this.seedRootCategories();
   }
 
+  /**
+   * Resolves a seed password from env vars.
+   * In non-development environments a missing password is fatal:
+   * seeding must never silently fall back to a known default.
+   * In development only, a fallback is kept but a loud warning is logged.
+   */
+  private resolveSeedPassword(envVar: string, devFallback: string): string {
+    const password = this.configService.get<string>(envVar);
+    if (password) return password;
+
+    if (process.env.NODE_ENV !== 'development') {
+      throw new Error(
+        `${envVar} env var is required in ${process.env.NODE_ENV ?? 'production'} environment. ` +
+          'Refusing to seed with a default password.',
+      );
+    }
+
+    this.logger.warn(
+      `⚠️  WARNING: ${envVar} is not set. Using a development-only fallback password. ` +
+        `Set ${envVar} in .env before deploying to production!`,
+    );
+    return devFallback;
+  }
+
   /* ── Admin Seed ── */
 
   private async seedAdmin(): Promise<void> {
@@ -50,10 +74,7 @@ export class DatabaseSeeder implements OnModuleInit {
     const saltRounds = Number(
       this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
     );
-    const adminPassword = this.configService.get<string>(
-      'ADMIN_PASSWORD',
-      'Admin@123',
-    );
+    const adminPassword = this.resolveSeedPassword('ADMIN_PASSWORD', 'Admin@123');
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
     await this.employeeModel.create({
@@ -77,7 +98,7 @@ export class DatabaseSeeder implements OnModuleInit {
       this.configService.get<number>('BCRYPT_SALT_ROUNDS', 10),
     );
 
-    const defaultTechPassword = this.configService.get<string>(
+    const defaultTechPassword = this.resolveSeedPassword(
       'TECH_PASSWORD',
       'Tech@123',
     );

@@ -34,22 +34,18 @@ async function bootstrap() {
   // ── Security Headers ──
   app.use(helmet());
   // ── CORS ──
-  const frontendUrl = configService.get<string>(
-    'FRONTEND_URL',
-    'http://localhost:5173',
-  );
-  const vercelPreviewPattern = /^https:\/\/[_\w-]+\.vercel\.app$/;
+  const allowedOrigins = [
+    configService.get<string>('FRONTEND_URL', 'http://localhost:5173'),
+    configService.get<string>('FRONTEND_PREVIEW_URL'),
+  ].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (server-to-server, curl, Render health check)
       if (!origin) return callback(null, true);
 
-      // Allow the configured frontend URL (set via FRONTEND_URL env var)
-      if (origin === frontendUrl) return callback(null, true);
-
-      // Allow Vercel production and preview deployments
-      if (vercelPreviewPattern.test(origin)) return callback(null, true);
+      // Allow only explicitly configured origins (FRONTEND_URL / FRONTEND_PREVIEW_URL)
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     },

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Area, AreaDocument } from '../schemas/area.schema.js';
+import { escapeRegex } from '../../common/utils/regex.js';
 
 @Injectable()
 export class AreaRepository {
@@ -23,7 +24,7 @@ export class AreaRepository {
   }
 
   async search(query: string): Promise<AreaDocument[]> {
-    const regex = new RegExp(query, 'i');
+    const regex = new RegExp(escapeRegex(query), 'i');
     return this.areaModel.find({ name: regex }).sort({ name: 1 }).exec();
   }
 

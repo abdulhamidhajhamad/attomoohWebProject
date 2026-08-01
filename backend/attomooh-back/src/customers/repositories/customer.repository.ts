@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Customer, CustomerDocument } from '../schemas/customer.schema.js';
+import { escapeRegex } from '../../common/utils/regex.js';
 
 @Injectable()
 export class CustomerRepository {
@@ -37,7 +38,7 @@ export class CustomerRepository {
   }
 
   async search(query: string): Promise<CustomerDocument[]> {
-    const regex = new RegExp(query, 'i');
+    const regex = new RegExp(escapeRegex(query), 'i');
     return this.customerModel
       .find({ $or: [{ name: regex }, { phone: regex }, { customId: regex }] })
       .populate('area')

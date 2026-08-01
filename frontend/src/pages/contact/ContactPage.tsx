@@ -16,7 +16,7 @@ export default function ContactPage() {
   useSEO({
     title: t('contact.title'),
     description:
-      'تواصل مع الطموح لتجهيزات المطابخ الصناعية. نحن هنا لمساعدتك.',
+      'تواصل مع شركة الطموح للتوريدات الصناعية. نحن هنا لمساعدتك.',
   });
 
   const [form, setForm] = useState({

@@ -5,6 +5,7 @@ import {
   MachineMaint,
   MachineMaintDocument,
 } from '../schemas/machine-maint.schema.js';
+import { escapeRegex } from '../../../common/utils/regex.js';
 
 @Injectable()
 export class MachineMaintRepository {
@@ -46,7 +47,7 @@ export class MachineMaintRepository {
     const filter: Record<string, unknown> = {};
     if (params.status) filter.status = params.status;
     if (params.search) {
-      const rx = new RegExp(params.search, 'i');
+      const rx = new RegExp(escapeRegex(params.search), 'i');
       filter.$or = [
         { machineName: rx },
         { machineDetails: rx },

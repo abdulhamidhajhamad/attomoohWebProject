@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Employee, EmployeeDocument } from '../schemas/employee.schema.js';
 import { UserRole } from '../../common/enums/user-role.enum.js';
 import { TechnicianStatus } from '../../common/enums/technician-status.enum.js';
+import { escapeRegex } from '../../common/utils/regex.js';
 
 @Injectable()
 export class EmployeeRepository {
@@ -24,7 +25,7 @@ export class EmployeeRepository {
   }
 
   async search(query: string): Promise<EmployeeDocument[]> {
-    const regex = new RegExp(query, 'i');
+    const regex = new RegExp(escapeRegex(query), 'i');
     return this.model
       .find({ $or: [{ name: regex }, { phone: regex }] })
       .populate('area')

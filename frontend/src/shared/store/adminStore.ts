@@ -31,14 +31,22 @@ export const useAdminStore = create<AdminStore>()(
 
       login: async (email: string, password: string): Promise<boolean> => {
         try {
-          await authService.login({ email, password });
+          const data = await authService.login({ email, password });
+          if (data.role !== 'admin') {
+            // Valid credentials but not an admin role — clear any session
+            authService.logout();
+            throw new Error('غير مصرح لك بالدخول');
+          }
           set({
             isAuthenticated: true,
             adminEmail: email,
             loginTime: Date.now(),
           });
           return true;
-        } catch {
+        } catch (error) {
+          if (error instanceof Error && error.message === 'غير مصرح لك بالدخول') {
+            throw error;
+          }
           return false;
         }
       },

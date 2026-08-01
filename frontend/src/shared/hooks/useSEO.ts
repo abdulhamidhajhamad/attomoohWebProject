@@ -21,7 +21,7 @@ export function useSEO({
   useEffect(() => {
     const suffix =
       i18n.language === 'ar'
-        ? 'الطموح | تجهيزات المطابخ الصناعية'
+        ? 'شركة الطموح للتوريدات الصناعية | تجهيزات المطابخ الصناعية'
         : 'Attomooh | Kitchen Equipment';
 
     if (title) {
