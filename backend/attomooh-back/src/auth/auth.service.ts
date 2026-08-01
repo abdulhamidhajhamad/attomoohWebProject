@@ -15,7 +15,9 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signup(signupDto: SignupDto): Promise<{ accessToken: string }> {
+  async signup(
+    signupDto: SignupDto,
+  ): Promise<{ accessToken: string; role: UserRole }> {
     const createDto: CreateEmployeeDto = {
       name: signupDto.name,
       email: signupDto.email,
@@ -31,10 +33,12 @@ export class AuthService {
       role: employee.role!,
     };
 
-    return { accessToken: this.jwtService.sign(payload) };
+    return { accessToken: this.jwtService.sign(payload), role: employee.role! };
   }
 
-  async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ accessToken: string; role: UserRole }> {
     const employee = await this.employeesService.findByEmail(loginDto.email);
 
     if (!employee || !employee.password || !employee.role) {
@@ -55,6 +59,6 @@ export class AuthService {
       role: employee.role,
     };
 
-    return { accessToken: this.jwtService.sign(payload) };
+    return { accessToken: this.jwtService.sign(payload), role: employee.role };
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Tool, ToolDocument } from '../schemas/tool.schema.js';
+import { escapeRegex } from '../../common/utils/regex.js';
 
 @Injectable()
 export class ToolRepository {
@@ -27,7 +28,7 @@ export class ToolRepository {
       .exec();
   }
   async search(query: string): Promise<ToolDocument[]> {
-    const regex = new RegExp(query, 'i');
+    const regex = new RegExp(escapeRegex(query), 'i');
     return this.model
       .find({ $or: [{ name: regex }, { customId: regex }] })
       .populate('responsibleTechnician', 'name phone')

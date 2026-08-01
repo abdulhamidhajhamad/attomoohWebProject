@@ -5,6 +5,7 @@ import {
   InventoryItem,
   InventoryItemDocument,
 } from '../schemas/inventory-item.schema.js';
+import { escapeRegex } from '../../common/utils/regex.js';
 
 @Injectable()
 export class InventoryItemRepository {
@@ -23,7 +24,7 @@ export class InventoryItemRepository {
     return this.model.find().sort({ createdAt: -1 }).exec();
   }
   async search(query: string): Promise<InventoryItemDocument[]> {
-    const regex = new RegExp(query, 'i');
+    const regex = new RegExp(escapeRegex(query), 'i');
     return this.model
       .find({ $or: [{ name: regex }, { customId: regex }] })
       .sort({ name: 1 })

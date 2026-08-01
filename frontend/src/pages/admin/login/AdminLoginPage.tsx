@@ -30,8 +30,12 @@ export default function AdminLoginPage() {
       } else {
         setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
       }
-    } catch {
-      setError('حدث خطأ في الاتصال — تأكد من تشغيل السيرفر');
+    } catch (err) {
+      if (err instanceof Error && err.message === 'غير مصرح لك بالدخول') {
+        setError(err.message);
+      } else {
+        setError('حدث خطأ في الاتصال — تأكد من تشغيل السيرفر');
+      }
     } finally {
       setLoading(false);
     }

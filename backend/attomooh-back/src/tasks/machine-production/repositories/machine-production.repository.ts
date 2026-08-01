@@ -5,6 +5,7 @@ import {
   MachineProduction,
   MachineProductionDocument,
 } from '../schemas/machine-production.schema.js';
+import { escapeRegex } from '../../../common/utils/regex.js';
 
 @Injectable()
 export class MachineProductionRepository {
@@ -49,7 +50,7 @@ export class MachineProductionRepository {
   ): Promise<MachineProductionDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.search) {
-      const rx = new RegExp(params.search, 'i');
+      const rx = new RegExp(escapeRegex(params.search), 'i');
       filter.$or = [
         { customId: rx },
         { machineName: rx },

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Transport, TransportDocument } from '../schemas/transport.schema.js';
+import { escapeRegex } from '../../../common/utils/regex.js';
 
 @Injectable()
 export class TransportRepository {
@@ -30,7 +31,7 @@ export class TransportRepository {
   ): Promise<TransportDocument[]> {
     const filter: Record<string, unknown> = {};
     if (params.search) {
-      const rx = new RegExp(params.search, 'i');
+      const rx = new RegExp(escapeRegex(params.search), 'i');
       filter.$or = [
         { machineName: rx },
         { machineDetails: rx },
