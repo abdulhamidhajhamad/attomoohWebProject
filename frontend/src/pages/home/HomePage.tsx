@@ -21,7 +21,7 @@ export default function HomePage() {
   useSEO({
     description:
       currentLang === 'ar'
-        ? 'الطموح - المورد الرائد لمعدات المطاعم والملاحم والمطابخ الصناعية. أفران، قلايات، مفارم لحوم، معدات تبريد وأكثر.'
+        ? 'شركة الطموح للتوريدات الصناعية - المورد الرائد لمعدات المطاعم والملاحم والمطابخ الصناعية. أفران، قلايات، مفارم لحوم، معدات تبريد وأكثر.'
         : 'Attomooh - Leading supplier of restaurant, butcher, and industrial kitchen equipment.',
     keywords:
       'معدات مطاعم, تجهيزات مطاعم, معدات ملاحم, تجهيزات مطابخ صناعية, restaurant equipment, commercial kitchen equipment',

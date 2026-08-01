@@ -1,12 +1,12 @@
 export const BRAND = {
   name: 'Attomooh',
-  nameAr: 'الطموح',
+  nameAr: 'شركة الطموح للتوريدات الصناعية',
   tagline: {
     ar: 'تجهيزات المطابخ الصناعية',
     en: 'Kitchen Equipment',
   },
   fullName: {
-    ar: 'الطموح لتجهيزات المطابخ',
+    ar: 'شركة الطموح للتوريدات الصناعية',
     en: 'Attomooh Kitchen Equipment',
   },
 } as const;

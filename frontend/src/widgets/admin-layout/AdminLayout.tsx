@@ -82,7 +82,7 @@ export const AdminLayout = memo(function AdminLayout() {
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHeader}>
           <img src={logoSrc} alt="Attomooh" className={styles.sidebarLogo} />
-          <span className={styles.sidebarTitle}>الطموح</span>
+          <span className={styles.sidebarTitle}>شركة الطموح للتوريدات الصناعية</span>
           <button
             className={styles.sidebarClose}
             onClick={() => setSidebarOpen(false)}
